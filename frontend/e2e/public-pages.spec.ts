@@ -180,7 +180,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
   const publicRoutes = [
     "/", "/professions", "/top", "/pricing", "/mentorship", "/support",
     "/methodology", "/glossary", "/sources", "/about", "/status", "/compare",
-    "/login", "/register", "/llms.txt", "/.well-known/llms.txt", "/.well-known/linkset.json", "/.well-known/security.txt", "/llms-full.txt",
+    "/login", "/register", "/legal/offer", "/legal/refunds", "/legal/privacy", "/legal/consent", "/payments/error", "/payments/pending", "/llms.txt", "/.well-known/llms.txt", "/.well-known/linkset.json", "/.well-known/security.txt", "/llms-full.txt",
     "/ai-index.json", "/open-data.json", "/feed.xml", "/sitemap.xml", "/robots.txt",
     "/citation", "/citation.json", "/citation.bib", "/citation.ris", "/datapackage.json", "/catalog.jsonld",
     "/research", "/research.json", "/insights", "/insights.json",

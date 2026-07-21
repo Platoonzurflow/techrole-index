@@ -1,4 +1,5 @@
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Literal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
@@ -191,10 +192,43 @@ class ScoreVersionCreate(BaseModel):
     description: str = Field(min_length=20, max_length=2000)
 
 
-class DemoPurchaseResponse(BaseModel):
+class PaymentCreateRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    product_code: Literal["premium_30_days"]
+    accepted_terms: Literal[True]
+    terms_version: str = Field(pattern=r"^[a-zA-Z0-9._-]{3,80}$")
+
+
+class PaymentResponse(BaseModel):
+    order_id: str
+    product_code: str
+    product_name: str
     status: str
-    subscription_id: str
-    current_period_end: datetime
+    amount: Decimal
+    currency: str
+    confirmation_url: str | None
+    is_test: bool
+
+
+class DemoPaymentCompleteRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    outcome: Literal["succeeded", "canceled"]
+
+
+class PaymentRefundRequest(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    reason: str = Field(default="requested_by_customer", min_length=3, max_length=180)
+
+
+class PaymentRefundResponse(BaseModel):
+    refund_id: str
+    order_id: str
+    status: str
+    amount: Decimal
+    currency: str
 
 
 class AlertCreate(BaseModel):

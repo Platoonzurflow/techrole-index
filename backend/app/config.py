@@ -1,3 +1,4 @@
+from decimal import Decimal
 from functools import lru_cache
 from urllib.parse import unquote, urlsplit
 
@@ -19,6 +20,21 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     demo_seed: int = 20260717
     min_salary_sample: int = Field(default=20, ge=3, le=1000)
+
+    payments_enabled: bool = False
+    payments_provider: str = "demo"
+    payments_mode: str = "test"
+    payments_live_confirmed: bool = False
+    payments_legal_approved: bool = False
+    payments_terms_version: str = "draft-2026-07-21"
+    payments_seller_status: str = "unconfirmed"
+    payments_fiscalization_mode: str = "disabled"
+    premium_30_days_price_rub: Decimal = Field(default=Decimal("1.00"), gt=0)
+    yookassa_shop_id: str = ""
+    yookassa_secret_key: str = ""
+    yookassa_api_url: str = "https://api.yookassa.ru/v3"
+    yookassa_timeout_seconds: float = Field(default=15, ge=3, le=60)
+    yookassa_vat_code: int = Field(default=0, ge=0, le=12)
 
     cbr_currency_enabled: bool = False
     cbr_currency_base_url: str = "https://www.cbr.ru/scripts/XML_daily.asp"
@@ -81,6 +97,69 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Email delivery requires SMTP_HOST, SMTP_USERNAME and SMTP_PASSWORD"
             )
+        if self.payments_provider not in {"demo", "yookassa"}:
+            raise ValueError("PAYMENTS_PROVIDER must be demo or yookassa")
+        if self.payments_mode not in {"test", "live"}:
+            raise ValueError("PAYMENTS_MODE must be test or live")
+        if self.payments_seller_status not in {
+            "unconfirmed",
+            "self_employed",
+            "sole_proprietor",
+            "company",
+        }:
+            raise ValueError(
+                "PAYMENTS_SELLER_STATUS must be unconfirmed, self_employed, "
+                "sole_proprietor or company"
+            )
+        if self.payments_fiscalization_mode not in {
+            "disabled",
+            "self_employed_manual",
+            "yookassa",
+            "third_party",
+        }:
+            raise ValueError(
+                "PAYMENTS_FISCALIZATION_MODE must be disabled, self_employed_manual, "
+                "yookassa or third_party"
+            )
+        if self.payments_enabled and self.payments_provider == "yookassa" and not (
+            self.yookassa_shop_id and self.yookassa_secret_key
+        ):
+            raise ValueError(
+                "YooKassa payments require YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY"
+            )
+        if self.payments_mode == "live":
+            if not self.payments_live_confirmed:
+                raise ValueError("Live payments require PAYMENTS_LIVE_CONFIRMED=true")
+            if not self.payments_legal_approved:
+                raise ValueError("Live payments require PAYMENTS_LEGAL_APPROVED=true")
+            if not self.payments_terms_version or self.payments_terms_version.startswith(
+                "draft-"
+            ):
+                raise ValueError("Live payments require an approved PAYMENTS_TERMS_VERSION")
+            if self.payments_provider == "demo":
+                raise ValueError("Demo provider cannot be used for live payments")
+            if self.payments_seller_status == "unconfirmed":
+                raise ValueError("Live payments require a confirmed seller status")
+            if self.payments_fiscalization_mode == "disabled":
+                raise ValueError("Live payments require a fiscalization mode")
+            if (
+                self.payments_seller_status == "self_employed"
+                and self.payments_fiscalization_mode != "self_employed_manual"
+            ):
+                raise ValueError(
+                    "Self-employed live payments require self_employed_manual fiscalization"
+                )
+            if self.payments_seller_status in {"sole_proprietor", "company"} and (
+                self.payments_fiscalization_mode not in {"yookassa", "third_party"}
+            ):
+                raise ValueError(
+                    "Sole proprietors and companies require a configured online cash register"
+                )
+            if (
+                self.payments_fiscalization_mode in {"yookassa", "third_party"}
+                and self.yookassa_vat_code == 0
+            ):
+                raise ValueError("Live receipt fiscalization requires YOOKASSA_VAT_CODE")
         if self.app_env.lower() == "production":
             errors: list[str] = []
             if self.demo_mode:

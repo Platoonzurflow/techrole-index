@@ -26,7 +26,7 @@
 - Prometheus-compatible observability: внутренний `/metrics`, bounded route-template labels, multiprocess Gunicorn storage и отдельный loopback-only профиль с alert rules.
 - Windows public preview: production standalone на 3100 стоит за постоянным loopback Node proxy на 3199, поэтому SSH сохраняет локальный listener при переключении immutable build slot; отдельный refresh отслеживает возможную ротацию временного hostname самим провайдером.
 
-Подробности: [ARCHITECTURE.md](ARCHITECTURE.md), формулы: [METHODOLOGY.md](METHODOLOGY.md), решения: [DECISIONS.md](DECISIONS.md), варианты размещения: [HOSTING.md](HOSTING.md), белая стратегия запуска: [GROWTH.md](GROWTH.md), вклад в проект: [CONTRIBUTING.md](CONTRIBUTING.md), приватное сообщение об уязвимости: [SECURITY.md](SECURITY.md).
+Подробности: [ARCHITECTURE.md](ARCHITECTURE.md), формулы: [METHODOLOGY.md](METHODOLOGY.md), решения: [DECISIONS.md](DECISIONS.md), платежи и действия владельца: [PAYMENTS.md](PAYMENTS.md), варианты размещения: [HOSTING.md](HOSTING.md), белая стратегия запуска: [GROWTH.md](GROWTH.md), вклад в проект: [CONTRIBUTING.md](CONTRIBUTING.md), приватное сообщение об уязвимости: [SECURITY.md](SECURITY.md).
 
 ## Быстрый запуск
 
@@ -176,9 +176,11 @@ docker compose --profile e2e run --rm e2e
 docker compose exec -T frontend npm run audit:public
 ```
 
-## Demo-режим и платежи
+## Тестовый контур платежей
 
-`DEMO_MODE=true` включает синтетические данные и `DemoPaymentProvider`. Тестовая покупка в личном кабинете создаёт subscription/entitlement на 30 дней без списаний. Webhook `/api/v1/payments/webhooks/demo` проверяет HMAC-подпись и идемпотентность `provider + event_id`. Реальный эквайринг намеренно отсутствует.
+`DemoPaymentProvider` проводит полный sandbox-сценарий без списания: сервер формирует продукт и цену, сохраняет заказ и версию принятых условий, проверяет HMAC webhook/idempotency и только после `succeeded` выдаёт отдельный entitlement на 30 дней. Отмена терминальна; полный административный возврат идемпотентен и отзывает только доступ этого заказа.
+
+Основной кандидат для реального подключения — ЮKassa, резервный — Robokassa. Адаптер ЮKassa уже использует официальный REST API, server-generated сумму, `Idempotence-Key`, авторизованную перепроверку webhook, возвраты и серверные данные для чека. Без test `shopId`/secret он проверен mock-контрактом, а не вызовом магазина. Live-режим заблокирован до личной регистрации владельца, KYC, постоянного HTTPS-host, фискализации, юридически проверенных документов и явного подтверждения. Сравнение провайдеров, переменные и пошаговая инструкция: [PAYMENTS.md](PAYMENTS.md).
 
 ## Подключение законного источника
 

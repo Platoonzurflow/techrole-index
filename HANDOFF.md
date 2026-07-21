@@ -308,7 +308,9 @@ Paywall реализован backend-ом до сериализации. Premium
 
 Auth: Argon2 password hash, JWT HttpOnly/SameSite cookie, CSRF для mutation endpoints, rate limit login/register, RBAC admin/user.
 
-`PaymentProvider` не привязан к реальному acquiring. Текущая реализация создаёт идемпотентное событие и entitlement на 30 дней без списания. Есть webhook с HMAC verification и статусы trialing/active/past_due/canceled/expired. Реальный платёжный провайдер не выбран и не подключён.
+`DemoPaymentProvider` проводит локальный sandbox без списания. Серверный product catalog определяет цену и 30-дневный доступ; `payment_orders` сохраняет idempotency key, provider id, сумму, test/live и принятую версию условий. HMAC demo webhook проверяет raw body, повторы дедуплицируются, отмена терминальна. Полный admin refund идемпотентен и отзывает только entitlement соответствующего заказа.
+
+Основной кандидат — ЮKassa, резервный — Robokassa. `YooKassaPaymentProvider` реализует официальный REST contract: Basic auth, `Idempotence-Key`, redirect confirmation, полный возврат, server-side receipt item и аутентификацию webhook повторным GET объекта, поскольку ЮKassa не подписывает уведомления. Адаптер покрыт MockTransport contract tests, но test shop владельца ещё не вызван: нет выданных владельцем test credentials. Реальный режим fail closed требует отдельного подтверждения, утверждённой оферты, статуса продавца, фискализации/VAT и постоянного HTTPS-host. Полная памятка: `PAYMENTS.md`.
 
 ## 11. Административная панель
 
@@ -368,8 +370,13 @@ Service:
 
 Payments:
 
-- встроенная purchase-команда под `/payments`;
-- `POST /payments/webhooks/demo`.
+- `GET /payments/products`;
+- `POST /payments` с CSRF и `Idempotency-Key`;
+- `GET /payments/{order_id}` только владельцу/admin;
+- `POST /payments/{order_id}/demo/complete` только в sandbox;
+- `POST /payments/{order_id}/refund` только admin;
+- `POST /payments/webhooks/demo`;
+- `POST /payments/webhooks/yookassa`.
 
 Admin: endpoints находятся под `/api/v1/admin/*`; точный контракт смотреть в Swagger.
 
@@ -441,17 +448,17 @@ HhApiProvider использует только официальный API, од
 Backend внутри контейнера:
 
 - Ruff: passed;
-- mypy: passed, 47 source files;
-- pytest: `74 passed`, 4 warnings.
+- mypy: passed, 49 source files;
+- pytest: `87 passed`, 3 warnings.
 
 Frontend:
 
 - ESLint: passed;
 - source TypeScript: passed;
-- Vitest: `36 passed`;
-- Next.js production build: passed, 56 generated static page artifacts, включая 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
+- Vitest: `38 passed`;
+- Next.js production build: passed, 61 generated page artifacts, включая legal/payment routes и 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
 - отдельные production-check Docker images frontend/backend: built and smoke-tested, HTTP 200;
-- Playwright Chromium profile: `26 passed` после добавления CSVW. Сценарии включают 50 profession links, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, пять conditional `304`, сверку каждой из 691 строк, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, основные формы/селекты, 11 accessibility/reduced-motion проверок и 4 lab performance budgets;
+- Playwright Chromium profile: `27 passed`. Сценарии включают полный demo payment flow с регистрацией, явным принятием условий, sandbox checkout и выдачей Premium, а также 50 profession links, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, пять conditional `304`, сверку каждой из 691 строк, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, основные формы/селекты, 11 accessibility/reduced-motion проверок и 4 lab performance budgets;
 - независимый `csvw 4.1.0` типизированно прочитал все 691 строк по опубликованной metadata: 30 колонок, 691 уникальный составной primary key, duplicate `0`; daily CSV публикуется как UTF-8 без BOM для совместимости CSVW, отдельный aggregate CSV не менялся;
 - DCAT JSON-LD дополнительно разобран независимым `rdflib 7.1.4`: 62 RDF-триплета, по одному Catalog, Dataset и DataService, две Distribution; endpoint локально отвечает `200` и strong SHA-256 ETag;
 - официальный `mlcroissant 1.1.0`: validate завершился `Done`, loader скачал объявленный CSV и типизированно прочитал первые три записи всех 30 полей; отсутствие checksum для `isLiveDataset=true` распознано штатно;
@@ -468,16 +475,17 @@ Frontend:
 - все 50 profession detail SSR routes: passed.
 - внешний production-preview smoke после CSVW/DCAT: homepage/canonical/security headers, 11 CSS/JS assets, 50 AI-сущностей, 50 Dataset, 151 aggregate CSV-строка, 691 daily JSON record, 692 daily CSV-строки, 27-field Draft 2020-12 schema и соответствие каждой строки, CSVW и Croissant 1.1 с 30 фактическими CSV-полями, DCAT с двумя distributions, SHA-256 ETag/Last-Modified и шесть conditional `304`, канонический Dataset landing, 2 provenance-слоя, 12 editorial insights, все 12 Article pages и 12 per-article CSL records, 50 LLM-описаний, dataset citation CSL, research aggregate, 85 sitemap URL, 85-КБ Open Graph PNG и backend readiness - passed. По скачанным с внешнего HTTPS URL точным bytes `csvw 4.1.0` прочитал 691 строку / 691 уникальный ключ, а `rdflib` разобрал DCAT в 64 RDF-триплета. Официальный `mlcroissant 1.1.0` повторно завершил validate, скачал CSV без BOM и типизированно прочитал запись всех 30 полей. Изолированная симуляция недоступного backend подтвердила `503`, `Retry-After: 60` и `Cache-Control: no-store` для daily exports;
 - постоянный loopback `public-proxy` на 3199 пережил force-recreate standalone upstream на 3100; позднее анонимный localhost.run ротировал hostname внутри живого PID, поэтому добавлен refresh последнего URL из логов с историей previous URLs;
-- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; отдельный immutable `.next-public-tsnet` с 23 browser assets / 1 789 953 bytes собран с этим canonical, все десять сервисов healthy, полный внешний smoke прошёл. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
+- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; актуальный immutable `.next-public-tsnet-v011` с 25 browser assets / 1 885 366 bytes собран с этим canonical, все постоянные сервисы healthy, полный внешний smoke и отдельный внешний payment-flow прошли. Платежи на preview используют только `demo/test`, terms остаются draft. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
 - canonical Dataset JSON-LD дополнительно сверён с актуальной документацией Google Dataset Search: самоцитирование удалено из предназначенного для связанных научных работ `Dataset.citation`, а identifier/creator/publisher/canonical URL и отдельные citation formats сохранены; целевой Playwright-сценарий, ESLint и TypeScript прошли;
 - `CITATION.cff` исправлен по CFF 1.2 (`preferred-citation.type=data` при верхнеуровневом GitHub `type=dataset`) и независимо прошёл `cffconvert 2.0.0 --validate`; отдельный CI job повторяет эту проверку на hosted runner;
-- Gitleaks 8.30.1 повторно просканировал всю локальную историю и одно-коммитную очищенную `public-main`: `no leaks found`. Allowlist переименован в автоматически обнаруживаемый `.gitleaks.toml`, поэтому одинаковая узкая политика применяется локально и в GitHub Action без скрытого CLI-флага;
+- Gitleaks повторно просканировал staged payment diff и всю пятикоммитную очищенную `public-main`: `no leaks found`. Старый синтетический production-settings fixture исключён только точным fingerprint в `.gitleaksignore`; целые файлы, пути и commits не исключаются;
 - Compose default/public/production/observability configs и GitHub Actions/Dependabot YAML - passed;
 - rendered production security contract на синтетических credentials - passed: один HTTPS origin в backend/frontend build/runtime/Caddy, 7 backend-сервисов с `APP_ENV=production`/`DEMO_MODE=false`, без bind-mount `/app`, только Caddy публикует 80/443; отдельный PostgreSQL bootstrap smoke создал 50 reference professions при `users=metrics=vacancies=enabled_demo_sources=0` и затем удалил временную БД/роль;
 - Prometheus `/metrics`: standard text format, privacy/cardinality tests passed; временный Gunicorn с 2 workers агрегировал 30 запросов из 4 multiprocess-файлов без пользовательских `@`;
 - Redis catalog/detail cache: miss→hit, SHA-256 key без slug/query, TTL 119 секунд; при pause Redis detail API ответил 200 за 621 мс и Redis вернулся healthy;
 - миграция `0004` применена; официальный CBR snapshot на 2026-07-20 сохранён для USD/EUR/KZT с effective date 2026-07-18;
 - миграция `0005` применена; PostgreSQL full refresh создал 691 observed-publication slice для 1 052 классифицированных публикаций, повторный overlap refresh обработал только 7 дней, stale/invalid/leaked slices равны 0;
+- миграция `0006` применена; `payment_orders` и `payment_refunds` находятся на Alembic head, sandbox API/webhook/refund/replay/tampering и YooKassa contract tests прошли;
 - rolling research/provenance window выровнено по 180 полным UTC-календарным дням: schema `1.2` публикует полуоткрытые timestamp-границы, а live catalog и provenance оба дают 1 040 классифицированных публикаций за 2026-01-23..2026-07-21;
 - 2026-07-21 новый PostgreSQL custom backup (3 864 514 bytes) создан с SHA-256 manifest и действительно восстановлен `infra/windows/test-postgres-restore.ps1` в изолированную БД: revision `0005`, 26 public tables, 50 professions, 108 000 prepared metric rows, 691 observed slices, 5 535 vacancies и 3 users. После проверки временная БД и container archive удалены; основная БД не останавливалась.
 
@@ -579,7 +587,7 @@ Next build может автоматически дописывать custom dis
 - официальный open-data API «Работа России» подключён: реальные публикации и salary midpoint видны отдельным публичным слоем и инкрементально материализованы, но неизвестный gross/net намеренно не преобразуется в gross-витрину;
 - юридическое разрешение на коммерческое использование данных hh.ru не подтверждено;
 - официальный CBR currency provider подключён отдельным контуром и локально включён: migration `0004`, snapshots USD/EUR/KZT, requested/effective date и Dagster op. Эти rates ещё не применяются к несовместимому gross/net слою автоматически;
-- реальный payment provider не выбран;
+- ЮKassa выбрана основным payment-кандидатом, Robokassa резервом; demo sandbox и адаптер ЮKassa готовы, но test/live credentials, KYC, договор, фискализация, юридические реквизиты и постоянный HTTPS-host может предоставить только владелец;
 - Yandex SMTP и IMAP работают; пять писем Support/Mentorship/Nightly подтверждены во входящих, две сохранённые заявки доставлены. Пароль остаётся только в локальном `.env`;
 - Tailscale работает на ПК и iPhone. Firewall ограничен tailnet, но TCP 3389 ещё не слушает: владелец должен один раз повторно запустить исправленный `infra/windows/enable-private-remote-access.ps1` от администратора и получить `ListenerReady=True`;
 - production Compose теперь fail closed проверяет secrets/URLs/DB credentials, удаляет source mounts/лишние ports и безопасно bootstrap-ит пустую БД без demo data; сам deployment, постоянный домен, TLS и внешняя observability ещё не настроены;
@@ -606,7 +614,7 @@ Next build может автоматически дописывать custom dis
 Приоритет P1:
 
 1. Опубликовать Git remote и проверить добавленный GitHub Actions workflow на hosted runner; локальный Playwright E2E profile уже подключён к YAML.
-2. Выбрать законного платёжного провайдера, реализовать отдельный adapter и webhook contract tests.
+2. Получить от владельца пять обязательных ответов и test shop ЮKassa, вызвать официальный sandbox, проверить webhook через постоянный HTTPS ingress; затем заполнить/проверить `PAYMENTS.md` checklist. Live не включать без явного подтверждения.
 3. Определить срок хранения обращений и процедуру ротации SMTP app password; раздельная доставка Support/Mentorship/Nightly уже проверена.
 4. Prometheus-compatible метрики и локальные alert rules выполнены; дальше выбрать внешний Alertmanager-канал и при необходимости Sentry/OpenTelemetry collector.
 5. После стабильного домена настроить Search Console/Webmaster, IndexNow key и содержательные внешние публикации; временные tunnel URL не регистрировать.

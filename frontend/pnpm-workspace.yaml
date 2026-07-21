@@ -2,6 +2,10 @@ packages:
   - "."
 
 nodeLinker: hoisted
+confirmModulesPurge: false
+
+overrides:
+  postcss: 8.5.19
 
 allowBuilds:
   esbuild: true

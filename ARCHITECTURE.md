@@ -27,7 +27,7 @@
 
 ## Данные
 
-Модель включает все MVP-таблицы: `professions`, `profession_aliases`, `profession_categories`, `seniority_levels`, `regions`, `vacancy_sources`, `source_queries`, `vacancies`, `vacancy_skills`, `vacancy_snapshots`, `salary_observations`, `currency_rate_snapshots`, `profession_metrics_daily`, `profession_scores_daily`, `ingestion_runs`, `scoring_versions`, `users`, `subscriptions`, `entitlements`, `payment_events`, `audit_logs`, обращения `support_requests`, заявки `mentorship_requests`, а также Premium-правила `notification_rules`.
+Модель включает все MVP-таблицы: `professions`, `profession_aliases`, `profession_categories`, `seniority_levels`, `regions`, `vacancy_sources`, `source_queries`, `vacancies`, `vacancy_skills`, `vacancy_snapshots`, `salary_observations`, `currency_rate_snapshots`, `profession_metrics_daily`, `profession_scores_daily`, `ingestion_runs`, `scoring_versions`, `users`, `subscriptions`, `entitlements`, `payment_orders`, `payment_refunds`, `payment_events`, `audit_logs`, обращения `support_requests`, заявки `mentorship_requests`, а также Premium-правила `notification_rules`.
 
 Формы поддержки и личного ведения используют независимые REST-контуры: отдельные anonymous double-submit CSRF cookies, origin check, Redis rate limit, honeypot, разные таблицы и идемпотентные Celery-задачи через абстракцию `EmailProvider`. SMTP является общей конфигурацией окружения; при его отсутствии заявка остаётся в базе и может быть доставлена после настройки.
 

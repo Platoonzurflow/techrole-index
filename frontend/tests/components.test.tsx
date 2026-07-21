@@ -8,12 +8,23 @@ import { CompareTool } from "@/components/CompareTool";
 import { SupportButton } from "@/components/SupportButton";
 import { SupportForm } from "@/components/SupportForm";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
+import { AccountActions } from "@/components/AccountActions";
+
+const { routerPush, routerRefresh } = vi.hoisted(() => ({
+  routerPush: vi.fn(),
+  routerRefresh: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
+}));
 
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   localStorage.clear();
   document.documentElement.className = "";
+  routerPush.mockReset();
+  routerRefresh.mockReset();
 });
 
 describe("analytics components", () => {
@@ -127,6 +138,56 @@ describe("analytics components", () => {
       "/api/v1/compare?slugs=frontend%2Cbackend",
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+  });
+
+  it("creates a server-priced test payment without sending an amount", async () => {
+    document.cookie = "techrole_csrf=csrf-payment";
+    vi.stubGlobal("crypto", { randomUUID: () => "browser-idempotency-0001" });
+    const request = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        order_id: "order-1",
+        product_code: "premium_30_days",
+        product_name: "Premium на 30 дней",
+        status: "pending",
+        amount: "1.00",
+        currency: "RUB",
+        is_test: true,
+      }),
+    });
+    vi.stubGlobal("fetch", request);
+    render(<AccountActions premium={false} payments={{
+      enabled: true,
+      provider: "demo",
+      mode: "test",
+      terms_version: "draft-test",
+      products: [{
+        code: "premium_30_days",
+        name: "Premium на 30 дней",
+        description: "Доступ",
+        amount: "1.00",
+        currency: "RUB",
+        access_days: 30,
+      }],
+    }} />);
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /Тестовая оплата/ }));
+    expect(await screen.findByRole("status")).toHaveTextContent("Создаём защищённый платёж");
+    expect(request).toHaveBeenCalledWith("/api/v1/payments", expect.objectContaining({
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": "browser-idempotency-0001",
+        "X-CSRF-Token": "csrf-payment",
+      },
+      body: JSON.stringify({
+        product_code: "premium_30_days",
+        accepted_terms: true,
+        terms_version: "draft-test",
+      }),
+    }));
+    expect(routerPush).toHaveBeenCalledWith("/payments/pending?order_id=order-1");
   });
 
   it("opens the on-site technical support page", () => {

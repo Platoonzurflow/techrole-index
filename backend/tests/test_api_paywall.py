@@ -14,6 +14,9 @@ from app.main import app
 from app.models import (
     Base,
     Entitlement,
+    PaymentEvent,
+    PaymentOrder,
+    PaymentRefund,
     Profession,
     ProfessionCategory,
     ProfessionMetricDaily,
@@ -64,6 +67,12 @@ def build_client():
             email="premium@example.com",
             display_name="Premium",
             password_hash=hash_password("PremiumPassword1!"),
+        ),
+        User(
+            email="admin@example.com",
+            display_name="Admin",
+            password_hash=hash_password("AdminPassword1!"),
+            role="admin",
         ),
     ]
     session.add_all([category, region, version, *levels, *users])
@@ -322,39 +331,286 @@ def test_detail_cache_keeps_public_and_premium_contracts_isolated(monkeypatch):
     app.dependency_overrides.clear()
 
 
-def test_demo_purchase_and_webhook_are_entitled_and_idempotent():
+def enable_demo_payments(monkeypatch):
+    monkeypatch.setattr(settings, "payments_enabled", True)
+    monkeypatch.setattr(settings, "payments_provider", "demo")
+    monkeypatch.setattr(settings, "payments_mode", "test")
+    monkeypatch.setattr(settings, "premium_30_days_price_rub", Decimal("1.00"))
+    monkeypatch.setattr(settings, "demo_mode", True)
+    monkeypatch.setattr(settings, "payments_terms_version", "draft-test")
+
+
+def create_demo_order(client):
+    return client.post(
+        "/api/v1/payments",
+        headers={
+            "X-CSRF-Token": client.cookies.get("techrole_csrf"),
+            "Idempotency-Key": "checkout-key-0001",
+        },
+        json={
+            "product_code": "premium_30_days",
+            "accepted_terms": True,
+            "terms_version": "draft-test",
+        },
+    )
+
+
+def signed_payment_webhook(provider, order, *, event_id, status, amount="1.00"):
+    return provider.sign_webhook(
+        {
+            "event_id": event_id,
+            "event": f"payment.{status}",
+            "object": {
+                "id": order.external_payment_id,
+                "status": status,
+                "amount": {"value": amount, "currency": "RUB"},
+                "metadata": {"order_id": order.public_id},
+                "test": True,
+            },
+        }
+    )
+
+
+def test_demo_checkout_is_server_priced_and_idempotent(monkeypatch):
+    enable_demo_payments(monkeypatch)
     client, session = build_client()
     client.post(
         "/api/v1/auth/login",
         json={"email": "free@example.com", "password": "FreePassword1!"},
     )
-    csrf = client.cookies.get("techrole_csrf")
-    purchase = client.post("/api/v1/payments/demo/purchase", headers={"X-CSRF-Token": csrf})
+    rejected_terms = client.post(
+        "/api/v1/payments",
+        headers={
+            "X-CSRF-Token": client.cookies.get("techrole_csrf"),
+            "Idempotency-Key": "checkout-terms-0001",
+        },
+        json={
+            "product_code": "premium_30_days",
+            "accepted_terms": True,
+            "terms_version": "stale-version",
+        },
+    )
+    assert rejected_terms.status_code == 422
+    purchase = create_demo_order(client)
     assert purchase.status_code == 200
+    assert purchase.json()["amount"] == "1.00"
+    assert purchase.json()["status"] == "pending"
+    assert purchase.json()["is_test"] is True
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
+
+    duplicate = create_demo_order(client)
+    assert duplicate.status_code == 200
+    assert duplicate.json()["order_id"] == purchase.json()["order_id"]
+    assert len(session.scalars(select(PaymentOrder).where(PaymentOrder.user_id == 1)).all()) == 1
+
+    tampered = client.post(
+        "/api/v1/payments",
+        headers={
+            "X-CSRF-Token": client.cookies.get("techrole_csrf"),
+            "Idempotency-Key": "checkout-key-0002",
+        },
+        json={
+            "product_code": "premium_30_days",
+            "accepted_terms": True,
+            "terms_version": "draft-test",
+            "amount": "0.01",
+        },
+    )
+    assert tampered.status_code == 422
+
+    completed = client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/demo/complete",
+        headers={"X-CSRF-Token": client.cookies.get("techrole_csrf")},
+        json={"outcome": "succeeded"},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["status"] == "succeeded"
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_demo_webhook_rejects_bad_signature_amount_and_replays(monkeypatch):
+    enable_demo_payments(monkeypatch)
+    client, session = build_client()
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    purchase = create_demo_order(client)
+    order = session.scalar(
+        select(PaymentOrder).where(PaymentOrder.public_id == purchase.json()["order_id"])
+    )
+    assert order is not None
+
+    provider = DemoPaymentProvider(settings.app_secret_key, settings.public_base_url)
+    body, signature = signed_payment_webhook(
+        provider, order, event_id="evt-idempotent-1", status="succeeded"
+    )
+    assert (
+        client.post(
+            "/api/v1/payments/webhooks/demo",
+            content=body,
+            headers={"X-Demo-Signature": "0" * 64, "Content-Type": "application/json"},
+        ).status_code
+        == 401
+    )
+
+    wrong_body, wrong_signature = signed_payment_webhook(
+        provider,
+        order,
+        event_id="evt-wrong-amount",
+        status="succeeded",
+        amount="0.01",
+    )
+    assert (
+        client.post(
+            "/api/v1/payments/webhooks/demo",
+            content=wrong_body,
+            headers={
+                "X-Demo-Signature": wrong_signature,
+                "Content-Type": "application/json",
+            },
+        ).status_code
+        == 422
+    )
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
+
+    headers = {"X-Demo-Signature": signature, "Content-Type": "application/json"}
+    assert client.post(
+        "/api/v1/payments/webhooks/demo", content=body, headers=headers
+    ).json()["status"] == "processed"
+    assert client.post(
+        "/api/v1/payments/webhooks/demo", content=body, headers=headers
+    ).json()["status"] == "already_processed"
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
+    assert len(session.scalars(select(PaymentEvent)).all()) == 2
+    assert len(
+        session.scalars(
+            select(Entitlement).where(Entitlement.source == f"payment:{order.public_id}")
+        ).all()
+    ) == 1
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_canceled_demo_payment_does_not_grant_access(monkeypatch):
+    enable_demo_payments(monkeypatch)
+    client, session = build_client()
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    purchase = create_demo_order(client)
+    response = client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/demo/complete",
+        headers={"X-CSRF-Token": client.cookies.get("techrole_csrf")},
+        json={"outcome": "canceled"},
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "canceled"
+    replay_as_success = client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/demo/complete",
+        headers={"X-CSRF-Token": client.cookies.get("techrole_csrf")},
+        json={"outcome": "succeeded"},
+    )
+    assert replay_as_success.status_code == 200
+    assert replay_as_success.json()["status"] == "canceled"
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_admin_full_refund_is_idempotent_and_revokes_payment_access(monkeypatch):
+    enable_demo_payments(monkeypatch)
+    client, session = build_client()
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    purchase = create_demo_order(client)
+    client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/demo/complete",
+        headers={"X-CSRF-Token": client.cookies.get("techrole_csrf")},
+        json={"outcome": "succeeded"},
+    )
     assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
 
-    provider = DemoPaymentProvider(settings.app_secret_key)
-    body, signature = provider.sign_webhook(
+    forbidden = client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/refund",
+        headers={
+            "X-CSRF-Token": client.cookies.get("techrole_csrf"),
+            "Idempotency-Key": "refund-forbidden-0001",
+        },
+        json={"reason": "customer_request"},
+    )
+    assert forbidden.status_code == 403
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPassword1!"},
+    )
+    headers = {
+        "X-CSRF-Token": client.cookies.get("techrole_csrf"),
+        "Idempotency-Key": "refund-key-0001",
+    }
+    refunded = client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/refund",
+        headers=headers,
+        json={"reason": "customer_request"},
+    )
+    assert refunded.status_code == 200
+    assert refunded.json()["status"] == "succeeded"
+    repeated = client.post(
+        f"/api/v1/payments/{purchase.json()['order_id']}/refund",
+        headers=headers,
+        json={"reason": "customer_request"},
+    )
+    assert repeated.status_code == 200
+    assert repeated.json()["refund_id"] == refunded.json()["refund_id"]
+    assert len(session.scalars(select(PaymentRefund)).all()) == 1
+
+    order = session.scalar(
+        select(PaymentOrder).where(PaymentOrder.public_id == purchase.json()["order_id"])
+    )
+    local_refund = session.scalar(select(PaymentRefund))
+    assert order is not None and local_refund is not None
+    provider = DemoPaymentProvider(settings.app_secret_key, settings.public_base_url)
+    refund_body, refund_signature = provider.sign_webhook(
         {
-            "event_id": "evt-idempotent-1",
-            "type": "subscription.updated",
-            "subscription_id": purchase.json()["subscription_id"],
-            "status": "active",
+            "event_id": "evt-refund-replay-1",
+            "event": "refund.succeeded",
+            "object": {
+                "id": local_refund.external_refund_id,
+                "payment_id": order.external_payment_id,
+                "status": "succeeded",
+                "amount": {"value": "1.00", "currency": "RUB"},
+            },
         }
     )
-    headers = {"X-Demo-Signature": signature, "Content-Type": "application/json"}
-    assert (
-        client.post("/api/v1/payments/webhooks/demo", content=body, headers=headers).json()[
-            "status"
-        ]
-        == "processed"
+    webhook_headers = {
+        "X-Demo-Signature": refund_signature,
+        "Content-Type": "application/json",
+    }
+    assert client.post(
+        "/api/v1/payments/webhooks/demo",
+        content=refund_body,
+        headers=webhook_headers,
+    ).json()["status"] == "processed"
+    assert client.post(
+        "/api/v1/payments/webhooks/demo",
+        content=refund_body,
+        headers=webhook_headers,
+    ).json()["status"] == "already_processed"
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
     )
-    assert (
-        client.post("/api/v1/payments/webhooks/demo", content=body, headers=headers).json()[
-            "status"
-        ]
-        == "already_processed"
-    )
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
     client.close()
     session.close()
     app.dependency_overrides.clear()

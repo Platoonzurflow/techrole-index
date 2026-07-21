@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Check } from "lucide-react";
+import { safeApi } from "@/lib/api";
+import type { PaymentCatalog } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Тарифы",
@@ -24,13 +26,19 @@ const premium = [
   "CSV-экспорт и уведомления",
 ];
 
-export default function PricingPage() {
+function formatPrice(value: string, currency: string) {
+  return new Intl.NumberFormat("ru-RU", { style: "currency", currency }).format(Number(value));
+}
+
+export default async function PricingPage() {
+  const payments = await safeApi<PaymentCatalog>("/payments/products", { enabled: false, mode: "test", terms_version: "unavailable", products: [] });
+  const product = payments.products[0];
   return (
     <div className="shell py-14">
       <div className="mx-auto max-w-3xl text-center">
         <p className="eyebrow">Прозрачные тарифы</p>
         <h1 className="mt-3 text-4xl font-bold">Начните бесплатно, углубляйтесь с Premium</h1>
-        <p className="mt-4 text-lg text-muted">Платёжный провайдер пока не подключён. Активация Premium не списывает деньги и не запрашивает платёжные данные.</p>
+        <p className="mt-4 text-lg text-muted">{payments.enabled && payments.mode === "test" ? "Подключён безопасный тестовый режим: можно пройти весь сценарий, но реальные деньги не списываются." : payments.enabled ? "Сумму заказа рассчитывает сервер, а платёжные данные обрабатывает защищённая форма провайдера." : "Платёжный провайдер пока не включён. Сайт не списывает деньги и не запрашивает платёжные данные."}</p>
       </div>
       <div className="mx-auto mt-10 grid max-w-4xl gap-5 md:grid-cols-2">
         <article className="panel p-7">
@@ -42,10 +50,11 @@ export default function PricingPage() {
         </article>
         <article className="panel border-amber-400/40 p-7">
           <p className="eyebrow text-amber-600">Premium</p>
-          <h2 className="mt-3 text-3xl font-semibold">Доступ на 30 дней</h2>
-          <p className="mt-2 text-muted">Активация доступна в личном кабинете</p>
+          <h2 className="mt-3 text-3xl font-semibold">{product && payments.enabled ? formatPrice(product.amount, product.currency) : "Доступ на 30 дней"}</h2>
+          <p className="mt-2 text-muted">{payments.enabled && payments.mode === "test" ? "Тестовая цена, без реального списания" : "Активация доступна в личном кабинете"}</p>
           <ul className="mt-7 grid gap-3">{premium.map((item) => <li key={item} className="flex gap-2"><Check className="mt-1 shrink-0 text-positive" size={17} />{item}</li>)}</ul>
           <Link href="/account" className="button-primary mt-8 w-full">Открыть личный кабинет</Link>
+          <p className="mt-4 text-xs leading-5 text-muted">Продолжая оплату, пользователь принимает <Link className="underline" href="/legal/offer">условия оферты</Link> и подтверждает ознакомление с <Link className="underline" href="/legal/refunds">правилами возврата</Link>.</p>
         </article>
       </div>
     </div>

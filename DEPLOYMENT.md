@@ -6,6 +6,14 @@
 
 ## Production
 
+### Платежи
+
+До реальных списаний выполните отдельный checklist из [PAYMENTS.md](PAYMENTS.md). Tailscale Funnel не считается круглосуточным платежным ingress: он зависит от включённого Windows-компьютера. Нужен постоянный HTTPS origin, доступный webhook `/api/v1/payments/webhooks/yookassa`, законченный KYC/договор и кассовая схема.
+
+Безопасный локальный preview использует `PAYMENTS_PROVIDER=demo`, `PAYMENTS_MODE=test`, `PAYMENTS_LIVE_CONFIRMED=false` и `PAYMENTS_LEGAL_APPROVED=false`. Для test shop ЮKassa test `shopId` и secret хранятся только в `.env`/secret store. Миграция `0006` должна быть применена до запуска backend.
+
+Production guard требует отдельные live credentials, явные `PAYMENTS_LIVE_CONFIRMED=true` и `PAYMENTS_LEGAL_APPROVED=true`, утверждённую версию оферты, статус продавца, схему чеков и подтверждённый код НДС. Для НПД допускается только документированный ручной контур «Мой налог»; для ИП/компании — подключённая касса. Любое несовпадение завершает backend до приёма трафика.
+
 Для почтовой доставки обращений поддержки задайте `SUPPORT_EMAIL_ENABLED=true`, а для nightly-отчётов - `NIGHTLY_REPORT_EMAIL_ENABLED=true`. Оба контура используют `SUPPORT_RECIPIENT_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` и `SMTP_USE_SSL` через secret environment. Не помещайте SMTP-пароль в Compose-файл или образ. Темы различаются: `[TechRole Support]`, `[TechRole Mentorship]`, `[TechRole Nightly]`.
 
 1. На отдельном deployment-host скопировать `.env.example` в неотслеживаемый `.env` и заменить credentials. Обязательны новый `APP_SECRET_KEY` длиной от 32 символов, `POSTGRES_DB`, `POSTGRES_USER`, случайный `POSTGRES_PASSWORD` длиной от 16 символов и совпадающий URL-encoded `DATABASE_URL`.

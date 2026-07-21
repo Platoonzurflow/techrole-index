@@ -9,6 +9,20 @@ x-backend: &backend
   environment:
     DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://techrole:techrole@postgres:5432/techrole}
     REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    PAYMENTS_ENABLED: ${PAYMENTS_ENABLED:-false}
+    PAYMENTS_PROVIDER: ${PAYMENTS_PROVIDER:-demo}
+    PAYMENTS_MODE: ${PAYMENTS_MODE:-test}
+    PAYMENTS_LIVE_CONFIRMED: ${PAYMENTS_LIVE_CONFIRMED:-false}
+    PAYMENTS_LEGAL_APPROVED: ${PAYMENTS_LEGAL_APPROVED:-false}
+    PAYMENTS_TERMS_VERSION: ${PAYMENTS_TERMS_VERSION:-draft-2026-07-21}
+    PAYMENTS_SELLER_STATUS: ${PAYMENTS_SELLER_STATUS:-unconfirmed}
+    PAYMENTS_FISCALIZATION_MODE: ${PAYMENTS_FISCALIZATION_MODE:-disabled}
+    PREMIUM_30_DAYS_PRICE_RUB: ${PREMIUM_30_DAYS_PRICE_RUB:-1.00}
+    YOOKASSA_SHOP_ID: ${YOOKASSA_SHOP_ID:-}
+    YOOKASSA_SECRET_KEY: ${YOOKASSA_SECRET_KEY:-}
+    YOOKASSA_API_URL: ${YOOKASSA_API_URL:-https://api.yookassa.ru/v3}
+    YOOKASSA_TIMEOUT_SECONDS: ${YOOKASSA_TIMEOUT_SECONDS:-15}
+    YOOKASSA_VAT_CODE: ${YOOKASSA_VAT_CODE:-0}
     DAGSTER_HOME: /opt/dagster/dagster_home
     HOME: /opt/dagster
     DAGSTER_DISABLE_TELEMETRY: "1"
@@ -66,7 +80,7 @@ services:
 
   backend:
     <<: *backend
-    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload", "--reload-dir", "/app/app", "--reload-dir", "/app/alembic"]
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:

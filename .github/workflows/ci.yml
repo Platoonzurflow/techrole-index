@@ -74,6 +74,12 @@ jobs:
   compose-e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    env:
+      PAYMENTS_ENABLED: "true"
+      PAYMENTS_PROVIDER: demo
+      PAYMENTS_MODE: test
+      PAYMENTS_TERMS_VERSION: draft-ci
+      PREMIUM_30_DAYS_PRICE_RUB: "1.00"
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       - run: cp .env.example .env

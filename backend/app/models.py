@@ -344,6 +344,57 @@ class Subscription(Base, TimestampMixin):
     )
 
 
+class PaymentOrder(Base, TimestampMixin):
+    __tablename__ = "payment_orders"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    product_code: Mapped[str] = mapped_column(String(80), index=True)
+    provider: Mapped[str] = mapped_column(String(60), index=True)
+    external_payment_id: Mapped[str | None] = mapped_column(
+        String(160), nullable=True, unique=True
+    )
+    client_idempotency_key: Mapped[str] = mapped_column(String(64))
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    description: Mapped[str] = mapped_column(String(180))
+    terms_version: Mapped[str] = mapped_column(String(80))
+    terms_accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    confirmation_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    is_test: Mapped[bool] = mapped_column(Boolean, default=True)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    canceled_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+    __table_args__ = (
+        UniqueConstraint(
+            "user_id", "client_idempotency_key", name="uq_payment_order_user_idempotency"
+        ),
+    )
+
+
+class PaymentRefund(Base, TimestampMixin):
+    __tablename__ = "payment_refunds"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    public_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
+    payment_order_id: Mapped[int] = mapped_column(
+        ForeignKey("payment_orders.id"), index=True
+    )
+    provider: Mapped[str] = mapped_column(String(60), index=True)
+    external_refund_id: Mapped[str | None] = mapped_column(
+        String(160), nullable=True, unique=True
+    )
+    idempotency_key: Mapped[str] = mapped_column(String(64), unique=True)
+    status: Mapped[str] = mapped_column(String(32), index=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
+    currency: Mapped[str] = mapped_column(String(3))
+    reason: Mapped[str] = mapped_column(String(180))
+    succeeded_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+
 class Entitlement(Base, TimestampMixin):
     __tablename__ = "entitlements"
     id: Mapped[int] = mapped_column(primary_key=True)

@@ -46,6 +46,48 @@ def test_secure_production_settings_are_accepted() -> None:
     assert settings.demo_mode is False
 
 
+def test_live_payments_fail_closed_until_legal_and_fiscal_details_are_final() -> None:
+    base = {
+        "payments_enabled": True,
+        "payments_mode": "live",
+        "payments_provider": "yookassa",
+        "yookassa_shop_id": "shop-id",
+        "yookassa_secret_key": "production-key-placeholder",
+        "payments_live_confirmed": True,
+        "payments_legal_approved": True,
+        "payments_seller_status": "sole_proprietor",
+        "payments_fiscalization_mode": "yookassa",
+        "yookassa_vat_code": 1,
+    }
+    with pytest.raises(ValidationError, match="PAYMENTS_TERMS_VERSION"):
+        Settings(_env_file=None, **base)
+
+    configured = Settings(
+        _env_file=None,
+        **base,
+        payments_terms_version="offer-2026-07-21",
+    )
+    assert configured.payments_mode == "live"
+
+
+def test_live_self_employed_mode_cannot_claim_online_cash_register_fiscalization() -> None:
+    with pytest.raises(ValidationError, match="self_employed_manual"):
+        Settings(
+            _env_file=None,
+            payments_enabled=True,
+            payments_mode="live",
+            payments_provider="yookassa",
+            yookassa_shop_id="shop-id",
+            yookassa_secret_key="production-key-placeholder",
+            payments_live_confirmed=True,
+            payments_legal_approved=True,
+            payments_terms_version="offer-2026-07-21",
+            payments_seller_status="self_employed",
+            payments_fiscalization_mode="yookassa",
+            yookassa_vat_code=1,
+        )
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [

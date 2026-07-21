@@ -150,3 +150,31 @@ export interface User {
   role: "user" | "admin";
   access_level: "free" | "premium";
 }
+
+export interface PaymentProduct {
+  code: "premium_30_days";
+  name: string;
+  description: string;
+  amount: string;
+  currency: "RUB";
+  access_days: number;
+}
+
+export interface PaymentCatalog {
+  enabled: boolean;
+  provider?: "demo" | "yookassa";
+  mode: "test" | "live";
+  terms_version: string;
+  products: PaymentProduct[];
+}
+
+export interface PaymentOrder {
+  order_id: string;
+  product_code: "premium_30_days";
+  product_name: string;
+  status: "creating" | "pending" | "waiting_for_capture" | "succeeded" | "canceled" | "failed" | "refunded";
+  amount: string;
+  currency: "RUB";
+  confirmation_url?: string;
+  is_test: boolean;
+}

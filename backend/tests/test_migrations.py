@@ -23,6 +23,8 @@ def test_migration_up_and_down(tmp_path):
             "mentorship_requests",
             "currency_rate_snapshots",
             "observed_publication_metrics_daily",
+            "payment_orders",
+            "payment_refunds",
         } <= tables
         command.downgrade(config, "base")
         assert inspect(create_engine(database_url)).get_table_names() == ["alembic_version"]

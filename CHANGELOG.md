@@ -4,7 +4,9 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 
 ## [Unreleased]
 
-- No unreleased public changes yet.
+- Added a no-charge payment sandbox, server-priced 30-day Premium orders, auditable terms acceptance, idempotent webhooks/refunds and payment result pages.
+- Added a fail-closed YooKassa REST adapter and official-provider comparison; real charges remain disabled until owner KYC, legal/fiscal setup, stable hosting and explicit approval.
+- Updated Apache ECharts to 6.1.0 and forced patched PostCSS 8.5.19 after dependency audit.
 
 ## [0.1.0] - 2026-07-21
 
