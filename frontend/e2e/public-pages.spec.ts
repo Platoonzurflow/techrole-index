@@ -1,4 +1,15 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type APIRequestContext } from "@playwright/test";
+
+async function expectHealthyRoutes(request: APIRequestContext, routes: string[]) {
+  const batchSize = 8;
+  for (let start = 0; start < routes.length; start += batchSize) {
+    await Promise.all(routes.slice(start, start + batchSize).map(async (route) => {
+      const response = await request.get(route);
+      expect(response.status(), `${route} returned ${response.status()}`).toBeLessThan(400);
+    }));
+  }
+}
+
 test("public methodology is rendered and keyboard reachable", async ({ page }) => { await page.goto("/methodology"); await expect(page.getByRole("heading", { level: 1, name: /Методология/ })).toBeVisible(); await page.keyboard.press("Tab"); await expect(page.locator(":focus")).toBeVisible(); await expect(page.getByText("Midpoint", { exact: false }).first()).toBeVisible(); });
 
 test("public profession SSR contains seeded level metrics", async ({ page }) => {
@@ -195,10 +206,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
     "/open-data-daily.json", "/open-data-daily.csv", "/open-data-daily.csv-metadata.json", "/open-data-daily.schema.json",
     "/open-data-daily.croissant.json",
   ];
-  for (const route of publicRoutes) {
-    const response = await request.get(route);
-    expect(response.status(), `${route} returned ${response.status()}`).toBeLessThan(400);
-  }
+  await expectHealthyRoutes(request, publicRoutes);
 
   const aiIndex = await (await request.get("/ai-index.json")).json();
   expect(aiIndex.entities).toHaveLength(50);
@@ -380,9 +388,5 @@ test("public navigation and machine-readable endpoints have no broken links", as
     [...new Set(links.map((link) => (link as HTMLAnchorElement).getAttribute("href")!).filter(Boolean))],
   );
   expect(hrefs.length).toBeGreaterThanOrEqual(50);
-  for (const href of hrefs) {
-    if (href.startsWith("/api/")) continue;
-    const response = await request.get(href);
-    expect(response.status(), `${href} returned ${response.status()}`).toBeLessThan(400);
-  }
+  await expectHealthyRoutes(request, hrefs.filter((href) => !href.startsWith("/api/")));
 });
