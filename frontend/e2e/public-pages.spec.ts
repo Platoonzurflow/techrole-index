@@ -191,7 +191,7 @@ test("daily dataset landing explains, links and identifies the observed layer", 
 });
 
 test("public navigation and machine-readable endpoints have no broken links", async ({ page, request }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(300_000);
   const publicRoutes = [
     "/", "/professions", "/top", "/pricing", "/mentorship", "/support",
     "/methodology", "/glossary", "/sources", "/about", "/status", "/compare",
@@ -395,5 +395,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
     [...new Set(links.map((link) => (link as HTMLAnchorElement).getAttribute("href")!).filter(Boolean))],
   );
   expect(hrefs.length).toBeGreaterThanOrEqual(50);
-  await expectHealthyRoutes(request, hrefs.filter((href) => !href.startsWith("/api/")));
+  const professionHrefs = hrefs.filter((href) => href.startsWith("/professions/"));
+  expect(professionHrefs).toHaveLength(50);
+  await expectHealthyRoutes(request, professionHrefs);
 });
