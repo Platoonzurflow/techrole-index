@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProfessionCard } from "@/components/ProfessionCard";
 import { TrendBadge } from "@/components/TrendBadge";
@@ -103,14 +103,22 @@ describe("analytics components", () => {
 
   it("switches to the dark theme", () => {
     vi.stubGlobal("matchMedia", vi.fn(() => ({ matches: false })));
+    let initializeTheme: FrameRequestCallback | undefined;
     vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => {
-      callback(0);
+      initializeTheme = callback;
       return 1;
     });
     vi.stubGlobal("cancelAnimationFrame", vi.fn());
 
     render(<ThemeToggle />);
-    fireEvent.click(screen.getByRole("button", { name: "Включить тёмную тему" }));
+    const toggle = screen.getByRole("button", { name: "Включить тёмную тему" });
+    expect(toggle).toBeDisabled();
+    fireEvent.click(toggle);
+    expect(document.documentElement).not.toHaveClass("dark");
+
+    act(() => initializeTheme?.(0));
+    expect(toggle).toBeEnabled();
+    fireEvent.click(toggle);
 
     expect(document.documentElement).toHaveClass("dark");
     expect(localStorage.getItem("theme")).toBe("dark");
