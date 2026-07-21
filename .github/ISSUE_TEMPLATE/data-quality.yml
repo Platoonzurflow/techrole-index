@@ -1,0 +1,58 @@
+name: Ошибка качества данных
+description: Сообщить о воспроизводимой проблеме в публичном показателе или provenance
+title: "[data] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо за проверяемое сообщение. Не добавляйте персональные данные, приватные вакансии, cookies, токены или полные production logs.
+  - type: input
+    id: public_url
+    attributes:
+      label: Публичный URL TechRole Index
+      description: Страница или machine endpoint, где видна проблема.
+      placeholder: https://example.com/professions/data-engineer
+    validations:
+      required: true
+  - type: input
+    id: slice
+    attributes:
+      label: Срез данных
+      description: Профессия, регион, уровень и период, если применимо.
+      placeholder: data-engineer, Россия, Senior, 2026-07-01..2026-07-20
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Что наблюдается
+      description: Точное значение, статус, поле JSON или короткий фрагмент без персональных данных.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Что ожидалось
+      description: Объясните ожидаемый результат и почему текущий выглядит ошибочным.
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: Проверяемый первичный источник
+      description: Официальная документация/API/публикация, поддерживающая исправление.
+      placeholder: https://official.example/api/docs
+    validations:
+      required: true
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Подтверждения
+      options:
+        - label: Я не включил персональные данные, секреты или приватные материалы.
+          required: true
+        - label: Я различаю публикации вакансий и одновременно активные вакансии.
+          required: true
+        - label: Я указал gross/net/unknown, если вопрос относится к зарплате.
+          required: true

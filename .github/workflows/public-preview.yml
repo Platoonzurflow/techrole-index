@@ -1,0 +1,31 @@
+name: Public preview monitor
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: HTTPS origin to verify
+        required: false
+        default: https://win-702hpohbtiv.tail044b19.ts.net
+        type: string
+  schedule:
+    - cron: "27 5 * * *"
+
+concurrency:
+  group: public-preview-monitor
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  external-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      BASE_URL: ${{ inputs.base_url || 'https://win-702hpohbtiv.tail044b19.ts.net' }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Verify the public data and citation contracts
+        shell: pwsh
+        run: ./infra/windows/test-public-preview.ps1 -BaseUrl $env:BASE_URL

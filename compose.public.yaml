@@ -1,0 +1,52 @@
+services:
+  public-proxy:
+    image: techrole-index-frontend:production-check
+    profiles: ["public"]
+    working_dir: /proxy
+    command: ["node", "/proxy/public-proxy.mjs"]
+    environment:
+      HOSTNAME: 0.0.0.0
+      PORT: "3199"
+      UPSTREAM_URL: http://host.docker.internal:3100
+    volumes:
+      - ./infra/public-proxy.mjs:/proxy/public-proxy.mjs:ro
+    ports:
+      - "127.0.0.1:3199:3199"
+    depends_on:
+      public-frontend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3199/_proxy/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+    mem_limit: 128m
+    restart: unless-stopped
+
+  public-frontend:
+    image: techrole-index-frontend:production-check
+    profiles: ["public"]
+    working_dir: /app
+    command: ["node", "server.js"]
+    environment:
+      NODE_ENV: production
+      PORT: "3100"
+      HOSTNAME: 0.0.0.0
+      INTERNAL_API_URL: http://backend:8000
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3100}
+      NEXT_PUBLIC_DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-demo}
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-}
+    volumes:
+      - ${PUBLIC_BUILD_DIR:-./frontend/.next-public-live}/standalone:/app:ro
+    ports:
+      - "127.0.0.1:3100:3100"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3100/ai-index.json').then(async r=>{const b=await r.json();if(!r.ok||!Array.isArray(b.entities)||b.entities.length!==50)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    mem_limit: 768m
+    restart: unless-stopped

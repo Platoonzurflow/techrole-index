@@ -1,0 +1,57 @@
+{
+  "@context": "https://w3id.org/codemeta/3.1",
+  "@type": "SoftwareSourceCode",
+  "identifier": "https://github.com/Platoonzurflow/techrole-index",
+  "name": "TechRole Index",
+  "description": "A Russian-language catalog of 50 IT professions with transparent labor-market methodology, public observed vacancy-publication aggregates, portable dataset metadata, and server-side access controls.",
+  "applicationCategory": "Labor market analytics",
+  "codeRepository": "https://github.com/Platoonzurflow/techrole-index",
+  "continuousIntegration": "https://github.com/Platoonzurflow/techrole-index/actions",
+  "issueTracker": "https://github.com/Platoonzurflow/techrole-index/issues",
+  "readme": "https://github.com/Platoonzurflow/techrole-index#readme",
+  "url": "https://win-702hpohbtiv.tail044b19.ts.net",
+  "version": "0.1.0",
+  "dateCreated": "2026-07-17",
+  "dateModified": "2026-07-21",
+  "datePublished": "2026-07-21",
+  "developmentStatus": "active",
+  "programmingLanguage": [
+    "Python 3.12",
+    "TypeScript"
+  ],
+  "runtimePlatform": [
+    "Docker Compose",
+    "Node.js 22",
+    "PostgreSQL 16",
+    "Redis 7"
+  ],
+  "operatingSystem": [
+    "Linux",
+    "Windows"
+  ],
+  "keywords": [
+    "IT professions",
+    "labor market",
+    "salary methodology",
+    "vacancy publications",
+    "open data",
+    "Russia"
+  ],
+  "author": {
+    "@type": "Organization",
+    "name": "TechRole Index",
+    "email": "sqldevelopermoscow@yandex.com",
+    "url": "https://win-702hpohbtiv.tail044b19.ts.net/about"
+  },
+  "isSourceCodeOf": {
+    "@type": "SoftwareApplication",
+    "name": "TechRole Index",
+    "url": "https://win-702hpohbtiv.tail044b19.ts.net",
+    "applicationCategory": "Labor market analytics"
+  },
+  "relatedLink": [
+    "https://win-702hpohbtiv.tail044b19.ts.net/methodology",
+    "https://win-702hpohbtiv.tail044b19.ts.net/open-data-daily",
+    "https://win-702hpohbtiv.tail044b19.ts.net/citation"
+  ]
+}

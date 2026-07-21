@@ -1,0 +1,2 @@
+# Dagster stores local run history and schedule heartbeats under DAGSTER_HOME.
+# Production deployments can replace these defaults with external storage.

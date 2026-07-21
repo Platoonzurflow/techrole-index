@@ -1,0 +1,72 @@
+x-production-backend-environment: &production-backend-environment
+  APP_ENV: production
+  APP_SECRET_KEY: ${APP_SECRET_KEY:?APP_SECRET_KEY is required for production}
+  DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required for production}
+  DEMO_MODE: "false"
+  FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required for production}
+  PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required for production}
+
+services:
+  postgres:
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required for production}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required for production}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required for production}
+    ports: !reset []
+
+  migrate:
+    environment: *production-backend-environment
+    volumes: !reset []
+
+  seed:
+    environment: *production-backend-environment
+    volumes: !reset []
+
+  backend:
+    command: ["gunicorn", "-c", "gunicorn.conf.py", "-k", "uvicorn.workers.UvicornWorker", "-w", "2", "-b", "0.0.0.0:8000", "app.main:app"]
+    environment:
+      <<: *production-backend-environment
+      CATALOG_CACHE_ENABLED: "true"
+      PROMETHEUS_MULTIPROC_DIR: /tmp/prometheus
+    tmpfs:
+      - /tmp/prometheus:size=16m,mode=1777
+    ports: !reset []
+    volumes: !reset []
+
+  worker:
+    environment: *production-backend-environment
+    volumes: !reset []
+
+  scheduler:
+    environment: *production-backend-environment
+    volumes: !reset []
+
+  frontend:
+    build:
+      context: ./frontend
+      target: runner
+      args:
+        NEXT_PUBLIC_DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-live}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required for production}
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-live}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required for production}
+    command: ["node", "server.js"]
+    ports: !reset []
+    volumes: !reset []
+  redis:
+    ports: !reset []
+  dagster-webserver:
+    ports: !reset []
+    environment: *production-backend-environment
+    volumes: !override
+      - dagster_home:/opt/dagster/dagster_home
+  dagster-daemon:
+    environment: *production-backend-environment
+    volumes: !override
+      - dagster_home:/opt/dagster/dagster_home
+
+  caddy:
+    environment:
+      SITE_ADDRESS: ${SITE_ADDRESS:?SITE_ADDRESS is required for production}

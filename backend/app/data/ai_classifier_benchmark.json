@@ -1,0 +1,153 @@
+{
+  "schema_version": "1.0",
+  "description": "Synthetic Russian-language cases for the optional classifier. They contain no provider records or personal data.",
+  "thresholds": {
+    "schema_valid_rate": 1.0,
+    "slug_accuracy": 0.85,
+    "seniority_accuracy": 0.8,
+    "exact_accuracy": 0.75,
+    "abstention_accuracy": 1.0
+  },
+  "cases": [
+    {
+      "id": "python_backend_middle",
+      "title": "Программист серверных сервисов, middle",
+      "description": "Python, FastAPI, asyncio, PostgreSQL, разработка REST API",
+      "expected_slugs": ["python-developer"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "streaming_data_senior",
+      "title": "Старший специалист потоковой обработки данных",
+      "description": "Airflow, Kafka, Spark, ETL, DWH, проектирование пайплайнов данных",
+      "expected_slugs": ["data-engineer"],
+      "expected_seniorities": ["senior"]
+    },
+    {
+      "id": "analytics_dbt_middle",
+      "title": "Разработчик аналитических витрин, middle",
+      "description": "dbt, SQL, тесты качества, семантические модели, документация метрик",
+      "expected_slugs": ["analytics-engineer"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "ml_platform_middle",
+      "title": "Инженер платформы моделей, middle",
+      "description": "MLflow, model serving, feature store, мониторинг дрейфа, CI/CD моделей",
+      "expected_slugs": ["mlops-engineer"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "nlp_intern",
+      "title": "Стажёр по обработке естественного языка",
+      "description": "Transformers, токенизация, классификация текстов, named entity recognition",
+      "expected_slugs": ["nlp-engineer"],
+      "expected_seniorities": ["junior"]
+    },
+    {
+      "id": "computer_vision_middle",
+      "title": "Инженер систем распознавания изображений, middle",
+      "description": "OpenCV, object detection, сегментация изображений, PyTorch",
+      "expected_slugs": ["computer-vision-engineer"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "flutter_junior",
+      "title": "Младший разработчик кроссплатформенных мобильных приложений",
+      "description": "Dart, Flutter, Android, iOS, публикация мобильных приложений",
+      "expected_slugs": ["flutter-developer"],
+      "expected_seniorities": ["junior"]
+    },
+    {
+      "id": "soc_middle",
+      "title": "Специалист центра мониторинга, middle",
+      "description": "SIEM, разбор событий безопасности, triage инцидентов, SOC L2",
+      "expected_slugs": ["soc-analyst"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "pentest_senior",
+      "title": "Старший специалист по проверке защищённости",
+      "description": "Burp Suite, эксплуатация уязвимостей, red team, отчёты по проникновению",
+      "expected_slugs": ["penetration-tester"],
+      "expected_seniorities": ["senior"]
+    },
+    {
+      "id": "reliability_senior",
+      "title": "Старший инженер надёжности сервисов",
+      "description": "SLO, error budget, observability, on-call, incident response, Kubernetes",
+      "expected_slugs": ["sre"],
+      "expected_seniorities": ["senior"]
+    },
+    {
+      "id": "postgres_middle",
+      "title": "Администратор корпоративного PostgreSQL, middle",
+      "description": "PostgreSQL, репликация, PITR, pgBackRest, EXPLAIN, настройка запросов",
+      "expected_slugs": ["postgresql-dba"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "firmware_middle",
+      "title": "Инженер программного обеспечения микроконтроллеров, middle",
+      "description": "C, STM32, загрузчик, RTOS, JTAG, разработка микропрограмм",
+      "expected_slugs": ["firmware-engineer"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "solution_architecture",
+      "title": "Проектировщик интеграционной архитектуры",
+      "description": "Выбор архитектурных решений, интеграции, ADR, нефункциональные требования",
+      "expected_slugs": ["solution-architect"],
+      "expected_seniorities": [null]
+    },
+    {
+      "id": "non_it_support_abstain",
+      "title": "Специалист первой линии поддержки клиентов",
+      "description": "Ответы на обращения, консультации по тарифам, работа по скрипту",
+      "expected_slugs": [null],
+      "expected_seniorities": [null]
+    },
+    {
+      "id": "project_manager_abstain",
+      "title": "Менеджер проектов",
+      "description": "Сроки, бюджет, коммуникации с заказчиком, управление командой",
+      "expected_slugs": [null],
+      "expected_seniorities": [null]
+    },
+    {
+      "id": "accountant_1c_abstain",
+      "title": "Бухгалтер по учёту в 1С",
+      "description": "Первичная документация, акты, счета, сверка расчётов, без разработки",
+      "expected_slugs": [null],
+      "expected_seniorities": [null]
+    },
+    {
+      "id": "data_scientist_senior",
+      "title": "Старший исследователь данных",
+      "description": "Статистическое моделирование, эксперименты, Python, прогнозирование, causal inference",
+      "expected_slugs": ["data-scientist"],
+      "expected_seniorities": ["senior"]
+    },
+    {
+      "id": "manual_qa_junior",
+      "title": "Младший специалист по контролю качества ПО",
+      "description": "Ручные проверки, тест-кейсы, баг-репорты, регрессионное тестирование",
+      "expected_slugs": ["qa-manual"],
+      "expected_seniorities": ["junior"]
+    },
+    {
+      "id": "test_infrastructure_middle",
+      "title": "Инженер тестовой инфраструктуры, middle",
+      "description": "Python, Playwright, pytest, CI, разработка фреймворка автотестов",
+      "expected_slugs": ["qa-automation", "sdet"],
+      "expected_seniorities": ["middle"]
+    },
+    {
+      "id": "security_engineering_middle",
+      "title": "Инженер защитных механизмов, middle",
+      "description": "hardening, IAM, secrets management, threat modeling, безопасность Kubernetes",
+      "expected_slugs": ["security-engineer"],
+      "expected_seniorities": ["middle"]
+    }
+  ]
+}

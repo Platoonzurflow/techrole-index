@@ -1,0 +1,46 @@
+groups:
+  - name: techrole-backend
+    rules:
+      - alert: TechRoleBackendUnavailable
+        expr: up{job="techrole-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: TechRole backend is unavailable
+          description: Prometheus could not scrape the internal backend metrics endpoint for two minutes.
+
+      - alert: TechRoleHighErrorRate
+        expr: |
+          sum(rate(techrole_http_requests_total{status_class="5xx"}[5m]))
+          /
+          clamp_min(sum(rate(techrole_http_requests_total[5m])), 0.001)
+          > 0.05
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: TechRole backend 5xx rate is above 5%
+          description: The aggregate five-minute 5xx ratio stayed above 5% for ten minutes.
+
+      - alert: TechRoleHighP95Latency
+        expr: |
+          histogram_quantile(
+            0.95,
+            sum by (le) (rate(techrole_http_request_duration_seconds_bucket[5m]))
+          ) > 1.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: TechRole backend p95 latency is above 1.5 seconds
+          description: Aggregate p95 request duration stayed above 1.5 seconds for ten minutes.
+
+      - alert: TechRoleCacheErrors
+        expr: sum(rate(techrole_cache_operations_total{result="error"}[5m])) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: TechRole Redis cache errors detected
+          description: Cache operations are failing open; API responses may be slower while PostgreSQL remains authoritative.

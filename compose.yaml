@@ -1,0 +1,237 @@
+name: techrole-index
+
+x-backend: &backend
+  build:
+    context: ./backend
+  env_file:
+    - path: .env
+      required: false
+  environment:
+    DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg://techrole:techrole@postgres:5432/techrole}
+    REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+    DAGSTER_HOME: /opt/dagster/dagster_home
+    HOME: /opt/dagster
+    DAGSTER_DISABLE_TELEMETRY: "1"
+  volumes:
+    - ./backend:/app
+  depends_on:
+    postgres:
+      condition: service_healthy
+    redis:
+      condition: service_healthy
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-techrole}
+      POSTGRES_USER: ${POSTGRES_USER:-techrole}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-techrole}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 1g
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 384m
+    restart: unless-stopped
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  seed:
+    <<: *backend
+    command: ["python", "-m", "app.seed"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  backend:
+    <<: *backend
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    ports:
+      - "127.0.0.1:8000:8000"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    mem_limit: 1g
+
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "app.worker.celery_app", "worker", "--loglevel=INFO", "--concurrency=2"]
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.worker.celery_app inspect ping -d celery@$${HOSTNAME} --timeout=5"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    mem_limit: 1g
+
+  scheduler:
+    <<: *backend
+    command: ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=INFO", "--pidfile=/tmp/celerybeat.pid"]
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /tmp/celerybeat.pid || pgrep -f 'celery.*beat'"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    mem_limit: 512m
+
+  dagster-webserver:
+    <<: *backend
+    command: ["dagster-webserver", "-w", "workspace.yaml", "-h", "0.0.0.0", "-p", "3001"]
+    volumes:
+      - ./backend:/app
+      - dagster_home:/opt/dagster/dagster_home
+      - ./backend/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml:ro
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import socket; socket.create_connection(('localhost', 3001), 5).close()"]
+      interval: 15s
+      timeout: 6s
+      retries: 12
+    mem_limit: 1g
+
+  dagster-daemon:
+    <<: *backend
+    command: ["dagster-daemon", "run", "-w", "workspace.yaml"]
+    volumes:
+      - ./backend:/app
+      - dagster_home:/opt/dagster/dagster_home
+      - ./backend/dagster.yaml:/opt/dagster/dagster_home/dagster.yaml:ro
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+      dagster-webserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dagster-daemon", "liveness-check"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    mem_limit: 768m
+
+  dev-tests:
+    <<: *backend
+    profiles: ["local-dev"]
+    command: ["pytest"]
+    depends_on: []
+    mem_limit: 1g
+    restart: "no"
+
+  e2e:
+    image: mcr.microsoft.com/playwright:v1.61.1-noble
+    profiles: ["e2e"]
+    working_dir: /app
+    command: ["sh", "-lc", "corepack enable && pnpm install --frozen-lockfile && pnpm test:e2e"]
+    environment:
+      CI: "1"
+      PLAYWRIGHT_BASE_URL: http://frontend:3000
+      COREPACK_HOME: /tmp/corepack
+      COREPACK_DEFAULT_TO_LATEST: "0"
+    volumes:
+      - ./frontend:/app
+      - e2e_corepack:/tmp/corepack
+      - e2e_modules:/app/node_modules
+      - e2e_results:/app/test-results
+      - e2e_reports:/app/playwright-report
+    depends_on:
+      frontend:
+        condition: service_healthy
+    ipc: host
+    shm_size: 1gb
+    mem_limit: 2g
+    restart: "no"
+
+  frontend:
+    build:
+      context: ./frontend
+      target: dev
+    environment:
+      INTERNAL_API_URL: http://backend:8000
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3000}
+      NEXT_PUBLIC_DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-demo}
+      NEXT_PUBLIC_DAGSTER_URL: ${NEXT_PUBLIC_DAGSTER_URL:-http://localhost:3001}
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-}
+      NEXT_DIST_DIR: .next-dev
+    volumes:
+      - ./frontend:/app
+      - frontend_modules:/app/node_modules
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:3000').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+    mem_limit: 2g
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2-alpine
+    profiles: ["production"]
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      frontend:
+        condition: service_healthy
+    mem_limit: 256m
+    restart: unless-stopped
+
+  ollama-classifier:
+    image: curlimages/curl:8.10.1
+    profiles: ["ai"]
+    command: ["sh", "-c", "echo 'AI profile enabled; backend uses OLLAMA_BASE_URL only for uncertain records'; sleep infinity"]
+    mem_limit: 64m
+
+volumes:
+  postgres_data:
+  redis_data:
+  frontend_modules:
+  e2e_corepack:
+  e2e_modules:
+  e2e_results:
+  e2e_reports:
+  dagster_home:
+  caddy_data:
+  caddy_config:

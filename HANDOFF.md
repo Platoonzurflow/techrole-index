@@ -1,0 +1,644 @@
+# TechRole Index - полный handoff проекта
+
+Последнее обновление: 2026-07-20, Europe/Moscow.
+
+Этот файл предназначен для нового чата или разработчика, который продолжит проект без истории текущего диалога. Перед любыми изменениями необходимо полностью прочитать `AGENTS.md`, затем этот файл, `DECISIONS.md` и профильный документ из списка ниже.
+
+## 1. Что это за продукт
+
+TechRole Index - русскоязычный веб-сервис аналитики рынка IT-профессий. Пользователь изучает роли, сравнивает спрос, зарплаты и динамику по уровням Junior/Middle/Senior, смотрит индекс 0-100, технологический стек, рейтинг и историю показателей.
+
+Сервис также включает:
+
+- публичный каталог и индексируемые страницы 50 профессий;
+- бесплатный и Premium-доступ с серверным paywall;
+- сравнение 2-3 профессий, Premium-дашборд, CSV и уведомления;
+- регистрацию, авторизацию и личный кабинет;
+- административную панель;
+- заявку на персональное ведение до офера через почту;
+- страницу методологии, источников и статуса данных;
+- SEO, sitemap, robots.txt, расширенный JSON-LD, `/llms.txt`, `/llms-full.txt`, `/ai-index.json`, glossary и editorial policy.
+
+Важно: текущая базовая gross-витрина детерминированно подготовлена и не должна выдаваться за полностью актуальное состояние рынка. 2026-07-19 выполнен полный разрешённый 180-дневный проход отдельного real-provenance контура официального API «Работа России»; следующий nightly 2026-07-20 также завершился успешно. В актуальной БД 5 385 записей источника за 2026-01-21..2026-07-20, 1 052 записи классифицированы и 1 043 из них имеют зарплату. Эти 1 052 публикации материализованы в 691 изолированный daily SQL-срез версии `observed-publications-v1`; сумма витрины совпала с raw classified count при materialization, invalid slices и salary leaks ниже `n=20` равны нулю. Накопительный materialized dataset сохраняет собственный диапазон; rolling API на 2026-07-21 использует 180 полных UTC-дней 2026-01-23..2026-07-21 и содержит 1 040 классифицированных публикаций. Неизвестный gross/net не смешивается с основной gross-витриной. HH не включён и не вызывался.
+
+«Работа России» - самостоятельная государственная open-data база, а не данные hh.ru. На момент проверки официальный API сообщал 538 722 вакансии во всей базе. Для 17 узких профессий уверенных совпадений нет; нули оставлены честными. API не даёт статуса на каждый исторический день, поэтому 180-дневный ряд означает публикации по `creation-date`, а не одновременно активные вакансии.
+
+## 2. Где находится проект и что сейчас запущено
+
+Рабочий каталог Windows:
+
+`<workspace>\full-stack-data-engineer-ux-mvp`
+
+Локальные адреса:
+
+- сайт: `http://localhost:3000/`;
+- backend API: `http://localhost:8000/`;
+- Swagger/OpenAPI: `http://localhost:8000/docs`;
+- JSON OpenAPI: `http://localhost:8000/openapi.json`;
+- админ-панель: `http://localhost:3000/admin`;
+- Dagster: `http://localhost:3001`.
+
+На момент handoff контейнеры `frontend`, `backend`, `worker`, `scheduler`, `dagster-webserver`, `dagster-daemon`, `postgres` и `redis` настроены. PostgreSQL и Redis не опубликованы на host; наружу в local-dev доступны только `127.0.0.1:3000`, `127.0.0.1:3001` и `127.0.0.1:8000`. Dagster schedule называется `techrole_midnight_moscow`, cron `0 0 * * *`, timezone `Europe/Moscow`, default status `RUNNING`.
+
+Проект является Git-репозиторием на ветке `main`. Baseline commit `d2c6ed0` фиксирует исходное состояние; локальная identity записана как `Codex Agent <codex@localhost>`. `.env`, pnpm store, node_modules, Next dist, TypeScript cache, Celery schedule и backups игнорируются. Продолжение 2026-07-20 фиксируется отдельными проверенными commits, а не изменением baseline.
+
+## 3. Технологии
+
+Frontend:
+
+- Next.js 16, TypeScript, App Router;
+- React 19;
+- Tailwind CSS;
+- Lucide Icons;
+- Apache ECharts;
+- SSR публичных страниц;
+- Vitest + Testing Library;
+- Playwright E2E-сценарии.
+
+Backend:
+
+- Python 3.12;
+- FastAPI и автоматически формируемая OpenAPI;
+- SQLAlchemy 2;
+- Alembic;
+- Pydantic Settings;
+- PostgreSQL 16;
+- Redis 7;
+- Celery worker + Celery Beat;
+- Dagster 1.13 + dagster-webserver для nightly orchestration;
+- Argon2 через `pwdlib`, JWT в HttpOnly cookie.
+
+Инфраструктура:
+
+- Docker Compose;
+- отдельные контейнеры frontend/backend/worker/scheduler/PostgreSQL/Redis;
+- Caddy для production-профиля;
+- health checks и memory limits;
+- production overlay `compose.production.yaml`;
+- GPU не обязателен.
+
+## 4. Структура репозитория
+
+Корневые документы:
+
+- `README.md` - назначение, быстрый запуск, пользователи, команды и типовые проблемы;
+- `AGENTS.md` - обязательные команды и правила для агентов;
+- `ARCHITECTURE.md` - потоки и границы модулей;
+- `METHODOLOGY.md` - зарплаты, тренды, score и классификация;
+- `DECISIONS.md` - журнал архитектурных и продуктовых решений;
+- `SECURITY.md` - модель безопасности;
+- `DATA_SOURCES.md` - провайдеры и юридические ограничения;
+- `DEPLOYMENT.md` - local/production, backup и restore;
+- `HOSTING.md` - актуальная матрица бесплатного размещения, Funnel preview и путь на OCI/VPS;
+- `GROWTH.md` - белая стратегия индексации, цитирования и содержательного продвижения;
+- `CONTRIBUTING.md` и `.github/ISSUE_TEMPLATE` - правила проверяемого вклада и безопасное сообщение об ошибке данных;
+- `.env.example` - безопасный шаблон окружения;
+- `HANDOFF.md` - текущий файл.
+
+Backend:
+
+- `backend/app/domain/` - чистая бизнес-логика без I/O:
+  - `classifier.py` - объяснимая классификация профессии и seniority;
+  - `salary.py` - статистика зарплат и confidence;
+  - `trends.py` - окна 7/30/90 дней;
+  - `scoring.py` - формула индекса 0-100.
+- `backend/app/providers/` - интерфейсы источников:
+  - `vacancies.py` - `VacancyDataProvider`, `DemoVacancyProvider`, guarded `HhApiProvider`;
+  - `currency.py` - `CurrencyRateProvider`;
+  - `payments.py` - `PaymentProvider` и встроенная реализация;
+  - `ai.py` - `OptionalAiClassifier`;
+  - `analytics.py` - будущий `AnalyticsSink` для ClickHouse.
+- `backend/app/api/` - REST, auth, paywall, admin, payments и status;
+- `backend/app/models.py` - SQLAlchemy-модель всех таблиц;
+- `backend/app/schemas.py` - Pydantic-контракты;
+- `backend/app/security.py` - cookies, JWT, CSRF, пароли и rate limit;
+- `backend/app/seed.py` - детерминированные данные за 180 дней;
+- `backend/app/data/catalog.py` - каталог 50 профессий;
+- `backend/app/data/tech_stacks.py` - стек каждой профессии;
+- `backend/app/services/scoring_service.py` - пересчёт рейтинга;
+- `backend/app/worker.py` - Celery tasks/beat;
+- `backend/sql/` - понятные SQL-модели метрик и трендов;
+- `backend/alembic/` - миграции;
+- `backend/tests/` - backend unit/integration/API/paywall/migration tests.
+
+Frontend:
+
+- `frontend/app/` - маршруты App Router;
+- `frontend/components/` - переиспользуемые UI-компоненты;
+- `frontend/lib/api.ts` - server-side вызов FastAPI с передачей cookie;
+- `frontend/lib/types.ts` - TypeScript API types;
+- `frontend/lib/contact.ts` - контакт `sqldevelopermoscow@yandex.com`;
+- `frontend/app/globals.css` - темы, анимации и основная визуальная система;
+- `frontend/tests/components.test.tsx` - component tests;
+- `frontend/e2e/public-pages.spec.ts` - Playwright-сценарии;
+- `frontend/tsconfig.check.json` - стабильная проверка исходников без конфликтов generated Next types.
+
+Инфраструктура:
+
+- `compose.yaml` - local-dev;
+- `compose.production.yaml` - production overlay;
+- `frontend/Dockerfile`, `backend/Dockerfile`;
+- `infra/Caddyfile`.
+
+## 5. Реализованная модель данных
+
+Alembic-миграция создаёт:
+
+- `professions`;
+- `profession_aliases`;
+- `profession_categories`;
+- `seniority_levels`;
+- `regions`;
+- `vacancy_sources`;
+- `source_queries`;
+- `vacancies`;
+- `vacancy_skills`;
+- `vacancy_snapshots`;
+- `salary_observations`;
+- `currency_rate_snapshots`;
+- `profession_metrics_daily`;
+- `observed_publication_metrics_daily`;
+- `profession_scores_daily`;
+- `ingestion_runs`;
+- `scoring_versions`;
+- `users`;
+- `subscriptions`;
+- `entitlements`;
+- `payment_events`;
+- `audit_logs`;
+- `notification_rules`.
+
+Вакансия уникальна по `(source_id, external_id)`. Хранятся регион, валюта, gross/net, обе границы зарплаты, публикация, первое/последнее обнаружение, формат работы, remote, experience, профессия, seniority, confidence, источник и версия классификатора.
+
+## 6. Каталог и подготовленные данные
+
+Каталог содержит 50 профессий из исходного требования. У каждой есть:
+
+- русское и английское название;
+- slug;
+- категория;
+- уникальное описание;
+- поисковые алиасы;
+- типичный технологический стек;
+- Premium-флаг.
+
+Seed `20260717` воспроизводимо создаёт:
+
+- 50 профессий;
+- Junior/Middle/Senior;
+- Россия, Москва, Санкт-Петербург и другие регионы;
+- 180 дней метрик;
+- разные тренды роста/падения/нейтральной динамики;
+- вакансии с полной, частичной и отсутствующей зарплатой;
+- разные валюты;
+- редкие роли с недостаточной выборкой;
+- free, premium и admin пользователей;
+- активный scoring version.
+
+Demo-аккаунты технически используют email:
+
+- `free@example.com`;
+- `premium@example.com`;
+- `admin@example.com`.
+
+Пароли берутся только из локального `.env`: `DEMO_FREE_PASSWORD`, `DEMO_PREMIUM_PASSWORD`, `DEMO_ADMIN_PASSWORD`. Не переносить реальные пароли в код или клиентский bundle.
+
+## 7. Бизнес-логика
+
+### Классификация
+
+Порядок: Unicode/whitespace normalization -> aliases -> regex -> exclusions -> experience -> RU/EN seniority markers -> confidence.
+
+Lead, principal и architect не превращаются в Senior автоматически. Optional AI вызывается только для неопределённых вакансий и не является обязательным.
+
+### Зарплаты
+
+Срез: профессия x seniority x region x period x gross/net basis.
+
+Считаются vacancy count, salary count, coverage, median, average, P25, P75, медианы нижней/верхней границы, sample size и confidence. Midpoint создаётся только при двух границах. Gross/net не смешиваются. Минимум по умолчанию - 20 наблюдений.
+
+### Тренды
+
+Для 7/30/90 дней сравниваются средние текущего и предыдущего соседних окон. Порог:
+
+- рост: больше +3%;
+- нейтрально: от -3% до +3%;
+- падение: меньше -3%.
+
+Один день с предыдущим днём не сравнивается.
+
+### Индекс 0-100
+
+Версия `v1.0.0`:
+
+- спрос 30%;
+- зарплата 25%;
+- рост спроса 20%;
+- доступность для Junior 10%;
+- remote share 10%;
+- стабильность/качество данных 5%.
+
+Demand проходит `log1p`, экстремумы ограничиваются, ключевые компоненты переводятся в percentile rank. В БД сохраняются version, total и breakdown. Низкий confidence не скрывается.
+
+## 8. Публичные страницы и UX
+
+Реализованы:
+
+- `/` - главная;
+- `/professions` - каталог с query/category фильтрами;
+- `/professions/[slug]` - SSR-страница роли;
+- `/categories/[slug]` - страницы категорий;
+- `/top` - рейтинг;
+- `/compare` - сравнение;
+- `/dashboard` - Premium-дашборд;
+- `/pricing` - тарифы;
+- `/login`, `/register`, `/account`;
+- `/alerts`;
+- `/mentorship`;
+- `/support`;
+- `/methodology`;
+- `/research` и `/research.json`;
+- `/citation`, `/citation.json`, `/citation.bib`, `/citation.ris` и `/datapackage.json`;
+- `/sources`;
+- `/status`;
+- `/admin`;
+- `/robots.txt`, `/sitemap.xml`, `/llms.txt`.
+- `/manifest.webmanifest`, `/opengraph-image`, `/twitter-image` и `/icon.svg`.
+
+Главная получила оригинальный редизайн:
+
+- точный слоган «Сравните IT-профессии. Выберите направление по данным»;
+- jobs-first поиск;
+- недельный market pulse;
+- карточки профессий в стиле карьерного каталога;
+- светлую и тёмную тему;
+- оригинальную code-native карьерную сцену.
+
+Карьерная сцена написана HTML/CSS без чужих изображений и брендов. До взаимодействия персонаж сидит сутуло в худи и выглядит обеспокоенным. После hover/focus/tap он выпрямляется, меняет выражение, получает рубашку, галстук, пиджак, рабочую сумку, деньги и офер. Есть `prefers-reduced-motion`.
+
+Визуальные референсы Apple, Netflix и hh.ru использовались только на уровне общих паттернов: последовательная анимация, кинематографичная иерархия и jobs-first поиск. Логотипы, тексты, изображения, шрифты и фирменные композиции не копировались.
+
+Светлая тема реально осветляет шапку и hero. Мобильная версия проверена без горизонтального page overflow. Блок сравнения получил три пронумерованных picker-карточки и улучшенные select controls. Блок «Как устроена работа» сокращён до четырёх этапов.
+
+## 9. Личное ведение и поддержка
+
+Страница `/mentorship` описывает восьминедельную программу с нагрузкой около 20 часов в неделю. Четыре этапа:
+
+1. направление и план;
+2. навыки и практика;
+3. проекты и позиционирование;
+4. отклики и интервью.
+
+`MentorshipForm` отправляет данные на отдельный `/api/v1/mentorship/requests`: заявка сохраняется в `mentorship_requests`, получает номер и ставит `deliver_mentorship_request`. Письмо имеет префикс `[TechRole Mentorship]`. Офер не гарантируется - это явно указано на странице.
+
+Плавающая кнопка техподдержки ведёт на `/support`. Форма имеет собственный CSRF cookie, сохраняет обращение в `support_requests` и ставит `deliver_support_request`. Письмо имеет префикс `[TechRole Support]`. Обе формы используют Origin check, Redis rate limit и honeypot.
+
+## 10. Доступ, auth, Premium и платежи
+
+Состояния: anonymous, free, premium.
+
+- каталог и landing page всех профессий публичны;
+- около 70% ролей показывают базовую статистику;
+- Premium-роли публично отдают только title/description/teaser;
+- free history ограничена 30 днями;
+- public ranking ограничен top-3;
+- сравнение, полный рейтинг, dashboard, CSV и alerts требуют Premium.
+
+Paywall реализован backend-ом до сериализации. Premium-поля не скрываются CSS: они вообще не попадают в free JSON, SSR HTML, metadata и JSON-LD. Это покрыто тестами.
+
+Auth: Argon2 password hash, JWT HttpOnly/SameSite cookie, CSRF для mutation endpoints, rate limit login/register, RBAC admin/user.
+
+`PaymentProvider` не привязан к реальному acquiring. Текущая реализация создаёт идемпотентное событие и entitlement на 30 дней без списания. Есть webhook с HMAC verification и статусы trialing/active/past_due/canceled/expired. Реальный платёжный провайдер не выбран и не подключён.
+
+## 11. Административная панель
+
+Backend endpoints и UI позволяют:
+
+- редактировать профессию и Premium-флаг;
+- просматривать/добавлять aliases;
+- смотреть uncertain vacancies;
+- вручную исправлять классификацию;
+- запускать пересчёт и смотреть task state;
+- смотреть ingestion runs;
+- создавать scoring version с новыми весами;
+- блокировать пользователя;
+- выдавать Premium;
+- просматривать audit logs.
+
+Admin mutation endpoints защищены backend RBAC + CSRF. Действия записываются в `audit_logs`.
+
+## 12. Основные API
+
+Все API-маршруты имеют prefix `/api/v1`.
+
+Профессии:
+
+- `GET /open-data/publications`;
+- `GET /open-data/publication-metrics-daily`;
+- `GET /professions`;
+- `GET /categories`;
+- `GET /professions/{slug}`;
+- `GET /ranking`;
+- `GET /compare`;
+- `GET /dashboard`.
+
+Auth:
+
+- `POST /auth/register`;
+- `POST /auth/login`;
+- `POST /auth/logout`;
+- `GET /auth/me`.
+
+Premium:
+
+- `GET /export/professions/{slug}.csv`;
+- `GET/POST /alerts`;
+- `DELETE /alerts/{id}`.
+
+Service:
+
+- `GET /status`;
+- `GET /sources`;
+- `GET /support/csrf`;
+- `POST /support/requests`;
+- `GET /mentorship/csrf`;
+- `POST /mentorship/requests`;
+- `GET /health/ready`;
+- `GET /health/live` без `/api/v1`.
+
+Payments:
+
+- встроенная purchase-команда под `/payments`;
+- `POST /payments/webhooks/demo`.
+
+Admin: endpoints находятся под `/api/v1/admin/*`; точный контракт смотреть в Swagger.
+
+## 13. SEO и LLM discoverability
+
+Реализованы:
+
+- SSR публичных страниц;
+- metadata и canonical URL;
+- Open Graph;
+- sitemap и robots;
+- хлебные крошки;
+- JSON-LD `Occupation`, `Dataset`, `WebSite`, `Organization`, `BreadcrumbList`;
+- уникальные описания профессий;
+- категории и внутренние ссылки;
+- `/open-data-daily` с Dataset и Croissant 1.1 JSON-LD, полным словарём 27 JSON-полей и проверяемыми агрегатами; `/open-data-daily.schema.json` со строгим Draft 2020-12 контрактом; `/open-data-daily.croissant.json` и `/open-data-daily.csv-metadata.json` с 30 фактическими CSV-колонками, типами, ключом и provenance; `/catalog.jsonld` с W3C DCAT 3 Catalog/Dataset/distributions/DataService; `/llms.txt`, `/.well-known/llms.txt`, `/llms-full.txt`, `/ai-index.json`, `/open-data.json`, `/open-data.csv`, `/open-data-daily.json`, `/open-data-daily.csv` и RSS с машинным описанием, открытыми salary slices и правилами интерпретации;
+- `/citation` с CSL-JSON/BibTeX/RIS/Data Package и `/research` с динамическим обзором официального 180-дневного слоя;
+- `/data-status` и `/data-status.json`: подготовленная gross-витрина и официальный исторический слой разделены в SSR, JSON и на каждой profession page; `current_market_claim=false` для обоих;
+- `data-status` дополнительно показывает диапазон, число срезов, публикаций и версию инкрементальной SQL-материализации официального слоя;
+- `/insights`, двенадцать `TechArticle` страниц и `/insights.json`: весь утверждённый editorial backlog покрыт уникальными методическими разборами, связанными с RSS, sitemap, Data Package, AI/LLM indexes; каждая статья публикует Highwire meta и собственные `/cite/csl-json`, `/cite/bibtex`, `/cite/ris`;
+- оригинальные Open Graph/Twitter preview, web manifest и SVG favicon;
+
+Это улучшает машинную читаемость, но не гарантирует позицию в поиске или цитирование LLM. Premium-значения не добавляются в публичные машинные представления.
+
+## 14. Источники и юридическое ограничение
+
+`DemoVacancyProvider` включён по умолчанию. `HhApiProvider` подготовлен, но обязан оставаться выключенным, пока одновременно не заданы:
+
+- `HH_ENABLED=true`;
+- `HH_COMMERCIAL_USE_CONFIRMED=true`;
+- `HH_CONTACT_EMAIL`;
+- `HH_APP_NAME`;
+- при необходимости официальный access token.
+
+HhApiProvider использует только официальный API, одну страницу до 100 записей за вызов, корректный HH-User-Agent и не обходит rate limit, CAPTCHA или глубину выдачи. HTML scraping, прокси-ротация и чужие логотипы запрещены.
+
+Флаг не является юридическим разрешением. Коммерческое использование данных API может требовать письменного разрешения правообладателя. Нельзя утверждать, что такое разрешение получено, пока у владельца проекта нет подтверждающего документа.
+
+## 15. Ollama и AI
+
+На Windows доступен Ollama `0.32.1` по `127.0.0.1:11434`. Ранее установленная `mistral:7b` не прошла constrained-проверку. 2026-07-18 дополнительно установлена `qwen3.6:27b` Q4_K_M, 17 ГБ, 27.8B параметров, Apache-2.0.
+
+Холодная 4K-проверка `qwen3.6:27b` завершилась правильным структурированным ответом за 79 секунд: load 55.66 с, prompt 3.00 токена/с, output 1.46 токена/с. `ollama ps` показывал 70% CPU / 30% GPU; использовалось около 30.92 ГБ RAM и 7666 MiB VRAM. После замера выполнен `ollama stop qwen3.6:27b`, RAM/VRAM освобождены, модель осталась установленной.
+
+Локальный `.env` указывает `OLLAMA_MODEL=qwen3.6:27b` и включает AI-assist для nightly-pipeline. Docker-контейнер успешно классифицировал тестовый title как `nlp-engineer`. Это не интерактивный runtime: основной классификатор остаётся объяснимым rule-based, AI вызывается максимум для 3 неопределённых записей за run, проверяет slug/seniority, получает confidence cap 0.79 и выгружается после обработки.
+
+2026-07-21 добавлен воспроизводимый benchmark из 20 синтетических русскоязычных кейсов: близкие data/AI/infra/security/QA-роли, явный и отсутствующий seniority, три обязательных abstention на support/project-manager/бухгалтере 1С. Провайдер теперь передаёт Ollama строгий JSON Schema с enum 50 разрешённых slug и независимо валидирует ответ Pydantic с `extra=forbid`. `qwen3.6:27b` прошла schema/slug/seniority/exact `20/20` и abstention `3/3` за 276,4 с; первый холодный кейс — 40,2 с, остальные 10–14 с. Отчёт сохранён в игнорируемом `outputs/ai-classifier-qwen3.6-27b-20260721.json`, после завершения `ollama ps` пуст. Benchmark остаётся synthetic guardrail, а не разрешением включать AI в основной путь или повышать cap/лимит.
+
+## 16. Docker и важное исправление массового 404
+
+2026-07-18 все страницы `/professions/[slug]` начали возвращать стандартный Next.js 404, хотя backend `GET /api/v1/professions/{slug}` отвечал 200.
+
+Причина: dev-сервер и локальные production-проверки писали route manifests в пересекающийся bind-mounted `.next`. После build dev manifest перестал видеть динамический route.
+
+Исправление:
+
+- в `compose.yaml` frontend получил `NEXT_DIST_DIR=.next-dev`;
+- production продолжает использовать стандартный `.next`;
+- `frontend/tsconfig.check.json` проверяет исходники независимо от generated directories;
+- `tsconfig.json` исключает `.next-dev` и `.next-*`;
+- frontend-контейнер пересоздан.
+
+После исправления автоматически проверены все 50 slug: `CHECKED=50 FAILED=0`, каждый вернул HTTP 200 и SSR-контейнер `profession-page`.
+
+Не убирать разделение `.next-dev`/`.next`. Это регрессионно важное решение №23 в `DECISIONS.md`.
+
+## 17. Проверки на момент handoff
+
+Backend внутри контейнера:
+
+- Ruff: passed;
+- mypy: passed, 47 source files;
+- pytest: `74 passed`, 4 warnings.
+
+Frontend:
+
+- ESLint: passed;
+- source TypeScript: passed;
+- Vitest: `36 passed`;
+- Next.js production build: passed, 56 generated static page artifacts, включая 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
+- отдельные production-check Docker images frontend/backend: built and smoke-tested, HTTP 200;
+- Playwright Chromium profile: `26 passed` после добавления CSVW. Сценарии включают 50 profession links, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, пять conditional `304`, сверку каждой из 691 строк, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, основные формы/селекты, 11 accessibility/reduced-motion проверок и 4 lab performance budgets;
+- независимый `csvw 4.1.0` типизированно прочитал все 691 строк по опубликованной metadata: 30 колонок, 691 уникальный составной primary key, duplicate `0`; daily CSV публикуется как UTF-8 без BOM для совместимости CSVW, отдельный aggregate CSV не менялся;
+- DCAT JSON-LD дополнительно разобран независимым `rdflib 7.1.4`: 62 RDF-триплета, по одному Catalog, Dataset и DataService, две Distribution; endpoint локально отвечает `200` и strong SHA-256 ETag;
+- официальный `mlcroissant 1.1.0`: validate завершился `Done`, loader скачал объявленный CSV и типизированно прочитал первые три записи всех 30 полей; отсутствие checksum для `isLiveDataset=true` распознано штатно;
+- hosted CI после запуска Compose устанавливает закреплённый `mlcroissant==1.1.0`, повторяет validate и загрузку первых трёх записей до Playwright;
+- sitemap-driven public audit: `85 checked, 0 failed` через текущий внешний HTTPS preview; для каждого canonical HTML URL проверены status/content-type, уникальные title/description, canonical, один h1, `lang=ru`, отсутствие `noindex` и валидность всего JSON-LD;
+- те же 11 accessibility/reduced-motion сценариев отдельно прошли на immutable production standalone через постоянный public proxy;
+- production lab после исправления assets: в повторных проходах максимум TTFB/FCP/LCP составил `51/140/444 ms`, CLS везде `0`, theme event duration `48-64 ms`; это локальный guardrail, не field p75;
+- все публичные маршруты скомпилированы;
+- smoke crawl: 18 основных маршрутов и 50 страниц профессий, ошибок `0`;
+- browser smoke: форма поддержки зарегистрировала заявку, Celery обработал её, тестовая запись удалена;
+- чистый browser reload `/support`: heading/form по одному экземпляру, console errors `0`;
+- `docker compose up --build -d`: миграция/seed завершились с code 0, восемь постоянных сервисов, включая Dagster webserver/daemon, healthy;
+- Compose config: passed;
+- все 50 profession detail SSR routes: passed.
+- внешний production-preview smoke после CSVW/DCAT: homepage/canonical/security headers, 11 CSS/JS assets, 50 AI-сущностей, 50 Dataset, 151 aggregate CSV-строка, 691 daily JSON record, 692 daily CSV-строки, 27-field Draft 2020-12 schema и соответствие каждой строки, CSVW и Croissant 1.1 с 30 фактическими CSV-полями, DCAT с двумя distributions, SHA-256 ETag/Last-Modified и шесть conditional `304`, канонический Dataset landing, 2 provenance-слоя, 12 editorial insights, все 12 Article pages и 12 per-article CSL records, 50 LLM-описаний, dataset citation CSL, research aggregate, 85 sitemap URL, 85-КБ Open Graph PNG и backend readiness - passed. По скачанным с внешнего HTTPS URL точным bytes `csvw 4.1.0` прочитал 691 строку / 691 уникальный ключ, а `rdflib` разобрал DCAT в 64 RDF-триплета. Официальный `mlcroissant 1.1.0` повторно завершил validate, скачал CSV без BOM и типизированно прочитал запись всех 30 полей. Изолированная симуляция недоступного backend подтвердила `503`, `Retry-After: 60` и `Cache-Control: no-store` для daily exports;
+- постоянный loopback `public-proxy` на 3199 пережил force-recreate standalone upstream на 3100; позднее анонимный localhost.run ротировал hostname внутри живого PID, поэтому добавлен refresh последнего URL из логов с историей previous URLs;
+- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; отдельный immutable `.next-public-tsnet` с 23 browser assets / 1 789 953 bytes собран с этим canonical, все десять сервисов healthy, полный внешний smoke прошёл. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
+- canonical Dataset JSON-LD дополнительно сверён с актуальной документацией Google Dataset Search: самоцитирование удалено из предназначенного для связанных научных работ `Dataset.citation`, а identifier/creator/publisher/canonical URL и отдельные citation formats сохранены; целевой Playwright-сценарий, ESLint и TypeScript прошли;
+- `CITATION.cff` исправлен по CFF 1.2 (`preferred-citation.type=data` при верхнеуровневом GitHub `type=dataset`) и независимо прошёл `cffconvert 2.0.0 --validate`; отдельный CI job повторяет эту проверку на hosted runner;
+- Gitleaks 8.30.1 повторно просканировал всю локальную историю и одно-коммитную очищенную `public-main`: `no leaks found`. Allowlist переименован в автоматически обнаруживаемый `.gitleaks.toml`, поэтому одинаковая узкая политика применяется локально и в GitHub Action без скрытого CLI-флага;
+- Compose default/public/production/observability configs и GitHub Actions/Dependabot YAML - passed;
+- rendered production security contract на синтетических credentials - passed: один HTTPS origin в backend/frontend build/runtime/Caddy, 7 backend-сервисов с `APP_ENV=production`/`DEMO_MODE=false`, без bind-mount `/app`, только Caddy публикует 80/443; отдельный PostgreSQL bootstrap smoke создал 50 reference professions при `users=metrics=vacancies=enabled_demo_sources=0` и затем удалил временную БД/роль;
+- Prometheus `/metrics`: standard text format, privacy/cardinality tests passed; временный Gunicorn с 2 workers агрегировал 30 запросов из 4 multiprocess-файлов без пользовательских `@`;
+- Redis catalog/detail cache: miss→hit, SHA-256 key без slug/query, TTL 119 секунд; при pause Redis detail API ответил 200 за 621 мс и Redis вернулся healthy;
+- миграция `0004` применена; официальный CBR snapshot на 2026-07-20 сохранён для USD/EUR/KZT с effective date 2026-07-18;
+- миграция `0005` применена; PostgreSQL full refresh создал 691 observed-publication slice для 1 052 классифицированных публикаций, повторный overlap refresh обработал только 7 дней, stale/invalid/leaked slices равны 0;
+- rolling research/provenance window выровнено по 180 полным UTC-календарным дням: schema `1.2` публикует полуоткрытые timestamp-границы, а live catalog и provenance оба дают 1 040 классифицированных публикаций за 2026-01-23..2026-07-21;
+- 2026-07-21 новый PostgreSQL custom backup (3 864 514 bytes) создан с SHA-256 manifest и действительно восстановлен `infra/windows/test-postgres-restore.ps1` в изолированную БД: revision `0005`, 26 public tables, 50 professions, 108 000 prepared metric rows, 691 observed slices, 5 535 vacancies и 3 users. После проверки временная БД и container archive удалены; основная БД не останавливалась.
+
+В локальном in-app browser проверены:
+
+- новая главная;
+- светлая/тёмная тема;
+- карьерная сцена и её settled state;
+- `/compare` и три селекта;
+- `/mentorship` и четыре этапа;
+- мобильная ширина: `scrollWidth === clientWidth`.
+
+Playwright запускается из отдельного профиля на официальном Chromium-образе. Команда `docker compose --profile e2e run --rm e2e` прошла все 24 сценария. Для доступа к HMR внутри Compose в `allowedDevOrigins` разрешён только внутренний hostname `frontend`; production CSP и публичные origins не расширены. `npm run audit:public` читает sitemap запущенного экземпляра и отдельно проверяет все 84 canonical HTML URL; шаг включён в compose-e2e job GitHub Actions. Четыре performance-сценария сохраняют TTFB/FCP/LCP/CLS/event duration как attachments и используют lab budgets с запасом.
+
+## 18. Команды
+
+Полный local-dev:
+
+```powershell
+cd "<workspace>\full-stack-data-engineer-ux-mvp"
+docker compose up --build -d
+docker compose ps
+```
+
+Пересоздать только frontend после изменения Compose environment:
+
+```powershell
+docker compose up -d --force-recreate frontend
+```
+
+Миграции и seed:
+
+```powershell
+docker compose run --rm migrate alembic upgrade head
+docker compose run --rm seed python -m app.seed --force
+```
+
+Backend checks:
+
+```powershell
+docker compose exec -T backend sh -lc "ruff check . && mypy app && pytest"
+```
+
+Frontend checks:
+
+```powershell
+docker compose exec -T frontend sh -lc "npm run lint && npm run typecheck && npm test"
+docker compose exec -T frontend npm run build
+```
+
+Compose validation:
+
+```powershell
+docker compose config --quiet
+```
+
+Production:
+
+```powershell
+docker compose -f compose.yaml -f compose.production.yaml --profile production up --build -d
+```
+
+Worker/scheduler:
+
+```powershell
+docker compose up worker scheduler
+```
+
+## 19. Типовые проблемы среды
+
+### PowerShell profile
+
+При каждом escalated Docker-вызове Windows может печатать ошибку загрузки `Documents\WindowsPowerShell\profile.ps1`, потому что script execution отключён. Если сама Docker-команда имеет exit code 0, это предупреждение не влияет на проект.
+
+### Docker Hub EOF/TLS
+
+Во время первой установки Docker были ошибки получения token/blob с Docker Hub (`EOF`, TLS handshake). `curl` к registry сначала не проходил, затем вернул ожидаемый 401 и `docker pull` заработал. Это была сеть/TLS Docker Desktop, не код проекта.
+
+2026-07-19 повторная сборка production Docker image остановилась на `HEAD node:22-alpine` с тем же внешним `registry-1.docker.io: EOF`. При этом локальный `next build`, TypeScript, lint, Vitest, backend suite и E2E прошли; Compose production config валиден. Для полного image rebuild нужно повторить команду после восстановления Docker Hub connectivity.
+
+2026-07-20 Docker Hub снова оборвал HEAD базового Python image и две загрузки `prom/prometheus:v3.5.0`. `prometheus-client` установлен в текущий dev-контейнер, проверен и сохранён локальным fallback image `techrole-index-backend:latest`; обычный воспроизводимый build описан `pyproject.toml` и должен заменить fallback после восстановления registry. Prometheus Compose/YAML/alerts валидны, но сам Prometheus-контейнер из-за внешнего EOF ещё не запущен.
+
+2026-07-21 после production hardening Docker Hub снова вернул EOF на metadata/token для `node:22-alpine` и `caddy:2-alpine`; повторный `docker pull node:22-alpine` также завершился на registry manifest HEAD. Dockerfile build args и rendered Compose проверены, обычные Next production builds прошли, но новый production image tag нужно повторно собрать после восстановления registry.
+
+### Generated Next types
+
+Next build может автоматически дописывать custom dist type paths в `tsconfig.json` и import в `next-env.d.ts`. Для проверок используется `tsconfig.check.json`. После экспериментальных custom-dist builds нужно вернуть `next-env.d.ts` к двум reference-строкам, а `tsconfig.json` - к `.next/types/**/*.ts`. Обычный production build теперь можно запускать отдельно от `.next-dev`.
+
+### Next standalone browser assets
+
+Сам каталог `<dist>/standalone` не включает `<dist>/static`: без отдельной подготовки HTML и JSON отвечают 200, но `/_next/static/*` возвращает 404, CSS отсутствует, React не гидратируется и CLS растёт. После каждой custom-dist сборки обязательно запускайте `NEXT_DIST_DIR=<тот же каталог> npm run prepare:standalone` до переключения `PUBLIC_BUILD_DIR`. Скрипт копирует static и optional `public`, а внешний `test-public-preview.ps1` запрашивает все CSS/JS главной страницы.
+
+### Playwright
+
+Добавлен отдельный профиль `e2e` на официальном образе `mcr.microsoft.com/playwright:v1.61.1-noble`. Он не запускается в обычном окружении и вызывается командой `docker compose --profile e2e run --rm e2e`. Chromium и зависимости изолированы от Alpine frontend runtime.
+
+## 20. Что ещё не готово
+
+- официальный open-data API «Работа России» подключён: реальные публикации и salary midpoint видны отдельным публичным слоем и инкрементально материализованы, но неизвестный gross/net намеренно не преобразуется в gross-витрину;
+- юридическое разрешение на коммерческое использование данных hh.ru не подтверждено;
+- официальный CBR currency provider подключён отдельным контуром и локально включён: migration `0004`, snapshots USD/EUR/KZT, requested/effective date и Dagster op. Эти rates ещё не применяются к несовместимому gross/net слою автоматически;
+- реальный payment provider не выбран;
+- Yandex SMTP и IMAP работают; пять писем Support/Mentorship/Nightly подтверждены во входящих, две сохранённые заявки доставлены. Пароль остаётся только в локальном `.env`;
+- Tailscale работает на ПК и iPhone. Firewall ограничен tailnet, но TCP 3389 ещё не слушает: владелец должен один раз повторно запустить исправленный `infra/windows/enable-private-remote-access.ps1` от администратора и получить `ListenerReady=True`;
+- production Compose теперь fail closed проверяет secrets/URLs/DB credentials, удаляет source mounts/лишние ports и безопасно bootstrap-ит пустую БД без demo data; сам deployment, постоянный домен, TLS и внешняя observability ещё не настроены;
+- перед публичным Git push Gitleaks 8.30.1 проверил все 20 commits: точечно разрешён только synthetic production-settings fixture, повторный scan сообщает `no leaks found`; SHA-pinned workflow `secret-scan.yml` готов повторять проверку;
+- auth rate limit перенесён в Redis, HMAC-хеширует IP и fail-closed в production;
+- Prometheus-compatible HTTP metrics, multiprocess Gunicorn storage, loopback-only Prometheus profile и alerts down/5xx/p95/cache-errors добавлены; внешний Alertmanager/Sentry/OpenTelemetry collector ещё не подключён;
+- ClickHouse только предусмотрен интерфейсом;
+- `qwen3.6:27b` прошла structured-output, live Docker-provider и воспроизводимый 20-case domain benchmark; перед расширением AI-assist всё ещё нужна размеченная holdout-выборка будущих реальных uncertain records без персональных данных;
+- Git repository инициализирован, baseline commit создан; удалённый origin и публичный репозиторий ещё не настроены;
+- GitHub Actions/Dependabot добавлены локально, но до появления remote не выполнялись на hosted runner;
+- стабильный для этой машины production-like preview доступен через Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` к постоянному local proxy; актуальная проверенная конфигурация хранится в `%LOCALAPPDATA%\TechRoleIndex\public-funnel-status.json`. Это beta/host-dependent адрес, не замена отдельному production-host и собственному домену;
+- `infra/windows/start-public-funnel.ps1` повторно проходит идемпотентно и доверяет структурированному `tailscale funnel status --json`, а не одному exit code команды настройки. Cloudflare Quick Tunnel сохранён только как аварийный временный fallback и тоже направляется на proxy 3199.
+
+## 21. Рекомендуемый дальнейший план
+
+Приоритет P0:
+
+1. Настроить удалённый Git origin и шифрованную off-host копию; локальные baseline commit и PostgreSQL backup с автоматическим полным restore-test уже созданы.
+2. Зафиксировать допустимые production-условия использования API «Работа России» и отдельно документированное право для любого будущего коммерческого источника.
+3. Publication-date materialization и quality gate выполнены отдельным Dagster op; дальше нужна только юридически и методически подтверждённая gross/net-нормализация перед любым переносом зарплат в prepared слой. CBR snapshots работают отдельно.
+4. Выполнено: UI, profession SSR, `data-status.json` и CSV разделяют `prepared_baseline` и `observed_historical`, не подменяя статус свежей датой.
+5. Production secret/Compose contract подготовлен и проверен на синтетических credentials; дальше на отдельном host создать пустую БД, заполнить реальный `.env`, выбрать постоянный домен и проверить Caddy TLS. Local demo volume намеренно не подходит.
+
+Приоритет P1:
+
+1. Опубликовать Git remote и проверить добавленный GitHub Actions workflow на hosted runner; локальный Playwright E2E profile уже подключён к YAML.
+2. Выбрать законного платёжного провайдера, реализовать отдельный adapter и webhook contract tests.
+3. Определить срок хранения обращений и процедуру ротации SMTP app password; раздельная доставка Support/Mentorship/Nightly уже проверена.
+4. Prometheus-compatible метрики и локальные alert rules выполнены; дальше выбрать внешний Alertmanager-канал и при необходимости Sentry/OpenTelemetry collector.
+5. После стабильного домена настроить Search Console/Webmaster, IndexNow key и содержательные внешние публикации; временные tunnel URL не регистрировать.
+
+Приоритет P2:
+
+1. Redis cache каталога/detail, изолированные incremental SQL transforms, публичные daily JSON/CSV/Schema exports и HTTP validators выполнены; следующий шаг - измерить query/cache нагрузку и долю `304` после стабильного трафика и только затем усложнять storage.
+2. Рассмотреть ClickHouse только после фактической нагрузки.
+3. Провести benchmark локальных моделей; AI оставлять только вспомогательным механизмом uncertain records.
+4. Accessibility, lab performance budgets и полный SEO crawl автоматизированы и проходят на local/public preview; после стабильного production domain остаются полевые p75 Core Web Vitals/RUM и повторный внешний crawl на каноническом host.
+
+## 22. Продуктовые предпочтения владельца
+
+- интерфейс должен быть живым, а не выглядеть как типичный «нейронный» шаблон;
+- стиль - современный аналитический и карьерный сервис, с анимациями, но понятный новичкам;
+- светлая тема должна быть заметно светлой;
+- на главной нужен точный продуктовый смысл, а не абстрактный рекламный слоган;
+- навязчивая маркировка «демо» не должна резать глаз, но нельзя вводить пользователя в заблуждение о происхождении данных;
+- выбор профессий должен выглядеть как полноценный продуктовый инструмент;
+- контакт поддержки и личного ведения: `sqldevelopermoscow@yandex.com`;
+- длинные тире в пользовательском тексте ранее заменялись на короткие;
+- шапка должна оставаться компактной, «Личное ведение» - в одну строку;
+- Premium нельзя реализовывать только визуальным скрытием.
+
+## 23. Инструкция следующему чату
+
+1. Прочитать `AGENTS.md`, `HANDOFF.md`, `DECISIONS.md`.
+2. Проверить `docker compose ps` и `docker compose config --quiet`.
+3. Не удалять и не сбрасывать пользовательские файлы; Git существует, поэтому сначала проверить `git status` и baseline history.
+4. Не включать HH и не вызывать его API без всех guard-переменных и подтверждённого законного основания.
+5. Для изменений доступа обязательно запускать paywall tests и проверять отсутствие Premium-полей в free JSON/HTML.
+6. Публичные profession pages должны оставаться SSR и индексируемыми.
+7. Не возвращать frontend dev cache с `.next-dev` на общий `.next`.
+8. После изменений выполнить обязательные команды из `AGENTS.md`, production build и пропорциональный browser smoke-test.
+9. Любое новое важное предположение добавить в `DECISIONS.md`.

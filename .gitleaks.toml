@@ -1,0 +1,10 @@
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Known synthetic production-settings fixture, scoped to one rule and one exact line."
+condition = "AND"
+targetRules = ["generic-api-key"]
+regexTarget = "line"
+regexes = ['''^\s*"app_secret_key": "prod-secret-0123456789-abcdefghijklmnop",\s*$''']
+paths = ['''^backend/tests/test_production_config[.]py$''']
