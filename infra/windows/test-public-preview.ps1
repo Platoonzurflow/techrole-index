@@ -79,17 +79,32 @@ if ($openDataCsv.StatusCode -ne 200 -or $openDataCsv.Headers['Content-Type'] -no
 }
 
 $provenance = Invoke-Utf8Json -Uri "$BaseUrl/data-status.json"
-if ($provenance.layers.Count -ne 2 -or @($provenance.layers | Where-Object { $_.current_market_claim -ne $false }).Count -ne 0) {
+$layerIds = @($provenance.layers | ForEach-Object { $_.id })
+if (
+    $provenance.layers.Count -ne 3 -or
+    @($provenance.layers | Where-Object { $_.current_market_claim -ne $false }).Count -ne 0 -or
+    @('prepared_analytics', 'official_publications', 'salary_benchmarks' | Where-Object { $layerIds -notcontains $_ }).Count -ne 0
+) {
     throw 'Data provenance verification failed.'
 }
 $officialLayer = $provenance.layers | Where-Object { $_.id -eq 'official_publications' }
+$salaryLayer = $provenance.layers | Where-Object { $_.id -eq 'salary_benchmarks' }
 if (
-    $provenance.schema_version -ne '1.2' -or
+    $provenance.schema_version -ne '1.3' -or
     $officialLayer.window_time_basis -ne 'UTC_calendar_days' -or
     $officialLayer.window_start_at -notmatch 'T00:00:00(?:Z|\+00:00)$' -or
     $officialLayer.window_end_at_exclusive -notmatch 'T00:00:00(?:Z|\+00:00)$'
 ) {
     throw 'UTC calendar-window provenance verification failed.'
+}
+if (
+    $salaryLayer.status -ne 'public_reference' -or
+    $salaryLayer.profession_count -ne 50 -or
+    ($salaryLayer.direct_professions + $salaryLayer.related_professions + $salaryLayer.category_only_professions) -ne 50 -or
+    $salaryLayer.latest_total_sample_size -ne 45226 -or
+    @($salaryLayer.source_urls).Count -lt 3
+) {
+    throw 'Salary benchmark provenance verification failed.'
 }
 if ($officialLayer.classified_publications -gt 0 -and (
     $officialLayer.materialized_slice_count -le 0 -or

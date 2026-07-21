@@ -35,6 +35,22 @@ class Settings(BaseSettings):
     yookassa_api_url: str = "https://api.yookassa.ru/v3"
     yookassa_timeout_seconds: float = Field(default=15, ge=3, le=60)
     yookassa_vat_code: int = Field(default=0, ge=0, le=12)
+    robokassa_merchant_login: str = ""
+    robokassa_password1: str = ""
+    robokassa_password2: str = ""
+    robokassa_password3: str = ""
+    robokassa_hash_algorithm: str = "sha256"
+    robokassa_payment_url: str = "https://auth.robokassa.ru/Merchant/Payment/Index"
+    robokassa_op_state_url: str = (
+        "https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt"
+    )
+    robokassa_refund_url: str = (
+        "https://services.robokassa.ru/RefundService/Refund/Create"
+    )
+    robokassa_refund_state_url: str = (
+        "https://services.robokassa.ru/RefundService/Refund/GetState"
+    )
+    robokassa_timeout_seconds: float = Field(default=15, ge=3, le=60)
 
     cbr_currency_enabled: bool = False
     cbr_currency_base_url: str = "https://www.cbr.ru/scripts/XML_daily.asp"
@@ -97,8 +113,8 @@ class Settings(BaseSettings):
             raise ValueError(
                 "Email delivery requires SMTP_HOST, SMTP_USERNAME and SMTP_PASSWORD"
             )
-        if self.payments_provider not in {"demo", "yookassa"}:
-            raise ValueError("PAYMENTS_PROVIDER must be demo or yookassa")
+        if self.payments_provider not in {"demo", "yookassa", "robokassa"}:
+            raise ValueError("PAYMENTS_PROVIDER must be demo, yookassa or robokassa")
         if self.payments_mode not in {"test", "live"}:
             raise ValueError("PAYMENTS_MODE must be test or live")
         if self.payments_seller_status not in {
@@ -115,17 +131,37 @@ class Settings(BaseSettings):
             "disabled",
             "self_employed_manual",
             "yookassa",
+            "robokassa",
             "third_party",
         }:
             raise ValueError(
                 "PAYMENTS_FISCALIZATION_MODE must be disabled, self_employed_manual, "
-                "yookassa or third_party"
+                "yookassa, robokassa or third_party"
             )
         if self.payments_enabled and self.payments_provider == "yookassa" and not (
             self.yookassa_shop_id and self.yookassa_secret_key
         ):
             raise ValueError(
                 "YooKassa payments require YOOKASSA_SHOP_ID and YOOKASSA_SECRET_KEY"
+            )
+        if self.robokassa_hash_algorithm.lower() not in {
+            "md5",
+            "sha1",
+            "sha256",
+            "sha384",
+            "sha512",
+        }:
+            raise ValueError(
+                "ROBOKASSA_HASH_ALGORITHM must match a supported shop algorithm"
+            )
+        if self.payments_enabled and self.payments_provider == "robokassa" and not (
+            self.robokassa_merchant_login
+            and self.robokassa_password1
+            and self.robokassa_password2
+        ):
+            raise ValueError(
+                "Robokassa payments require ROBOKASSA_MERCHANT_LOGIN, "
+                "ROBOKASSA_PASSWORD1 and ROBOKASSA_PASSWORD2"
             )
         if self.payments_mode == "live":
             if not self.payments_live_confirmed:
@@ -142,24 +178,65 @@ class Settings(BaseSettings):
                 raise ValueError("Live payments require a confirmed seller status")
             if self.payments_fiscalization_mode == "disabled":
                 raise ValueError("Live payments require a fiscalization mode")
-            if (
-                self.payments_seller_status == "self_employed"
-                and self.payments_fiscalization_mode != "self_employed_manual"
-            ):
-                raise ValueError(
-                    "Self-employed live payments require self_employed_manual fiscalization"
+            if self.payments_seller_status == "self_employed":
+                required_mode = (
+                    "robokassa"
+                    if self.payments_provider == "robokassa"
+                    else "self_employed_manual"
                 )
+                if self.payments_fiscalization_mode != required_mode:
+                    raise ValueError(
+                        f"Self-employed live payments require {required_mode} fiscalization"
+                    )
             if self.payments_seller_status in {"sole_proprietor", "company"} and (
-                self.payments_fiscalization_mode not in {"yookassa", "third_party"}
+                self.payments_fiscalization_mode
+                not in {"yookassa", "robokassa", "third_party"}
             ):
                 raise ValueError(
                     "Sole proprietors and companies require a configured online cash register"
                 )
             if (
-                self.payments_fiscalization_mode in {"yookassa", "third_party"}
+                self.payments_fiscalization_mode == "yookassa"
                 and self.yookassa_vat_code == 0
             ):
                 raise ValueError("Live receipt fiscalization requires YOOKASSA_VAT_CODE")
+            if self.payments_provider == "robokassa":
+                if not self.robokassa_password3:
+                    raise ValueError("Robokassa live refunds require ROBOKASSA_PASSWORD3")
+                official_urls = {
+                    "ROBOKASSA_PAYMENT_URL": (
+                        self.robokassa_payment_url,
+                        "https://auth.robokassa.ru/Merchant/Payment/Index",
+                    ),
+                    "ROBOKASSA_OP_STATE_URL": (
+                        self.robokassa_op_state_url,
+                        "https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt",
+                    ),
+                    "ROBOKASSA_REFUND_URL": (
+                        self.robokassa_refund_url,
+                        "https://services.robokassa.ru/RefundService/Refund/Create",
+                    ),
+                    "ROBOKASSA_REFUND_STATE_URL": (
+                        self.robokassa_refund_state_url,
+                        "https://services.robokassa.ru/RefundService/Refund/GetState",
+                    ),
+                }
+                for setting_name, (actual, expected) in official_urls.items():
+                    if actual.rstrip("/") != expected:
+                        raise ValueError(f"Live Robokassa requires official {setting_name}")
+                if (
+                    self.payments_seller_status in {"sole_proprietor", "company"}
+                    and self.payments_fiscalization_mode == "robokassa"
+                ):
+                    raise ValueError(
+                        "Robokassa fiscalization for sole proprietors and companies "
+                        "requires a separately implemented VAT-aware receipt contract"
+                    )
+            if (
+                self.payments_provider == "yookassa"
+                and self.yookassa_api_url.rstrip("/") != "https://api.yookassa.ru/v3"
+            ):
+                raise ValueError("Live YooKassa requires the official YOOKASSA_API_URL")
         if self.app_env.lower() == "production":
             errors: list[str] = []
             if self.demo_mode:

@@ -1,6 +1,7 @@
 import re
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
+from fastapi.responses import PlainTextResponse
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -161,13 +162,15 @@ async def refund_payment(
     )
 
 
-async def _webhook(provider_code: str, request: Request, db: Session) -> dict[str, str]:
+async def _webhook(
+    provider_code: str, request: Request, db: Session
+) -> dict[str, str] | PlainTextResponse:
     if not settings.payments_enabled or settings.payments_provider != provider_code:
         raise HTTPException(status_code=404, detail="Webhook is not configured")
     provider = get_payment_provider()
     body = await request.body()
     try:
-        status = await process_webhook(
+        result = await process_webhook(
             db,
             provider=provider,
             body=body,
@@ -179,7 +182,9 @@ async def _webhook(provider_code: str, request: Request, db: Session) -> dict[st
         raise HTTPException(status_code=422, detail="Webhook does not match the server order") from exc
     except PaymentProviderError as exc:
         raise HTTPException(status_code=502, detail="Provider verification failed") from exc
-    return {"status": status}
+    if result.acknowledgement is not None:
+        return PlainTextResponse(result.acknowledgement)
+    return {"status": result.status}
 
 
 @router.post("/webhooks/demo")
@@ -190,3 +195,8 @@ async def demo_webhook(request: Request, db: Session = Depends(get_db)):
 @router.post("/webhooks/yookassa")
 async def yookassa_webhook(request: Request, db: Session = Depends(get_db)):
     return await _webhook("yookassa", request, db)
+
+
+@router.post("/webhooks/robokassa")
+async def robokassa_webhook(request: Request, db: Session = Depends(get_db)):
+    return await _webhook("robokassa", request, db)

@@ -1,13 +1,18 @@
-# Бесплатное размещение TechRole Index
+# Постоянный домен и размещение TechRole Index
 
-Актуальность условий проверена 2026-07-21 по официальной документации провайдеров. Free tier меняется, поэтому перед переносом нужно повторно сверить лимиты.
+Актуальность условий и публичных цен проверена 2026-07-22 по официальным страницам провайдеров. Тарифы меняются, поэтому итоговую сумму нужно повторно сверить в корзине до оплаты.
 
 ## Короткий вывод
 
-Для текущего полного стека нет добросовестного serverless-варианта «навсегда бесплатно» без существенной переделки или риска потери данных. Практический маршрут состоит из двух этапов:
+Для текущего полного стека нет добросовестного serverless-варианта «навсегда бесплатно» без существенной переделки или риска потери данных. Конкретный недорогой вариант для владельца из России:
 
-1. Публичный стабильный preview через Tailscale Funnel на уже работающем Windows-host. Адрес `*.ts.net` не меняется при перезапуске Funnel, TLS выдаётся автоматически, наружу проксируется только `127.0.0.1:3199`.
-2. Полноценный 24/7-host на OCI Always Free Ampere A1 либо на платном VPS. Канонический домен лучше держать в Cloudflare и направлять через named Tunnel или обычный Caddy DNS/IP route.
+1. Домен `techrole.ru`: на момент WHOIS-проверки 22.07.2026 свободен. У Timeweb регистрация `.ru` показана как 200 ₽, продление — 399 ₽; у Beget — 199/420 ₽. Разница в 1 ₽ несущественна, поэтому практичнее Timeweb с более дешёвым продлением. Доступность может измениться в любую минуту.
+2. VPS Timeweb Cloud `2 vCPU / 4 ГБ / 50 ГБ` в российском регионе: официальный конфигуратор показал вариант от 721 ₽/месяц; московский вариант того же размера — 1 000 ₽/месяц. Для текущего production-набора этого достаточно: контейнеры без Next dev занимают около 1 ГБ RAM, но нужен swap и сборка через CI.
+3. До покупки продолжать использовать Tailscale Funnel только как preview. Он бесплатен и даёт HTTPS, но webhook и сайт пропадут при выключении домашнего ПК.
+
+Итого минимальный проверенный бюджет первого года — примерно 8 852 ₽: домен 200 ₽ + 12 × 721 ₽. Это ориентир без акций, резервных копий и возможных платных опций.
+
+FunPay для домена не выбран: подтверждённого предложения официального регистратора дешевле 199–200 ₽ не найдено, а покупка домена или аккаунта у посредника создаёт риск, что владельцем/администратором в реестре останется продавец. Домен нужно регистрировать лично на свои паспортные данные в аккаунте аккредитованного регистратора.
 
 Tailscale Funnel остаётся beta, имеет не настраиваемый bandwidth limit и зависит от включённого ПК. Его нельзя выдавать за отказоустойчивый production, но он заметно надёжнее вращающегося анонимного `*.lhr.life` preview. Официальные ограничения: [Tailscale Funnel](https://tailscale.com/docs/features/tailscale-funnel) и [CLI](https://tailscale.com/docs/reference/tailscale-cli/funnel).
 
@@ -17,11 +22,13 @@ Tailscale Funnel остаётся beta, имеет не настраиваемы
 |---|---|---|---|
 | Tailscale Funnel | HTTPS `*.ts.net` на всех планах | Beta, только tailnet-domain, bandwidth limit, домашний host должен работать | Немедленный стабильный публичный preview |
 | Cloudflare Tunnel | Zero Trust Free заявлен как `$0 forever`; tunnel создаёт outbound-only соединение без открытых inbound ports | Для нормального hostname нужен собственный домен в Cloudflare; у free plan нет production SLA | Предпочтительный ingress после появления домена |
-| Oracle Cloud Always Free | Ampere A1 суммарно до 2 OCPU/12 ГБ RAM и 200 ГБ block storage в home region | Нужны регистрация с телефоном/картой; возможен `out of host capacity`; idle VM может быть изъята | Лучший найденный `$0` VM-host для полного Compose |
+| Timeweb Cloud | Российский VPS 2 vCPU/4 ГБ/50 ГБ от 721 ₽/месяц по конфигуратору 22.07.2026 | Платный; внешний backup оплачивается/настраивается отдельно | Основной недорогой production-вариант |
+| Beget VPS | 2 vCPU/4 ГБ/40 ГБ — 33 ₽/день плюс публичный IPv4 5 ₽/день, около 1 140 ₽ за 30 дней | Дороже Timeweb для выбранной конфигурации | Резервный российский VPS |
+| Oracle Cloud Always Free | Ampere A1 может дать бесплатные ресурсы в поддерживаемом home region | Нужны личная регистрация, карта и доступная ёмкость; аккаунт/регион для владельца из РФ не подтверждены, idle VM может быть изъята | Только необязательная попытка, не план запуска |
 | Render Free | Free web service и 1 ГБ PostgreSQL | PostgreSQL истекает через 30 дней, без backup; free filesystem ephemeral | Не использовать для основной БД |
 | Koyeb Free | Один web instance: 0,1 vCPU, 512 МБ RAM, 2 ГБ SSD | Засыпает через час, без worker service и persistent volume; docs прямо не рекомендуют production | Не подходит полному стеку |
 
-Источники: [Cloudflare Free plan](https://www.cloudflare.com/plans/zero-trust-services/), [Cloudflare named Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/), [Cloudflare outbound connectivity](https://developers.cloudflare.com/cloudflare-one/networks/connectivity-options/), [OCI Free Tier](https://docs.oracle.com/iaas/Content/FreeTier/freetier.htm), [OCI Always Free resources](https://docs.oracle.com/en-us/iaas/Content/FreeTier/freetier_topic-Always_Free_Resources.htm), [Render Free](https://render.com/docs/free), [Koyeb Free instance](https://www.koyeb.com/docs/reference/instances).
+Источники: [домены Timeweb](https://timeweb.com/ru/services/domains/), [домены Beget](https://beget.com/ru/domains), [VPS Timeweb Cloud](https://timeweb.cloud/services/cloud-servers), [VPS Beget](https://beget.com/ru/vps), [Cloudflare Free plan](https://www.cloudflare.com/plans/zero-trust-services/), [Cloudflare named Tunnel](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/), [OCI Free Tier](https://docs.oracle.com/iaas/Content/FreeTier/freetier.htm), [Render Free](https://render.com/docs/free), [Koyeb Free instance](https://www.koyeb.com/docs/reference/instances).
 
 ## Этап 1: стабильный Funnel preview
 
@@ -53,14 +60,15 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\infra\windows\test-public-
 
 Если для диагностики параллельно запускался Cloudflare Quick Tunnel, после переключения canonical остановите только записанный им процесс: `powershell -NoProfile -ExecutionPolicy Bypass -File .\infra\windows\stop-public-quick-tunnel.ps1`. Скрипт сверяет PID и полный путь `cloudflared.exe`, отмечает runtime status остановленным и не изменяет Tailscale Funnel.
 
-## Этап 2: OCI Always Free или VPS
+## Этап 2: домен и VPS
 
-1. Создать чистую Ubuntu VM, предпочтительно Ampere A1 с 2 OCPU/12 ГБ, и отдельный SSH key.
-2. Разрешить inbound только 22 с административного IP и 80/443 для Caddy. PostgreSQL, Redis, backend и Dagster наружу не публиковать.
-3. Установить Docker Engine/Compose из официального репозитория, скопировать Git checkout и новый `.env` без demo credentials.
-4. Перенести dump и обязательно прогнать `test-postgres-restore.ps1` до переключения DNS; на Linux выполнить эквивалентный isolated restore drill.
-5. Запустить production overlay, проверить fail-closed validator, health endpoints, nightly schedule, SMTP и backup.
-6. Только после внешнего smoke переключить домен, отправить sitemap, IndexNow и начать содержательное продвижение.
+1. Лично зарегистрировать `techrole.ru` на свои данные; не покупать чужой аккаунт регистратора. Включить двухфакторную защиту и запрет/подтверждение трансфера.
+2. Создать чистую Ubuntu 24.04 VM минимум с 2 vCPU/4 ГБ/40–50 ГБ и отдельным SSH key. Добавить 2–4 ГБ swap; собирать immutable frontend в CI, чтобы не держать Next build на production постоянно.
+3. Разрешить inbound только 22 с административного IP и 80/443 для Caddy. PostgreSQL, Redis, backend и Dagster наружу не публиковать.
+4. Установить Docker Engine/Compose из официального репозитория, скопировать Git checkout и новый `.env` без demo credentials.
+5. Перенести dump и обязательно прогнать isolated restore drill до переключения DNS.
+6. Запустить production overlay, проверить fail-closed validator, health endpoints, nightly schedule, SMTP, webhook и backup.
+7. Только после внешнего smoke переключить домен, отправить sitemap, IndexNow и начать содержательное продвижение.
 
 Always Free не означает SLA. Нужны внешний uptime monitor, зашифрованный off-host backup и план переноса на другой host.
 

@@ -25,6 +25,10 @@ celery_app.conf.update(
             "task": "app.worker.retry_mentorship_deliveries",
             "schedule": 60 * 60,
         },
+        "reconcile-payment-refunds": {
+            "task": "app.worker.reconcile_payment_refunds",
+            "schedule": 60 * 5,
+        },
     },
 )
 
@@ -215,3 +219,14 @@ def retry_mentorship_deliveries() -> dict:
     for mentorship_id in mentorship_ids:
         deliver_mentorship_request.delay(mentorship_id)
     return {"status": "queued", "count": len(mentorship_ids)}
+
+
+@celery_app.task(name="app.worker.reconcile_payment_refunds")
+def reconcile_payment_refunds() -> dict:
+    import asyncio
+
+    from app.database import SessionLocal
+    from app.services.payments import reconcile_pending_refunds
+
+    with SessionLocal() as db:
+        return asyncio.run(reconcile_pending_refunds(db))

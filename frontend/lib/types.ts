@@ -221,7 +221,7 @@ export interface PaymentProduct {
 
 export interface PaymentCatalog {
   enabled: boolean;
-  provider?: "demo" | "yookassa";
+  provider?: "demo" | "yookassa" | "robokassa";
   mode: "test" | "live";
   terms_version: string;
   products: PaymentProduct[];

@@ -8,11 +8,11 @@
 
 ### Платежи
 
-До реальных списаний выполните отдельный checklist из [PAYMENTS.md](PAYMENTS.md). Tailscale Funnel не считается круглосуточным платежным ingress: он зависит от включённого Windows-компьютера. Нужен постоянный HTTPS origin, доступный webhook `/api/v1/payments/webhooks/yookassa`, законченный KYC/договор и кассовая схема.
+До реальных списаний выполните отдельный checklist из [PAYMENTS.md](PAYMENTS.md). Tailscale Funnel не считается круглосуточным платёжным ingress: он зависит от включённого Windows-компьютера. Для основного варианта нужен постоянный HTTPS origin с webhook `/api/v1/payments/webhooks/robokassa`, законченный KYC/договор и подключённые «Робочеки СМЗ».
 
-Безопасный локальный preview использует `PAYMENTS_PROVIDER=demo`, `PAYMENTS_MODE=test`, `PAYMENTS_LIVE_CONFIRMED=false` и `PAYMENTS_LEGAL_APPROVED=false`. Для test shop ЮKassa test `shopId` и secret хранятся только в `.env`/secret store. Миграция `0006` должна быть применена до запуска backend.
+Безопасный локальный preview использует `PAYMENTS_PROVIDER=demo`, `PAYMENTS_MODE=test`, `PAYMENTS_LIVE_CONFIRMED=false` и `PAYMENTS_LEGAL_APPROVED=false`. Для test shop Robokassa MerchantLogin и тестовые Пароли №1/№2 хранятся только в `.env`/secret store; Password3 нужен только live refund API. Миграция `0006` должна быть применена до запуска backend.
 
-Production guard требует отдельные live credentials, явные `PAYMENTS_LIVE_CONFIRMED=true` и `PAYMENTS_LEGAL_APPROVED=true`, утверждённую версию оферты, статус продавца, схему чеков и подтверждённый код НДС. Для НПД допускается только документированный ручной контур «Мой налог»; для ИП/компании — подключённая касса. Любое несовпадение завершает backend до приёма трафика.
+Production guard требует отдельные live credentials, явные `PAYMENTS_LIVE_CONFIRMED=true` и `PAYMENTS_LEGAL_APPROVED=true`, утверждённую версию оферты, статус продавца и схему чеков. Для подтверждённого НПД + Robokassa обязателен `PAYMENTS_FISCALIZATION_MODE=robokassa`; для резервной ЮKassa — ручной контур «Мой налог». Robokassa live принимает только официальные payment/refund endpoints и отдельный Password3. VAT-aware Robokassa receipts для ИП/компании намеренно заблокированы до отдельной реализации. Любое несовпадение завершает backend до приёма трафика.
 
 Для почтовой доставки обращений поддержки задайте `SUPPORT_EMAIL_ENABLED=true`, а для nightly-отчётов - `NIGHTLY_REPORT_EMAIL_ENABLED=true`. Оба контура используют `SUPPORT_RECIPIENT_EMAIL`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM_EMAIL` и `SMTP_USE_SSL` через secret environment. Не помещайте SMTP-пароль в Compose-файл или образ. Темы различаются: `[TechRole Support]`, `[TechRole Mentorship]`, `[TechRole Nightly]`.
 

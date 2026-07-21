@@ -1,5 +1,7 @@
+import hashlib
 from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
+from urllib.parse import urlencode
 
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine, select
@@ -343,6 +345,25 @@ def enable_demo_payments(monkeypatch):
     monkeypatch.setattr(settings, "payments_terms_version", "draft-test")
 
 
+def enable_robokassa_test_payments(monkeypatch):
+    monkeypatch.setattr(settings, "payments_enabled", True)
+    monkeypatch.setattr(settings, "payments_provider", "robokassa")
+    monkeypatch.setattr(settings, "payments_mode", "test")
+    monkeypatch.setattr(settings, "premium_30_days_price_rub", Decimal("1.00"))
+    monkeypatch.setattr(settings, "payments_terms_version", "draft-test")
+    monkeypatch.setattr(settings, "robokassa_merchant_login", "test-merchant")
+    monkeypatch.setattr(settings, "robokassa_password1", "test-password-one")
+    monkeypatch.setattr(settings, "robokassa_password2", "test-password-two")
+    monkeypatch.setattr(settings, "robokassa_password3", "")
+    monkeypatch.setattr(settings, "robokassa_hash_algorithm", "sha256")
+    monkeypatch.setattr(
+        settings,
+        "robokassa_payment_url",
+        "https://auth.robokassa.test/Merchant/Payment/Index",
+    )
+    monkeypatch.setattr(settings, "payments_fiscalization_mode", "disabled")
+
+
 def create_demo_order(client):
     return client.post(
         "/api/v1/payments",
@@ -495,6 +516,59 @@ def test_demo_webhook_rejects_bad_signature_amount_and_replays(monkeypatch):
     )
     assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
     assert len(session.scalars(select(PaymentEvent)).all()) == 2
+    assert (
+        len(
+            session.scalars(
+                select(Entitlement).where(Entitlement.source == f"payment:{order.public_id}")
+            ).all()
+        )
+        == 1
+    )
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_robokassa_result_url_rejects_tampering_and_acknowledges_replays(monkeypatch):
+    enable_robokassa_test_payments(monkeypatch)
+    client, session = build_client()
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    purchase = create_demo_order(client)
+    assert purchase.status_code == 200
+    order = session.scalar(
+        select(PaymentOrder).where(PaymentOrder.public_id == purchase.json()["order_id"])
+    )
+    assert order is not None and order.external_payment_id is not None
+
+    def callback(amount: str, signature: str | None = None) -> bytes:
+        values = {
+            "OutSum": amount,
+            "InvId": order.external_payment_id,
+            "Shp_order_id": order.public_id,
+            "IsTest": "1",
+        }
+        signature_base = (
+            f"{amount}:{order.external_payment_id}:test-password-two:"
+            f"Shp_order_id={order.public_id}"
+        )
+        values["SignatureValue"] = signature or hashlib.sha256(
+            signature_base.encode()
+        ).hexdigest()
+        return urlencode(values).encode()
+
+    endpoint = "/api/v1/payments/webhooks/robokassa"
+    assert client.post(endpoint, content=callback("1.00", "0" * 64)).status_code == 401
+    assert client.post(endpoint, content=callback("0.01")).status_code == 422
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
+
+    first = client.post(endpoint, content=callback("1.00"))
+    repeated = client.post(endpoint, content=callback("1.00"))
+    assert first.status_code == 200 and first.text == f"OK{order.external_payment_id}"
+    assert repeated.status_code == 200 and repeated.text == f"OK{order.external_payment_id}"
+    assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
     assert (
         len(
             session.scalars(

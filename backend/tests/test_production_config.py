@@ -88,6 +88,99 @@ def test_live_self_employed_mode_cannot_claim_online_cash_register_fiscalization
         )
 
 
+def test_live_self_employed_robokassa_requires_automatic_receipts_and_refund_key() -> None:
+    base = {
+        "payments_enabled": True,
+        "payments_mode": "live",
+        "payments_provider": "robokassa",
+        "robokassa_merchant_login": "merchant",
+        "robokassa_password1": "test-password-one",
+        "robokassa_password2": "test-password-two",
+        "payments_live_confirmed": True,
+        "payments_legal_approved": True,
+        "payments_terms_version": "offer-2026-07-22",
+        "payments_seller_status": "self_employed",
+    }
+    with pytest.raises(ValidationError, match="robokassa fiscalization"):
+        Settings(
+            _env_file=None,
+            **base,
+            payments_fiscalization_mode="self_employed_manual",
+            robokassa_password3="test-password-three",
+        )
+    with pytest.raises(ValidationError, match="ROBOKASSA_PASSWORD3"):
+        Settings(
+            _env_file=None,
+            **base,
+            payments_fiscalization_mode="robokassa",
+        )
+    configured = Settings(
+        _env_file=None,
+        **base,
+        payments_fiscalization_mode="robokassa",
+        robokassa_password3="test-password-three",
+    )
+    assert configured.payments_provider == "robokassa"
+
+
+def test_live_payment_providers_reject_non_official_api_endpoints() -> None:
+    robokassa = {
+        "payments_enabled": True,
+        "payments_mode": "live",
+        "payments_provider": "robokassa",
+        "robokassa_merchant_login": "merchant",
+        "robokassa_password1": "test-password-one",
+        "robokassa_password2": "test-password-two",
+        "robokassa_password3": "test-password-three",
+        "payments_live_confirmed": True,
+        "payments_legal_approved": True,
+        "payments_terms_version": "offer-2026-07-22",
+        "payments_seller_status": "self_employed",
+        "payments_fiscalization_mode": "robokassa",
+    }
+    with pytest.raises(ValidationError, match="official ROBOKASSA_REFUND_URL"):
+        Settings(
+            _env_file=None,
+            **robokassa,
+            robokassa_refund_url="https://example.test/collect-credentials",
+        )
+
+    with pytest.raises(ValidationError, match="official YOOKASSA_API_URL"):
+        Settings(
+            _env_file=None,
+            payments_enabled=True,
+            payments_mode="live",
+            payments_provider="yookassa",
+            yookassa_shop_id="shop-id",
+            yookassa_secret_key="production-key-placeholder",
+            yookassa_api_url="https://example.test/v3",
+            payments_live_confirmed=True,
+            payments_legal_approved=True,
+            payments_terms_version="offer-2026-07-22",
+            payments_seller_status="self_employed",
+            payments_fiscalization_mode="self_employed_manual",
+        )
+
+
+def test_robokassa_company_receipts_fail_closed_until_vat_contract_exists() -> None:
+    with pytest.raises(ValidationError, match="VAT-aware receipt contract"):
+        Settings(
+            _env_file=None,
+            payments_enabled=True,
+            payments_mode="live",
+            payments_provider="robokassa",
+            robokassa_merchant_login="merchant",
+            robokassa_password1="test-password-one",
+            robokassa_password2="test-password-two",
+            robokassa_password3="test-password-three",
+            payments_live_confirmed=True,
+            payments_legal_approved=True,
+            payments_terms_version="offer-2026-07-22",
+            payments_seller_status="sole_proprietor",
+            payments_fiscalization_mode="robokassa",
+        )
+
+
 @pytest.mark.parametrize(
     ("overrides", "message"),
     [

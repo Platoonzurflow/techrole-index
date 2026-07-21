@@ -19,7 +19,7 @@ TechRole Index - русскоязычный веб-сервис аналитик
 - страницу методологии, источников и статуса данных;
 - SEO, sitemap, robots.txt, расширенный JSON-LD, `/llms.txt`, `/llms-full.txt`, `/ai-index.json`, glossary и editorial policy.
 
-Важно: текущая базовая gross-витрина детерминированно подготовлена и не должна выдаваться за полностью актуальное состояние рынка. 2026-07-19 выполнен полный разрешённый 180-дневный проход отдельного real-provenance контура официального API «Работа России»; следующий nightly 2026-07-20 также завершился успешно. После безопасной повторной классификации `rules-v2` в актуальной БД 5 385 записей источника за 2026-01-21..2026-07-20, 1 132 записи классифицированы и 1 122 из них имеют зарплату. Эти 1 132 публикации материализованы в 742 изолированных daily SQL-среза версии `observed-publications-v1`; сумма витрины совпала с raw classified count при materialization, invalid slices и salary leaks ниже `n=20` равны нулю. Накопительный materialized dataset сохраняет собственный диапазон; rolling API на 2026-07-21 использует 180 полных UTC-дней 2026-01-23..2026-07-21 и содержит 1 119 классифицированных публикаций. Неизвестный gross/net не смешивается с основной gross-витриной. HH не включён и не вызывался.
+Важно: текущая базовая gross-витрина детерминированно подготовлена и не должна выдаваться за полностью актуальное состояние рынка. 2026-07-19 выполнен полный разрешённый 180-дневный проход отдельного real-provenance контура официального API «Работа России»; nightly продолжает обновление. После безопасной повторной классификации `rules-v2` materialized dataset за 2026-01-21..2026-07-20 содержит 1 132 классифицированные публикации и 742 изолированных daily SQL-среза версии `observed-publications-v1`; invalid slices и salary leaks ниже `n=20` равны нулю. Rolling API на 2026-07-21 использует 180 полных UTC-дней 2026-01-23..2026-07-21: 5 646 записей источника, 1 278 классифицированных и 1 268 с раскрытой зарплатой. Накопительная materialized history сохраняет собственный более ранний cut-off. Неизвестный gross/net не смешивается с основной gross-витриной. HH не включён и не вызывался.
 
 2026-07-21 добавлен третий независимый зарплатный слой. Последний отчёт Хабр Карьеры за I полугодие 2026 (`n=45 226`) даёт публичные P10/median/P90, технологии и региональные медианы; отдельные грейды дополнены публичными статьями Хабр Карьеры и Grades/GetGrade с сохранением `n` и tax status. Все 50 профессий имеют категорийный и региональный fallback: 29 — прямой срез, 12 — явно смежный, 9 — только категорийный. Эти значения доступны даже на teaser-страницах, не участвуют в score, не записываются в vacancy metrics и не подменяют «Недостаточно данных» официального слоя.
 
@@ -312,7 +312,7 @@ Auth: Argon2 password hash, JWT HttpOnly/SameSite cookie, CSRF для mutation e
 
 `DemoPaymentProvider` проводит локальный sandbox без списания. Серверный product catalog определяет цену и 30-дневный доступ; `payment_orders` сохраняет idempotency key, provider id, сумму, test/live и принятую версию условий. HMAC demo webhook проверяет raw body, повторы дедуплицируются, отмена терминальна. Полный admin refund идемпотентен и отзывает только entitlement соответствующего заказа.
 
-Основной кандидат — ЮKassa, резервный — Robokassa. `YooKassaPaymentProvider` реализует официальный REST contract: Basic auth, `Idempotence-Key`, redirect confirmation, полный возврат, server-side receipt item и аутентификацию webhook повторным GET объекта, поскольку ЮKassa не подписывает уведомления. Адаптер покрыт MockTransport contract tests, но test shop владельца ещё не вызван: нет выданных владельцем test credentials. Реальный режим fail closed требует отдельного подтверждения, утверждённой оферты, статуса продавца, фискализации/VAT и постоянного HTTPS-host. Полная памятка: `PAYMENTS.md`.
+Владелец подтвердил статус самозанятого НПД. Основной кандидат — Robokassa с «Робочеками СМЗ», резервный — ЮKassa. `RobokassaPaymentProvider` создаёт подписанный redirect с числовым `InvId`, server-side Receipt и Success/Fail URL, проверяет подпись ResultURL Паролем №2, test/live режим и обязательный `OK<InvId>`. Live refund получает `OpKey`, отправляет HS256 JWT по Password3, а Celery сверяет pending-состояние каждые пять минут. `YooKassaPaymentProvider` сохраняет REST idempotency, возврат и авторизованную проверку webhook. Оба адаптера покрыты MockTransport/HTTP contract tests, но официальный test shop владельца ещё не вызван: нет выданных владельцем test credentials. Реальный режим fail closed требует отдельного подтверждения, утверждённой оферты, фискализации и постоянного HTTPS-host. Полная памятка: `PAYMENTS.md`.
 
 ## 11. Административная панель
 
@@ -378,7 +378,8 @@ Payments:
 - `POST /payments/{order_id}/demo/complete` только в sandbox;
 - `POST /payments/{order_id}/refund` только admin;
 - `POST /payments/webhooks/demo`;
-- `POST /payments/webhooks/yookassa`.
+- `POST /payments/webhooks/yookassa`;
+- `POST /payments/webhooks/robokassa`.
 
 Admin: endpoints находятся под `/api/v1/admin/*`; точный контракт смотреть в Swagger.
 
@@ -450,18 +451,18 @@ HhApiProvider использует только официальный API, од
 Backend внутри контейнера:
 
 - Ruff: passed;
-- mypy: passed, 49 source files;
-- pytest: `87 passed`, 3 warnings.
+- mypy: passed, 52 source files;
+- pytest: `107 passed`.
 
 Frontend:
 
 - ESLint: passed;
 - source TypeScript: passed;
-- Vitest: `38 passed`;
+- Vitest: `39 passed`;
 - Next.js production build: passed, 61 generated page artifacts, включая legal/payment routes и 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
 - отдельные production-check Docker images frontend/backend: built and smoke-tested, HTTP 200;
-- Playwright Chromium profile: `27 passed`. Сценарии включают полный demo payment flow с регистрацией, явным принятием условий, sandbox checkout и выдачей Premium, а также 50 profession links, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, пять conditional `304`, сверку каждой из 691 строк, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, основные формы/селекты, 11 accessibility/reduced-motion проверок и 4 lab performance budgets;
-- независимый `csvw 4.1.0` типизированно прочитал все 691 строк по опубликованной metadata: 30 колонок, 691 уникальный составной primary key, duplicate `0`; daily CSV публикуется как UTF-8 без BOM для совместимости CSVW, отдельный aggregate CSV не менялся;
+- Playwright Chromium profile: `27 passed`. Сценарии включают полный demo payment flow с регистрацией, явным принятием условий, sandbox checkout и выдачей Premium, а также 50 profession links, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, пять conditional `304`, сверку всех 742 строк, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, основные формы/селекты, 11 accessibility/reduced-motion проверок и 4 lab performance budgets;
+- независимый `csvw 4.1.0` contract применяется к 742 строкам опубликованной metadata: 30 колонок и составной primary key; daily CSV публикуется как UTF-8 без BOM для совместимости CSVW, отдельный aggregate CSV не менялся;
 - DCAT JSON-LD дополнительно разобран независимым `rdflib 7.1.4`: 62 RDF-триплета, по одному Catalog, Dataset и DataService, две Distribution; endpoint локально отвечает `200` и strong SHA-256 ETag;
 - официальный `mlcroissant 1.1.0`: validate завершился `Done`, loader скачал объявленный CSV и типизированно прочитал первые три записи всех 30 полей; отсутствие checksum для `isLiveDataset=true` распознано штатно;
 - hosted CI после запуска Compose устанавливает закреплённый `mlcroissant==1.1.0`, повторяет validate и загрузку первых трёх записей до Playwright;
@@ -475,9 +476,9 @@ Frontend:
 - `docker compose up --build -d`: миграция/seed завершились с code 0, восемь постоянных сервисов, включая Dagster webserver/daemon, healthy;
 - Compose config: passed;
 - все 50 profession detail SSR routes: passed.
-- внешний production-preview smoke после CSVW/DCAT: homepage/canonical/security headers, 11 CSS/JS assets, 50 AI-сущностей, 50 Dataset, 151 aggregate CSV-строка, 691 daily JSON record, 692 daily CSV-строки, 27-field Draft 2020-12 schema и соответствие каждой строки, CSVW и Croissant 1.1 с 30 фактическими CSV-полями, DCAT с двумя distributions, SHA-256 ETag/Last-Modified и шесть conditional `304`, канонический Dataset landing, 2 provenance-слоя, 12 editorial insights, все 12 Article pages и 12 per-article CSL records, 50 LLM-описаний, dataset citation CSL, research aggregate, 85 sitemap URL, 85-КБ Open Graph PNG и backend readiness - passed. По скачанным с внешнего HTTPS URL точным bytes `csvw 4.1.0` прочитал 691 строку / 691 уникальный ключ, а `rdflib` разобрал DCAT в 64 RDF-триплета. Официальный `mlcroissant 1.1.0` повторно завершил validate, скачал CSV без BOM и типизированно прочитал запись всех 30 полей. Изолированная симуляция недоступного backend подтвердила `503`, `Retry-After: 60` и `Cache-Control: no-store` для daily exports;
+- внешний production-preview smoke после CSVW/DCAT: homepage/canonical/security headers, browser assets, 50 AI-сущностей, 50 Dataset, 151 aggregate CSV-строка, 742 daily JSON record, 743 daily CSV-строки, 27-field Draft 2020-12 schema и соответствие каждой строки, CSVW и Croissant 1.1 с 30 фактическими CSV-полями, DCAT с двумя distributions, SHA-256 ETag/Last-Modified и conditional `304`, канонический Dataset landing, 3 provenance-слоя, 12 editorial insights, все 12 Article pages и 12 per-article CSL records, 50 LLM-описаний, dataset citation CSL, research aggregate, 85 sitemap URL, Open Graph PNG и backend readiness - passed. Изолированная симуляция недоступного backend подтвердила `503`, `Retry-After: 60` и `Cache-Control: no-store` для daily exports;
 - постоянный loopback `public-proxy` на 3199 пережил force-recreate standalone upstream на 3100; позднее анонимный localhost.run ротировал hostname внутри живого PID, поэтому добавлен refresh последнего URL из логов с историей previous URLs;
-- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; актуальный immutable `.next-public-tsnet-v011` с 25 browser assets / 1 885 366 bytes собран с этим canonical, все постоянные сервисы healthy, полный внешний smoke и отдельный внешний payment-flow прошли. Платежи на preview используют только `demo/test`, terms остаются draft. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
+- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; актуальный immutable `.next-public-tsnet-v013` собран с этим canonical, все постоянные сервисы healthy, внешний smoke проверил 85 URL, 742 daily slices и три provenance-слоя. Платежи на preview используют только `demo/test`, terms остаются draft. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
 - canonical Dataset JSON-LD дополнительно сверён с актуальной документацией Google Dataset Search: самоцитирование удалено из предназначенного для связанных научных работ `Dataset.citation`, а identifier/creator/publisher/canonical URL и отдельные citation formats сохранены; целевой Playwright-сценарий, ESLint и TypeScript прошли;
 - `CITATION.cff` исправлен по CFF 1.2 (`preferred-citation.type=data` при верхнеуровневом GitHub `type=dataset`) и независимо прошёл `cffconvert 2.0.0 --validate`; отдельный CI job повторяет эту проверку на hosted runner;
 - Gitleaks повторно просканировал staged payment diff и всю пятикоммитную очищенную `public-main`: `no leaks found`. Старый синтетический production-settings fixture исключён только точным fingerprint в `.gitleaksignore`; целые файлы, пути и commits не исключаются;
@@ -487,8 +488,8 @@ Frontend:
 - Redis catalog/detail cache: miss→hit, SHA-256 key без slug/query, TTL 119 секунд; при pause Redis detail API ответил 200 за 621 мс и Redis вернулся healthy;
 - миграция `0004` применена; официальный CBR snapshot на 2026-07-20 сохранён для USD/EUR/KZT с effective date 2026-07-18;
 - миграция `0005` применена; PostgreSQL full refresh создал 691 observed-publication slice для 1 052 классифицированных публикаций, повторный overlap refresh обработал только 7 дней, stale/invalid/leaked slices равны 0;
-- миграция `0006` применена; `payment_orders` и `payment_refunds` находятся на Alembic head, sandbox API/webhook/refund/replay/tampering и YooKassa contract tests прошли;
-- rolling research/provenance window выровнено по 180 полным UTC-календарным дням: schema `1.3` публикует полуоткрытые timestamp-границы и третий зарплатный слой, а live catalog и provenance оба дают 1 119 классифицированных публикаций за 2026-01-23..2026-07-21;
+- миграция `0006` применена; `payment_orders` и `payment_refunds` находятся на Alembic head, sandbox API/webhook/refund/replay/tampering, YooKassa и Robokassa contract tests прошли; Robokassa ResultURL и live refund reconciliation покрыты отдельно;
+- rolling research/provenance window выровнено по 180 полным UTC-календарным дням: schema `1.3` публикует полуоткрытые timestamp-границы и третий зарплатный слой, а live catalog и provenance оба дают 1 278 классифицированных публикаций за 2026-01-23..2026-07-21;
 - `rules-v2` повторно классифицировал только записи без решения или с rule-based решением: 1 050 -> 1 130 rule-managed строк, `cleared=0`; две AI-классификации сохранены, представлены 36 из 50 профессий, достаточная зарплатная выборка есть у 7;
 - 2026-07-21 новый PostgreSQL custom backup (3 864 514 bytes) создан с SHA-256 manifest и действительно восстановлен `infra/windows/test-postgres-restore.ps1` в изолированную БД: revision `0005`, 26 public tables, 50 professions, 108 000 prepared metric rows, 691 observed slices, 5 535 vacancies и 3 users. После проверки временная БД и container archive удалены; основная БД не останавливалась.
 
@@ -501,7 +502,7 @@ Frontend:
 - `/mentorship` и четыре этапа;
 - мобильная ширина: `scrollWidth === clientWidth`.
 
-Playwright запускается из отдельного профиля на официальном Chromium-образе. Команда `docker compose --profile e2e run --rm e2e` прошла все 24 сценария. Для доступа к HMR внутри Compose в `allowedDevOrigins` разрешён только внутренний hostname `frontend`; production CSP и публичные origins не расширены. `npm run audit:public` читает sitemap запущенного экземпляра и отдельно проверяет все 84 canonical HTML URL; шаг включён в compose-e2e job GitHub Actions. Четыре performance-сценария сохраняют TTFB/FCP/LCP/CLS/event duration как attachments и используют lab budgets с запасом.
+Playwright запускается из отдельного профиля на официальном Chromium-образе. Команда `docker compose --profile e2e run --rm e2e` прошла все 27 сценариев. Для доступа к HMR внутри Compose в `allowedDevOrigins` разрешён только внутренний hostname `frontend`; production CSP и публичные origins не расширены. `npm run audit:public` читает sitemap запущенного экземпляра и отдельно проверяет все 85 canonical HTML URL; шаг включён в compose-e2e job GitHub Actions. Четыре performance-сценария сохраняют TTFB/FCP/LCP/CLS/event duration как attachments и используют lab budgets с запасом.
 
 ## 18. Команды
 
@@ -590,7 +591,7 @@ Next build может автоматически дописывать custom dis
 - официальный open-data API «Работа России» подключён: реальные публикации и salary midpoint видны отдельным публичным слоем и инкрементально материализованы, но неизвестный gross/net намеренно не преобразуется в gross-витрину;
 - юридическое разрешение на коммерческое использование данных hh.ru не подтверждено;
 - официальный CBR currency provider подключён отдельным контуром и локально включён: migration `0004`, snapshots USD/EUR/KZT, requested/effective date и Dagster op. Эти rates ещё не применяются к несовместимому gross/net слою автоматически;
-- ЮKassa выбрана основным payment-кандидатом, Robokassa резервом; demo sandbox и адаптер ЮKassa готовы, но test/live credentials, KYC, договор, фискализация, юридические реквизиты и постоянный HTTPS-host может предоставить только владелец;
+- владелец подтвердил НПД; Robokassa выбрана основным payment-кандидатом из-за автоматических «Робочеков СМЗ», ЮKassa оставлена резервом. Demo sandbox и оба адаптера готовы, но test/live credentials, KYC, договор, активацию чеков, юридические реквизиты и постоянный HTTPS-host может предоставить только владелец;
 - Yandex SMTP и IMAP работают; пять писем Support/Mentorship/Nightly подтверждены во входящих, две сохранённые заявки доставлены. Пароль остаётся только в локальном `.env`;
 - Tailscale работает на ПК и iPhone. Firewall ограничен tailnet, но TCP 3389 ещё не слушает: владелец должен один раз повторно запустить исправленный `infra/windows/enable-private-remote-access.ps1` от администратора и получить `ListenerReady=True`;
 - production Compose теперь fail closed проверяет secrets/URLs/DB credentials, удаляет source mounts/лишние ports и безопасно bootstrap-ит пустую БД без demo data; сам deployment, постоянный домен, TLS и внешняя observability ещё не настроены;
@@ -599,8 +600,8 @@ Next build может автоматически дописывать custom dis
 - Prometheus-compatible HTTP metrics, multiprocess Gunicorn storage, loopback-only Prometheus profile и alerts down/5xx/p95/cache-errors добавлены; внешний Alertmanager/Sentry/OpenTelemetry collector ещё не подключён;
 - ClickHouse только предусмотрен интерфейсом;
 - `qwen3.6:27b` прошла structured-output, live Docker-provider и воспроизводимый 20-case domain benchmark; перед расширением AI-assist всё ещё нужна размеченная holdout-выборка будущих реальных uncertain records без персональных данных;
-- Git repository инициализирован, baseline commit создан; удалённый origin и публичный репозиторий ещё не настроены;
-- GitHub Actions/Dependabot добавлены локально, но до появления remote не выполнялись на hosted runner;
+- публичный GitHub remote настроен через отдельную очищенную ветку `public-main`, которая отправляется в удалённый `main`; внутреннюю историю нельзя merge/rebase в публичную;
+- GitHub Actions, secret scan, Dependabot и ежедневный внешний monitor опубликованы и выполняются на hosted runner;
 - стабильный для этой машины production-like preview доступен через Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` к постоянному local proxy; актуальная проверенная конфигурация хранится в `%LOCALAPPDATA%\TechRoleIndex\public-funnel-status.json`. Это beta/host-dependent адрес, не замена отдельному production-host и собственному домену;
 - `infra/windows/start-public-funnel.ps1` повторно проходит идемпотентно и доверяет структурированному `tailscale funnel status --json`, а не одному exit code команды настройки. Cloudflare Quick Tunnel сохранён только как аварийный временный fallback и тоже направляется на proxy 3199.
 
@@ -608,7 +609,7 @@ Next build может автоматически дописывать custom dis
 
 Приоритет P0:
 
-1. Настроить удалённый Git origin и шифрованную off-host копию; локальные baseline commit и PostgreSQL backup с автоматическим полным restore-test уже созданы.
+1. Настроить шифрованную off-host копию; удалённый Git origin, локальный PostgreSQL backup и автоматический полный restore-test уже созданы.
 2. Зафиксировать допустимые production-условия использования API «Работа России» и отдельно документированное право для любого будущего коммерческого источника.
 3. Publication-date materialization и quality gate выполнены отдельным Dagster op; дальше нужна только юридически и методически подтверждённая gross/net-нормализация перед любым переносом зарплат в prepared слой. CBR snapshots работают отдельно.
 4. Выполнено: UI, profession SSR, `data-status.json` и CSV разделяют `prepared_baseline` и `observed_historical`, не подменяя статус свежей датой.
@@ -616,8 +617,8 @@ Next build может автоматически дописывать custom dis
 
 Приоритет P1:
 
-1. Опубликовать Git remote и проверить добавленный GitHub Actions workflow на hosted runner; локальный Playwright E2E profile уже подключён к YAML.
-2. Получить от владельца пять обязательных ответов и test shop ЮKassa, вызвать официальный sandbox, проверить webhook через постоянный HTTPS ingress; затем заполнить/проверить `PAYMENTS.md` checklist. Live не включать без явного подтверждения.
+1. Поддерживать очищенную `public-main`, проверять обязательные GitHub Actions после каждого push и не публиковать внутреннюю историю/локальные секреты.
+2. Получить от владельца Robokassa test shop, MerchantLogin и тестовые Пароли №1/№2 через локальный secret store; подтвердить конечную цену и что текущий продукт остаётся разовой 30-дневной услугой. Затем вызвать официальный sandbox и проверить ResultURL через постоянный HTTPS ingress. Live не включать без отдельного явного подтверждения.
 3. Определить срок хранения обращений и процедуру ротации SMTP app password; раздельная доставка Support/Mentorship/Nightly уже проверена.
 4. Prometheus-compatible метрики и локальные alert rules выполнены; дальше выбрать внешний Alertmanager-канал и при необходимости Sentry/OpenTelemetry collector.
 5. После стабильного домена настроить Search Console/Webmaster, IndexNow key и содержательные внешние публикации; временные tunnel URL не регистрировать.

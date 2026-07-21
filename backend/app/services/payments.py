@@ -25,6 +25,7 @@ from app.providers.payments import (
     PaymentProviderError,
     ProviderPayment,
     ProviderRefund,
+    RobokassaPaymentProvider,
     VerifiedWebhook,
     YooKassaPaymentProvider,
 )
@@ -46,6 +47,12 @@ class Product:
     amount: Decimal
     currency: str
     access_days: int
+
+
+@dataclass(frozen=True)
+class WebhookProcessResult:
+    status: str
+    acknowledgement: str | None = None
 
 
 def get_product(code: str) -> Product:
@@ -73,6 +80,21 @@ def get_payment_provider() -> PaymentProvider:
             test_mode=settings.payments_mode == "test",
             fiscalization_mode=settings.payments_fiscalization_mode,
             vat_code=settings.yookassa_vat_code,
+        )
+    if settings.payments_provider == "robokassa":
+        return RobokassaPaymentProvider(
+            merchant_login=settings.robokassa_merchant_login,
+            password1=settings.robokassa_password1,
+            password2=settings.robokassa_password2,
+            password3=settings.robokassa_password3,
+            hash_algorithm=settings.robokassa_hash_algorithm,
+            payment_url=settings.robokassa_payment_url,
+            op_state_url=settings.robokassa_op_state_url,
+            refund_url=settings.robokassa_refund_url,
+            refund_state_url=settings.robokassa_refund_state_url,
+            timeout_seconds=settings.robokassa_timeout_seconds,
+            test_mode=settings.payments_mode == "test",
+            fiscalization_mode=settings.payments_fiscalization_mode,
         )
     raise PaymentConfigurationError("Unsupported payment provider")
 
@@ -424,6 +446,7 @@ async def create_payment_order(
             customer_email=user.email,
             return_url=return_url,
             idempotency_key=order.public_id,
+            provider_reference=str(order.id),
         )
         _validate_payment(order, payment)
         if payment.confirmation_url:
@@ -457,23 +480,29 @@ async def create_payment_order(
 
 async def process_webhook(
     db: Session, *, provider: PaymentProvider, body: bytes, headers: dict[str, str]
-) -> str:
+) -> WebhookProcessResult:
     verified: VerifiedWebhook = await provider.authenticate_webhook(body, headers)
     if verified.object_type == "payment" and verified.payment is not None:
-        return process_payment_update(
-            db,
-            provider_code=provider.code,
-            event_id=verified.event_id,
-            event_type=verified.event_type,
-            payment=verified.payment,
+        return WebhookProcessResult(
+            status=process_payment_update(
+                db,
+                provider_code=provider.code,
+                event_id=verified.event_id,
+                event_type=verified.event_type,
+                payment=verified.payment,
+            ),
+            acknowledgement=verified.acknowledgement,
         )
     if verified.object_type == "refund" and verified.refund is not None:
-        return process_refund_update(
-            db,
-            provider_code=provider.code,
-            event_id=verified.event_id,
-            event_type=verified.event_type,
-            refund=verified.refund,
+        return WebhookProcessResult(
+            status=process_refund_update(
+                db,
+                provider_code=provider.code,
+                event_id=verified.event_id,
+                event_type=verified.event_type,
+                refund=verified.refund,
+            ),
+            acknowledgement=verified.acknowledgement,
         )
     raise PaymentValidationError("Unsupported verified webhook")
 
@@ -577,3 +606,48 @@ async def create_full_refund(
         raise
     db.refresh(local_refund)
     return local_refund
+
+
+async def reconcile_pending_refunds(db: Session, *, limit: int = 50) -> dict[str, int]:
+    if not (
+        settings.payments_enabled
+        and settings.payments_provider == "robokassa"
+        and settings.payments_mode == "live"
+    ):
+        return {"checked": 0, "updated": 0, "failed": 0}
+    provider = get_payment_provider()
+    if not isinstance(provider, RobokassaPaymentProvider):
+        raise PaymentConfigurationError("Robokassa provider is not configured")
+    rows = db.execute(
+        select(PaymentRefund, PaymentOrder)
+        .join(PaymentOrder, PaymentOrder.id == PaymentRefund.payment_order_id)
+        .where(
+            PaymentRefund.provider == "robokassa",
+            PaymentRefund.status == "pending",
+            PaymentRefund.external_refund_id.is_not(None),
+            PaymentOrder.external_payment_id.is_not(None),
+        )
+        .order_by(PaymentRefund.created_at)
+        .limit(limit)
+    ).all()
+    updated = failed = 0
+    for local_refund, order in rows:
+        try:
+            refund = await provider.get_refund(
+                request_id=local_refund.external_refund_id,
+                payment_external_id=order.external_payment_id,
+                amount=local_refund.amount,
+                currency=local_refund.currency,
+            )
+            outcome = process_refund_update(
+                db,
+                provider_code="robokassa",
+                event_id=f"reconcile:{refund.external_id}:{refund.status}",
+                event_type="refund.reconciled",
+                refund=refund,
+            )
+            updated += int(outcome == "processed")
+        except (PaymentProviderError, PaymentValidationError):
+            failed += 1
+            db.rollback()
+    return {"checked": len(rows), "updated": updated, "failed": failed}
