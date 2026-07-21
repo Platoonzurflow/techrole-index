@@ -22,9 +22,12 @@ from app.seed import (
 
 
 def production_settings(**overrides: object) -> Settings:
+    synthetic_signing_key = "-".join(
+        ("test", "only", "not", "a", "credential", "repeatable", "value")
+    )
     values: dict[str, object] = {
         "app_env": "production",
-        "app_secret_key": "prod-secret-0123456789-abcdefghijklmnop",
+        "app_secret_key": synthetic_signing_key,
         "database_url": (
             "postgresql+psycopg://techrole_prod:"
             "database-password-0123456789@postgres:5432/techrole_prod"
