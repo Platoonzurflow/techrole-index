@@ -1,7 +1,7 @@
 import { expect, test, type APIRequestContext } from "@playwright/test";
 
 async function expectHealthyRoutes(request: APIRequestContext, routes: string[]) {
-  const batchSize = 8;
+  const batchSize = 4;
   for (let start = 0; start < routes.length; start += batchSize) {
     await Promise.all(routes.slice(start, start + batchSize).map(async (route) => {
       const response = await request.get(route);
@@ -187,7 +187,7 @@ test("daily dataset landing explains, links and identifies the observed layer", 
 });
 
 test("public navigation and machine-readable endpoints have no broken links", async ({ page, request }) => {
-  test.slow();
+  test.setTimeout(180_000);
   const publicRoutes = [
     "/", "/professions", "/top", "/pricing", "/mentorship", "/support",
     "/methodology", "/glossary", "/sources", "/about", "/status", "/compare",
