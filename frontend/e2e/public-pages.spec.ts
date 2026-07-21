@@ -366,7 +366,10 @@ test("public navigation and machine-readable endpoints have no broken links", as
 
   const research = await (await request.get("/research.json")).json();
   expect(research.type).toBe("Report");
-  expect(research.summary.represented_professions).toBeGreaterThan(0);
+  expect(
+    research.summary.represented_professions
+      + research.summary.zero_result_professions,
+  ).toBe(50);
   expect(research.summary.total_publications).toBe(officialLayer.classified_publications);
 
   const llmsFull = await (await request.get("/llms-full.txt")).text();
