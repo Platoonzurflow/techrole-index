@@ -5,6 +5,7 @@ import {
   type ObservedPublicationMetricsExport,
 } from "@/lib/observed-publication-data";
 import { conditionalResponse } from "@/lib/conditional-response";
+import { observedPublicationDatasetPublishedDate } from "@/lib/observed-publication-croissant";
 
 export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -25,6 +26,8 @@ export async function GET(request: Request) {
     });
   }
   const summary = summarizeObservedPublicationMetrics(dataset.records);
+  const lastModified = summary.lastMaterializedAt
+    ?? `${observedPublicationDatasetPublishedDate}T00:00:00Z`;
   return conditionalResponse(request, buildObservedPublicationCsv(dataset.records, siteUrl), {
     headers: {
       "Access-Control-Allow-Origin": "*",
@@ -36,5 +39,5 @@ export async function GET(request: Request) {
       "X-Content-Type-Options": "nosniff",
       "X-Robots-Tag": "index, follow",
     },
-  }, summary.lastMaterializedAt);
+  }, lastModified);
 }

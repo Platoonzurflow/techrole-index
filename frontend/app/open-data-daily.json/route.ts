@@ -5,6 +5,7 @@ import {
   type ObservedPublicationMetricsExport,
 } from "@/lib/observed-publication-data";
 import { conditionalResponse } from "@/lib/conditional-response";
+import { observedPublicationDatasetPublishedDate } from "@/lib/observed-publication-croissant";
 
 export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -28,6 +29,8 @@ export async function GET(request: Request) {
   }
   const records = dataset.records;
   const summary = summarizeObservedPublicationMetrics(records);
+  const lastModified = summary.lastMaterializedAt
+    ?? `${observedPublicationDatasetPublishedDate}T00:00:00Z`;
 
   const body = JSON.stringify({
     schema_version: "1.0",
@@ -70,5 +73,5 @@ export async function GET(request: Request) {
       "Link": `<${siteUrl}/open-data-daily.json>; rel="canonical", <${siteUrl}/open-data-daily>; rel="describedby", <${siteUrl}/open-data-daily.schema.json>; rel="describedby", <${siteUrl}/open-data-daily.croissant.json>; rel="describedby"; type="application/ld+json", <${siteUrl}/methodology>; rel="describedby", <${siteUrl}/citation>; rel="cite-as"`,
       "X-Robots-Tag": "index, follow, max-snippet:-1",
     },
-  }, summary.lastMaterializedAt);
+  }, lastModified);
 }
