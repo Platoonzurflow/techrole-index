@@ -1,3 +1,4 @@
+from collections import Counter
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
@@ -5,6 +6,8 @@ from sqlalchemy import desc, func, or_, select, text
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.data.catalog import PROFESSIONS
+from app.data.salary_benchmarks import SOURCES, salary_benchmark_for
 from app.database import get_db
 from app.domain.time_windows import utc_calendar_window
 from app.models import (
@@ -77,6 +80,19 @@ def sources(db: Session = Depends(get_db)):
             "provider_type": "official_xml_api",
             "terms_url": "https://www.cbr.ru/development/sxml/",
         },
+        *[
+            {
+                "code": source["id"],
+                "name": source["name"],
+                "enabled": True,
+                "provider_type": "public_salary_report",
+                "terms_url": source["url"],
+                "methodology_url": source["methodology_url"],
+                "period": source["period"],
+                "salary_tax_status": source["tax_status"],
+            }
+            for source in SOURCES.values()
+        ],
     ]
 
 
@@ -84,6 +100,10 @@ def sources(db: Session = Depends(get_db)):
 def data_provenance(db: Session = Depends(get_db)):
     """Describe public data layers without implying that a prepared baseline is live."""
     now = datetime.now(timezone.utc)
+    benchmark_coverage = Counter(
+        salary_benchmark_for(slug, category_slug)["coverage"]
+        for slug, _, _, category_slug, _ in PROFESSIONS
+    )
     period_days = 180
     window = utc_calendar_window(now, days=period_days)
     last_metric_date = db.scalar(
@@ -103,17 +123,13 @@ def data_provenance(db: Session = Depends(get_db)):
             or 0
         )
 
-    source = db.scalar(
-        select(VacancySource).where(VacancySource.code == "trudvsem_open")
-    )
+    source = db.scalar(select(VacancySource).where(VacancySource.code == "trudvsem_open"))
     official_filters = (
         Vacancy.source_id == source.id if source is not None else Vacancy.source_id == -1,
         Vacancy.published_at >= window.start_at,
         Vacancy.published_at < window.end_at_exclusive,
     )
-    official_records = int(
-        db.scalar(select(func.count(Vacancy.id)).where(*official_filters)) or 0
-    )
+    official_records = int(db.scalar(select(func.count(Vacancy.id)).where(*official_filters)) or 0)
     classified_records = int(
         db.scalar(
             select(func.count(Vacancy.id)).where(
@@ -155,13 +171,12 @@ def data_provenance(db: Session = Depends(get_db)):
             func.max(ObservedPublicationMetricDaily.updated_at),
             func.max(ObservedPublicationMetricDaily.transform_version),
         ).where(
-            ObservedPublicationMetricDaily.source_id
-            == (source.id if source is not None else -1)
+            ObservedPublicationMetricDaily.source_id == (source.id if source is not None else -1)
         )
     ).one()
 
     return {
-        "schema_version": "1.2",
+        "schema_version": "1.3",
         "generated_at": now,
         "layers": [
             {
@@ -211,8 +226,35 @@ def data_provenance(db: Session = Depends(get_db)):
                     "одновременно активных вакансий. Gross/net источником не определён."
                 ),
             },
+            {
+                "id": "salary_benchmarks",
+                "label": "Публичные ориентиры фактических доходов",
+                "status": "public_reference",
+                "profession_count": len(PROFESSIONS),
+                "direct_professions": benchmark_coverage["direct"],
+                "related_professions": benchmark_coverage["related"],
+                "category_only_professions": benchmark_coverage["category"],
+                "source_codes": list(SOURCES),
+                "source_names": [source["name"] for source in SOURCES.values()],
+                "source_urls": [source["url"] for source in SOURCES.values()],
+                "latest_period": SOURCES["habr_2026_h1"]["period"],
+                "latest_published_at": SOURCES["habr_2026_h1"]["published_at"],
+                "latest_total_sample_size": SOURCES["habr_2026_h1"]["total_sample_size"],
+                "salary_currency": "RUB",
+                "salary_tax_statuses": sorted(
+                    {source["tax_status"] for source in SOURCES.values()}
+                ),
+                "current_market_claim": False,
+                "interpretation": (
+                    "Версионированные ориентиры фактических доходов из публичных "
+                    "исследований. Прямые, технологические, смежные и категорийные "
+                    "срезы помечены и не подменяют вилки вакансий."
+                ),
+            },
         ],
     }
+
+
 @router.get("/health/ready")
 def ready(db: Session = Depends(get_db)):
     db.execute(text("SELECT 1"))

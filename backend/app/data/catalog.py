@@ -40,6 +40,7 @@ PROFESSIONS = [
             "fullstack developer",
             "full-stack разработчик",
             "фулстек разработчик",
+            "разработчик fullstack",
         ],
     ),
     (
@@ -68,7 +69,14 @@ PROFESSIONS = [
         "C#/.NET-разработчик",
         "C#/.NET Developer",
         "development",
-        [".net developer", "c# developer", "dotnet разработчик", "c# разработчик"],
+        [
+            ".net developer",
+            "c# developer",
+            "dotnet разработчик",
+            "c# разработчик",
+            "программист .net",
+            "программист c#",
+        ],
     ),
     (
         "cpp-developer",
@@ -131,7 +139,13 @@ PROFESSIONS = [
         "Ручной тестировщик",
         "QA Manual",
         "quality",
-        ["qa manual", "manual qa", "ручной тестировщик", "тестировщик по"],
+        [
+            "qa manual",
+            "manual qa",
+            "ручной тестировщик",
+            "тестировщик по",
+            "тестировщик верификатор",
+        ],
     ),
     (
         "qa-automation",
@@ -172,7 +186,12 @@ PROFESSIONS = [
         "Системный администратор",
         "System Administrator",
         "infrastructure",
-        ["system administrator", "системный администратор", "сисадмин"],
+        [
+            "system administrator",
+            "системный администратор",
+            "сисадмин",
+            "помощник системного администратора",
+        ],
     ),
     (
         "network-engineer",
@@ -221,7 +240,12 @@ PROFESSIONS = [
         "Бизнес-аналитик",
         "Business Analyst",
         "analytics",
-        ["business analyst", "бизнес аналитик", "бизнес-аналитик"],
+        [
+            "business analyst",
+            "бизнес аналитик",
+            "бизнес-аналитик",
+            "аналитик бизнес-процессов",
+        ],
     ),
     (
         "data-engineer",
@@ -284,7 +308,12 @@ PROFESSIONS = [
         "Computer Vision-инженер",
         "Computer Vision Engineer",
         "data-ai",
-        ["computer vision engineer", "cv engineer", "инженер компьютерного зрения"],
+        [
+            "computer vision engineer",
+            "cv engineer",
+            "инженер компьютерного зрения",
+            "computer vision",
+        ],
     ),
     (
         "information-security-specialist",
@@ -295,6 +324,9 @@ PROFESSIONS = [
             "information security specialist",
             "специалист по информационной безопасности",
             "специалист иб",
+            "специалист по защите информации",
+            "специалист по обеспечению информационной безопасности",
+            "эксперт по информационной безопасности",
         ],
     ),
     (
@@ -309,7 +341,13 @@ PROFESSIONS = [
         "SOC-аналитик",
         "SOC Analyst",
         "security",
-        ["soc analyst", "soc аналитик", "аналитик центра мониторинга"],
+        [
+            "soc analyst",
+            "soc аналитик",
+            "аналитик центра мониторинга",
+            "специалист первой линии отдела soc",
+            "инженер центра мониторинга информационной безопасности",
+        ],
     ),
     (
         "penetration-tester",
@@ -358,7 +396,13 @@ PROFESSIONS = [
         "1С-разработчик",
         "1C Developer",
         "specialized",
-        ["1c developer", "1с разработчик", "программист 1с"],
+        [
+            "1c developer",
+            "1с разработчик",
+            "программист 1с",
+            "разработчик 1с",
+            "разработчик 1c",
+        ],
     ),
     (
         "sap-developer",
@@ -375,6 +419,8 @@ PROFESSIONS = [
         ["solution architect", "архитектор решений", "solutions architect"],
     ),
 ]
+
+ALIASES_BY_PROFESSION = {slug: tuple(aliases) for slug, _, _, _, aliases in PROFESSIONS}
 
 
 def profession_description(name_ru: str, name_en: str, category: str) -> str:

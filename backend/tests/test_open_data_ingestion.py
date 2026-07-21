@@ -132,7 +132,7 @@ def test_open_data_ingestion_keeps_unknown_gross_separate() -> None:
             assert vacancy.profession_id == profession.id
             assert vacancy.seniority_id == junior.id
             assert vacancy.salary_gross is None
-            assert vacancy.classifier_version == "rules-v1"
+            assert vacancy.classifier_version == "rules-v2"
             assert vacancy.raw_payload == {"provider": "trudvsem_open", "id": "open-1"}
             assert db.scalar(select(func.count()).select_from(VacancySkill)) == 3
             source = db.scalar(

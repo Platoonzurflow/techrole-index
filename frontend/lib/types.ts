@@ -80,6 +80,44 @@ export interface OfficialOpenDataSummary {
   methodology_note: string;
 }
 
+export interface SalaryBenchmarkSource {
+  id: string;
+  name: string;
+  url: string;
+  methodology_url: string;
+  period: string;
+  published_at: string;
+  total_sample_size?: number;
+  currency: "RUB";
+  tax_status: "gross" | "net" | "unknown";
+  income_type: "salary" | "salary_plus_bonus";
+  methodology_note: string;
+}
+
+export interface SalaryBenchmarkPoint {
+  source_id: string;
+  scope: "exact_role" | "related_role" | "technology" | "category" | "market_level";
+  label: string;
+  geography: "russia" | "moscow" | "saint_petersburg" | "regions";
+  metric: "median" | "average" | "range";
+  value?: number;
+  lower?: number;
+  upper?: number;
+  p10?: number;
+  p90?: number;
+  seniority?: "junior" | "middle" | "senior";
+  sample_size?: number;
+  note?: string;
+  is_fallback: boolean;
+}
+
+export interface SalaryBenchmarkSummary {
+  coverage: "direct" | "related" | "category";
+  points: SalaryBenchmarkPoint[];
+  sources: SalaryBenchmarkSource[];
+  methodology_note: string;
+}
+
 export interface ProfessionDetail extends ProfessionSummary {
   updated_at?: string;
   scoring_version?: string;
@@ -92,6 +130,7 @@ export interface ProfessionDetail extends ProfessionSummary {
   tech_stack?: Array<{ title: string; items: string[] }>;
   history_days?: number;
   official_open_data?: OfficialOpenDataSummary;
+  salary_benchmark?: SalaryBenchmarkSummary;
 }
 
 export interface PreparedAnalyticsLayer {
@@ -137,10 +176,30 @@ export interface OfficialPublicationsLayer {
   interpretation: string;
 }
 
+export interface SalaryBenchmarksLayer {
+  id: "salary_benchmarks";
+  label: string;
+  status: "public_reference";
+  profession_count: number;
+  direct_professions: number;
+  related_professions: number;
+  category_only_professions: number;
+  source_codes: string[];
+  source_names: string[];
+  source_urls: string[];
+  latest_period: string;
+  latest_published_at: string;
+  latest_total_sample_size: number;
+  salary_currency: "RUB";
+  salary_tax_statuses: Array<"gross" | "net" | "unknown">;
+  current_market_claim: false;
+  interpretation: string;
+}
+
 export interface DataProvenance {
-  schema_version: "1.2";
+  schema_version: "1.3";
   generated_at: string;
-  layers: Array<PreparedAnalyticsLayer | OfficialPublicationsLayer>;
+  layers: Array<PreparedAnalyticsLayer | OfficialPublicationsLayer | SalaryBenchmarksLayer>;
 }
 
 export interface User {

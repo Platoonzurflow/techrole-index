@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowRight, CalendarDays, CircleHelp, Layers3, MapPin, Radio, Wifi } from "lucide-react";
 import { Paywall } from "@/components/Paywall";
+import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 import { OfficialSalaryChart, PublicationChart, SalaryChart, VacancyChart } from "@/components/Charts";
 import { TrendBadge } from "@/components/TrendBadge";
 import { api, safeApi } from "@/lib/api";
@@ -148,10 +149,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
 
       <section className="mt-10 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-5 sm:p-6" aria-labelledby="data-layers-title">
         <div className="flex flex-wrap items-start justify-between gap-4">
-          <div><p className="eyebrow">Статус данных</p><h2 id="data-layers-title" className="mt-2 text-2xl font-semibold">Два слоя, которые нельзя смешивать</h2></div>
+          <div><p className="eyebrow">Статус данных</p><h2 id="data-layers-title" className="mt-2 text-2xl font-semibold">Слои, которые нельзя смешивать</h2></div>
           <Link href="/data-status" className="button-secondary">Как читать статусы</Link>
         </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-2">
+        <div className="mt-5 grid gap-4 lg:grid-cols-3">
           <article className="rounded-2xl border border-line p-5">
             <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Официальные публикации</h3><span className="badge confidence-high">наблюдалось</span></div>
             <p className="mt-3 text-sm leading-6 text-muted">{profession.official_open_data ? `${profession.official_open_data.total_publications.toLocaleString("ru-RU")} классифицированных публикаций за ${profession.official_open_data.date_from} - ${profession.official_open_data.date_to}. Публикации не равны одновременно активным вакансиям; gross/net не определён.` : "Для этой роли пока нет классифицированных публикаций официального слоя."}</p>
@@ -159,6 +160,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           <article className="rounded-2xl border border-line p-5">
             <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Подготовленная витрина</h3><span className="badge confidence-medium">подготовлено</span></div>
             <p className="mt-3 text-sm leading-6 text-muted">Показатели спроса, gross-зарплат и индекса рассчитаны в детерминированной витрине{profession.updated_at ? ` на дату ${profession.updated_at}` : ""}. Эта дата не является подтверждением текущего состояния рынка.</p>
+          </article>
+          <article className="rounded-2xl border border-line p-5">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Публичные зарплатные исследования</h3><span className="badge confidence-medium">ориентир</span></div>
+            <p className="mt-3 text-sm leading-6 text-muted">Фактические доходы специалистов показаны отдельным справочным слоем: точные, смежные и категорийные значения никогда не смешиваются с вилками вакансий.</p>
           </article>
         </div>
       </section>
@@ -179,6 +184,8 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           </div>
         </section>
       ) : null}
+
+      {profession.salary_benchmark ? <SalaryBenchmarks data={profession.salary_benchmark} /> : null}
 
       {profession.official_open_data ? (
         <section className="panel mt-10 p-6 sm:p-8" aria-labelledby="official-open-data-title">

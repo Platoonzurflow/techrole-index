@@ -4,6 +4,8 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 
 ## [Unreleased]
 
+- Added a third, provenance-rich salary benchmark layer for all 50 professions using Habr Career H1 2026 (`n=45,226`) plus explicitly labeled grade references; exact, related, technology and category scopes never overwrite vacancy metrics.
+- Updated profession pages, sources and data-status schema 1.3 with regional salary references, source periods, tax status, sample sizes and mapping caveats.
 - Added a no-charge payment sandbox, server-priced 30-day Premium orders, auditable terms acceptance, idempotent webhooks/refunds and payment result pages.
 - Added a fail-closed YooKassa REST adapter and official-provider comparison; real charges remain disabled until owner KYC, legal/fiscal setup, stable hosting and explicit approval.
 - Updated Apache ECharts to 6.1.0 and forced patched PostCSS 8.5.19 after dependency audit.

@@ -10,6 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.data.catalog import ALIASES_BY_PROFESSION
 from app.domain.classifier import RuleBasedClassifier
 from app.models import (
     IngestionRun,
@@ -69,7 +70,9 @@ def _ensure_source(db: Session) -> VacancySource:
     return source
 
 
-def _classifier(db: Session) -> tuple[RuleBasedClassifier, dict[str, Profession]]:
+def build_rule_classifier(
+    db: Session,
+) -> tuple[RuleBasedClassifier, dict[str, Profession]]:
     professions = {
         item.slug: item
         for item in db.scalars(
@@ -88,6 +91,7 @@ def _classifier(db: Session) -> tuple[RuleBasedClassifier, dict[str, Profession]
         if alias.exclude_pattern:
             exclusions[slug].append(alias.exclude_pattern)
     for slug, profession in professions.items():
+        aliases[slug].extend(ALIASES_BY_PROFESSION.get(slug, ()))
         aliases[slug].extend((profession.name_ru, profession.name_en))
     return RuleBasedClassifier(aliases, exclusions), professions
 
@@ -124,6 +128,7 @@ def _queries_for_profession(db: Session, profession: Profession) -> list[str]:
     candidates = [profession.name_ru]
     if settings.trudvsem_use_alias_queries:
         candidates.append(profession.name_en)
+        candidates.extend(ALIASES_BY_PROFESSION.get(profession.slug, ()))
         candidates.extend(
             db.scalars(
                 select(ProfessionAlias.alias)
@@ -155,9 +160,7 @@ def _coarse_region(region_code: str, regions: dict[str, Region]) -> Region:
 
 
 def _store_salary_observation(db: Session, vacancy: Vacancy, observed_at: datetime) -> None:
-    if vacancy.currency != "RUB" or (
-        vacancy.salary_from is None and vacancy.salary_to is None
-    ):
+    if vacancy.currency != "RUB" or (vacancy.salary_from is None and vacancy.salary_to is None):
         return
     observed_date = observed_at.date()
     existing = db.scalar(
@@ -219,7 +222,7 @@ def ingest_trudvsem_open_data(
         }
     if stale_runs:
         db.commit()
-    rules, professions_by_slug = _classifier(db)
+    rules, professions_by_slug = build_rule_classifier(db)
     regions = {item.code: item for item in db.scalars(select(Region)).all()}
     if not {"ru", "msk", "spb", "other"}.issubset(regions):
         raise RuntimeError("Required coarse regions are missing")
@@ -230,7 +233,11 @@ def ingest_trudvsem_open_data(
     }
     professions = list(professions_by_slug.values())[: settings.trudvsem_max_professions]
     provider = provider or TrudvsemOpenDataProvider(settings)
-    if ai_classifier is None and settings.ai_classifier_enabled and settings.ai_classifier_max_per_run:
+    if (
+        ai_classifier is None
+        and settings.ai_classifier_enabled
+        and settings.ai_classifier_max_per_run
+    ):
         ai_classifier = OllamaOptionalClassifier(settings, set(professions_by_slug))
 
     started_at = datetime.now(timezone.utc)
@@ -315,7 +322,11 @@ def ingest_trudvsem_open_data(
                             record.published_at,
                         )
 
-                        classification = rules.classify(record.title, record.experience)
+                        classification = rules.classify(
+                            record.title,
+                            record.experience,
+                            record.skills,
+                        )
                         classifier_version = rules.version
                         if (
                             ai_classifier is not None
@@ -392,9 +403,7 @@ def ingest_trudvsem_open_data(
                         vacancy.experience_code = record.experience
                         vacancy.profession_id = profession_match.id if profession_match else None
                         vacancy.seniority_id = level.id if level else None
-                        vacancy.classification_confidence = Decimal(
-                            str(classification.confidence)
-                        )
+                        vacancy.classification_confidence = Decimal(str(classification.confidence))
                         vacancy.classifier_version = classifier_version
                         vacancy.raw_payload = record.raw
                         db.flush()
@@ -470,12 +479,8 @@ def ingest_trudvsem_open_data(
         "records_outside_window": records_outside_window,
         "window_start": cutoff.isoformat(),
         "window_end": now.isoformat(),
-        "oldest_published_at": oldest_published_at.isoformat()
-        if oldest_published_at
-        else None,
-        "newest_published_at": newest_published_at.isoformat()
-        if newest_published_at
-        else None,
+        "oldest_published_at": oldest_published_at.isoformat() if oldest_published_at else None,
+        "newest_published_at": newest_published_at.isoformat() if newest_published_at else None,
         "metrics_recalculated": False,
         "metrics_note": (
             "official publication records were loaded; gross/net semantics and historical "

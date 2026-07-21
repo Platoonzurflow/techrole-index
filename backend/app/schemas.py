@@ -109,6 +109,50 @@ class OfficialOpenDataSummary(BaseModel):
     methodology_note: str
 
 
+class SalaryBenchmarkSource(BaseModel):
+    id: str
+    name: str
+    url: str
+    methodology_url: str
+    period: str
+    published_at: date
+    total_sample_size: int | None = None
+    currency: Literal["RUB"]
+    tax_status: Literal["gross", "net", "unknown"]
+    income_type: Literal["salary", "salary_plus_bonus"]
+    methodology_note: str
+
+
+class SalaryBenchmarkPoint(BaseModel):
+    source_id: str
+    scope: Literal[
+        "exact_role",
+        "related_role",
+        "technology",
+        "category",
+        "market_level",
+    ]
+    label: str
+    geography: Literal["russia", "moscow", "saint_petersburg", "regions"]
+    metric: Literal["median", "average", "range"]
+    value: float | None = None
+    lower: float | None = None
+    upper: float | None = None
+    p10: float | None = None
+    p90: float | None = None
+    seniority: Literal["junior", "middle", "senior"] | None = None
+    sample_size: int | None = None
+    note: str | None = None
+    is_fallback: bool
+
+
+class SalaryBenchmarkSummary(BaseModel):
+    coverage: Literal["direct", "related", "category"]
+    points: list[SalaryBenchmarkPoint]
+    sources: list[SalaryBenchmarkSource]
+    methodology_note: str
+
+
 class OpenDataCatalogItem(BaseModel):
     slug: str
     name_ru: str
@@ -170,6 +214,7 @@ class ProfessionDetail(ProfessionSummary):
     tech_stack: list[dict[str, str | list[str]]] | None = None
     history_days: int | None = None
     official_open_data: OfficialOpenDataSummary | None = None
+    salary_benchmark: SalaryBenchmarkSummary | None = None
 
 
 class ProfessionUpdate(BaseModel):

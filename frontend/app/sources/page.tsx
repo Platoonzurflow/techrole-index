@@ -18,6 +18,9 @@ interface Source {
   enabled: boolean;
   provider_type: string;
   terms_url?: string;
+  methodology_url?: string;
+  period?: string;
+  salary_tax_status?: "gross" | "net" | "unknown";
 }
 
 function sourceTitle(source: Source) {
@@ -25,11 +28,13 @@ function sourceTitle(source: Source) {
 }
 
 function providerTitle(source: Source) {
+  if (source.provider_type === "public_salary_report") return "Публичное исследование фактических доходов";
   return source.code === "demo" ? "Встроенный провайдер данных" : source.provider_type;
 }
 
 function sourceDescription(source: Source) {
   if (source.code === "cbr_currency") return `${source.enabled ? "Включённый" : "Выключенный"} источник официальных дневных курсов с requested/effective date.`;
+  if (source.provider_type === "public_salary_report") return `Версионированный зарплатный ориентир за ${source.period}; налоговый статус: ${source.salary_tax_status === "net" ? "на руки" : "не указан"}. Не смешивается с вилками вакансий.`;
   return `${source.enabled ? "Включённый" : "Выключенный"} источник вакансий TechRole Index.`;
 }
 
@@ -66,7 +71,8 @@ export default async function SourcesPage() {
           <article key={source.code} className="panel p-6">
             <div className="flex items-start justify-between gap-3"><h2 className="text-xl font-semibold">{sourceTitle(source)}</h2><span className={`badge ${source.enabled ? "confidence-high" : "confidence-low"}`}>{source.enabled ? "включён" : "выключен"}</span></div>
             <p className="mt-3 font-mono text-sm text-muted">{providerTitle(source)}</p><p className="mt-3 text-sm leading-6 text-muted">{sourceDescription(source)}</p>
-            {source.terms_url ? <a className="mt-5 inline-block font-semibold text-accent" href={source.terms_url} rel="noreferrer">Официальная документация/условия ↗</a> : <p className="mt-5 text-muted">Синтетический источник без персональных данных.</p>}
+            {source.terms_url ? <a className="mt-5 inline-block font-semibold text-accent" href={source.terms_url} rel="noreferrer">Источник/документация ↗</a> : <p className="mt-5 text-muted">Синтетический источник без персональных данных.</p>}
+            {source.methodology_url ? <a className="mt-3 block font-semibold text-accent" href={source.methodology_url} rel="noreferrer">Методология ↗</a> : null}
           </article>
         ))}
       </div>

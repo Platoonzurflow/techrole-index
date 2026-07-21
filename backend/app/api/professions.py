@@ -9,6 +9,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.data.salary_benchmarks import salary_benchmark_for
 from app.data.tech_stacks import tech_stack_for
 from app.database import get_db
 from app.domain.salary import SalaryInput, calculate_salary_statistics
@@ -59,9 +60,7 @@ def open_data_publications(db: Session = Depends(get_db)):
     window = utc_calendar_window(now, days=period_days)
     date_to = window.date_to
     date_from = window.date_from
-    source_id = db.scalar(
-        select(VacancySource.id).where(VacancySource.code == "trudvsem_open")
-    )
+    source_id = db.scalar(select(VacancySource.id).where(VacancySource.code == "trudvsem_open"))
     if source_id is None:
         return []
     rows = db.execute(
@@ -86,19 +85,21 @@ def open_data_publications(db: Session = Depends(get_db)):
     publications: list[OpenDataCatalogItem] = []
     for profession_id, slug, name_ru, total, last_ingested_at in rows:
         official = _official_open_data_summary(db, profession_id, period_days)
-        publications.append(OpenDataCatalogItem(
-            slug=slug,
-            name_ru=name_ru,
-            period_days=period_days,
-            date_from=date_from,
-            date_to=date_to,
-            total_publications=int(total or 0),
-            last_ingested_at=last_ingested_at,
-            salary_currency=official.salary_currency,
-            salary_gross_status=official.salary_gross_status,
-            salary_min_sample=official.salary_min_sample,
-            salary_by_seniority=official.salary_by_seniority,
-        ))
+        publications.append(
+            OpenDataCatalogItem(
+                slug=slug,
+                name_ru=name_ru,
+                period_days=period_days,
+                date_from=date_from,
+                date_to=date_to,
+                total_publications=int(total or 0),
+                last_ingested_at=last_ingested_at,
+                salary_currency=official.salary_currency,
+                salary_gross_status=official.salary_gross_status,
+                salary_min_sample=official.salary_min_sample,
+                salary_by_seniority=official.salary_by_seniority,
+            )
+        )
     return publications
 
 
@@ -113,9 +114,7 @@ def _official_open_data_summary(
     window = utc_calendar_window(now, days=period_days)
     date_to = window.date_to
     date_from = window.date_from
-    source_id = db.scalar(
-        select(VacancySource.id).where(VacancySource.code == "trudvsem_open")
-    )
+    source_id = db.scalar(select(VacancySource.id).where(VacancySource.code == "trudvsem_open"))
     rows: list[tuple[Any, ...]] = []
     if source_id is not None:
         rows = [
@@ -130,9 +129,7 @@ def _official_open_data_summary(
                     Vacancy.currency,
                     SeniorityLevel.code,
                 )
-                .outerjoin(
-                    SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id
-                )
+                .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
                 .where(
                     Vacancy.source_id == source_id,
                     Vacancy.profession_id == profession_id,
@@ -261,8 +258,7 @@ def _official_open_data_summary(
         confidence_level=confidence,
         last_ingested_at=last_ingested_at,
         daily_publications=[
-            PublicationPoint(date=metric_date, count=count)
-            for metric_date, count in daily.items()
+            PublicationPoint(date=metric_date, count=count) for metric_date, count in daily.items()
         ],
         salary_currency="RUB",
         salary_gross_status="unknown",
@@ -439,11 +435,13 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
     summary = _summary(profession, category, score, premium)
     tech_stack = tech_stack_for(profession.slug)
     official_open_data = _official_open_data_summary(db, profession.id)
+    salary_benchmark = salary_benchmark_for(profession.slug, category.slug)
     if summary.teaser_only:
         return ProfessionDetail(
             **summary.model_dump(),
             tech_stack=tech_stack,
             official_open_data=official_open_data,
+            salary_benchmark=salary_benchmark,
         )
 
     history_days = min(days, 180 if premium else 30)
@@ -459,6 +457,7 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
             **summary.model_dump(),
             tech_stack=tech_stack,
             official_open_data=official_open_data,
+            salary_benchmark=salary_benchmark,
         )
     start_date = max_date - timedelta(days=history_days - 1)
     metric_rows = db.execute(
@@ -571,6 +570,7 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
         tech_stack=tech_stack,
         history_days=history_days,
         official_open_data=official_open_data,
+        salary_benchmark=salary_benchmark,
     )
 
 
@@ -586,6 +586,7 @@ def get_profession(
     premium = has_premium(db, user)
     effective_days = min(days, 180 if premium else 30)
     cache_parts = {
+        "schema": "salary-benchmark-v1",
         "tier": "premium" if premium else "public",
         "slug": slug,
         "days": effective_days,

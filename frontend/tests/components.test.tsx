@@ -9,6 +9,7 @@ import { SupportButton } from "@/components/SupportButton";
 import { SupportForm } from "@/components/SupportForm";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
 import { AccountActions } from "@/components/AccountActions";
+import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -28,6 +29,42 @@ afterEach(() => {
 });
 
 describe("analytics components", () => {
+  it("labels salary fallbacks separately from an exact benchmark", () => {
+    render(<SalaryBenchmarks data={{
+      coverage: "direct",
+      methodology_note: "Слои не смешиваются.",
+      points: [
+        { source_id: "habr", scope: "exact_role", label: "Инженер по данным", geography: "russia", metric: "median", value: 240000, p10: 100000, p90: 413000, is_fallback: false },
+        { source_id: "habr", scope: "category", label: "Аналитика", geography: "russia", metric: "median", value: 194000, is_fallback: true },
+        { source_id: "habr", scope: "category", label: "Аналитика", geography: "moscow", metric: "median", value: 220000, is_fallback: true },
+        { source_id: "habr", scope: "category", label: "Аналитика", geography: "saint_petersburg", metric: "median", value: 180000, is_fallback: true },
+        { source_id: "habr", scope: "category", label: "Аналитика", geography: "regions", metric: "median", value: 160000, is_fallback: true },
+      ],
+      sources: [{
+        id: "habr",
+        name: "Хабр Карьера",
+        url: "https://habr.com/ru/specials/1060148/",
+        methodology_url: "https://career.habr.com/info/salaries",
+        period: "I полугодие 2026",
+        published_at: "2026-07-21",
+        total_sample_size: 45226,
+        currency: "RUB",
+        tax_status: "net",
+        income_type: "salary_plus_bonus",
+        methodology_note: "Фактические доходы.",
+      }],
+    }} />);
+
+    expect(screen.getByText("есть прямой срез")).toBeInTheDocument();
+    expect(screen.getByText("точная профессия")).toBeInTheDocument();
+    expect(screen.getByText("Категорийный fallback")).toBeInTheDocument();
+    expect(screen.getByText(/n=45[\s\u00a0]226/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /Источник/ })).toHaveAttribute(
+      "href",
+      "https://habr.com/ru/specials/1060148/",
+    );
+  });
+
   it("renders a server-safe premium teaser", () => {
     render(<ProfessionCard profession={{ id: 1, slug: "python", name_ru: "Python-разработчик", name_en: "Python Developer", description: "Описание", category_slug: "development", category_name: "Разработка", is_premium: true, teaser_only: true }} />);
     expect(screen.getByText("Premium")).toBeInTheDocument();

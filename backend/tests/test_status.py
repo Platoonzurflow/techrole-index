@@ -34,6 +34,10 @@ def test_sources_include_official_currency_provider() -> None:
     assert currency["provider_type"] == "official_xml_api"
     assert currency["terms_url"] == "https://www.cbr.ru/development/sxml/"
     assert isinstance(currency["enabled"], bool)
+    salary = next(item for item in payload if item["code"] == "habr_2026_h1")
+    assert salary["provider_type"] == "public_salary_report"
+    assert salary["salary_tax_status"] == "net"
+    assert salary["period"] == "I полугодие 2026"
 
 
 def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> None:
@@ -42,9 +46,7 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
     )
     Base.metadata.create_all(engine)
     with Session(engine) as db:
-        category = ProfessionCategory(
-            slug="development", name_ru="Разработка", description="Тест"
-        )
+        category = ProfessionCategory(slug="development", name_ru="Разработка", description="Тест")
         db.add(category)
         db.flush()
         profession = Profession(
@@ -79,7 +81,8 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
         payload = data_provenance(db)
     engine.dispose()
 
-    prepared, official = payload["layers"]
+    prepared, official, benchmarks = payload["layers"]
+    assert payload["schema_version"] == "1.3"
     assert prepared["status"] == "prepared_baseline"
     assert prepared["last_metric_date"] == date(2026, 7, 17)
     assert prepared["profession_count"] == 1
@@ -88,6 +91,16 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
     assert official["salary_tax_status"] == "unknown"
     assert official["materialized_slice_count"] == 0
     assert official["materialized_publications"] == 0
+    assert benchmarks["status"] == "public_reference"
+    assert benchmarks["profession_count"] == 50
+    assert benchmarks["latest_total_sample_size"] == 45226
+    assert (
+        sum(
+            benchmarks[key]
+            for key in ("direct_professions", "related_professions", "category_only_professions")
+        )
+        == 50
+    )
 
 
 def test_public_endpoints_share_complete_utc_calendar_window(monkeypatch) -> None:
@@ -106,9 +119,7 @@ def test_public_endpoints_share_complete_utc_calendar_window(monkeypatch) -> Non
     )
     Base.metadata.create_all(engine)
     with Session(engine) as db:
-        category = ProfessionCategory(
-            slug="development", name_ru="Разработка", description="Тест"
-        )
+        category = ProfessionCategory(slug="development", name_ru="Разработка", description="Тест")
         db.add(category)
         db.flush()
         profession = Profession(
@@ -136,19 +147,21 @@ def test_public_endpoints_share_complete_utc_calendar_window(monkeypatch) -> Non
             window_end - timedelta(seconds=1),
             window_end,
         ]
-        db.add_all([
-            Vacancy(
-                source_id=source.id,
-                external_id=f"boundary-{index}",
-                title=f"Python developer boundary {index}",
-                region_id=region.id,
-                published_at=published_at,
-                first_seen_at=fixed_now,
-                last_seen_at=fixed_now,
-                profession_id=profession.id,
-            )
-            for index, published_at in enumerate(published)
-        ])
+        db.add_all(
+            [
+                Vacancy(
+                    source_id=source.id,
+                    external_id=f"boundary-{index}",
+                    title=f"Python developer boundary {index}",
+                    region_id=region.id,
+                    published_at=published_at,
+                    first_seen_at=fixed_now,
+                    last_seen_at=fixed_now,
+                    profession_id=profession.id,
+                )
+                for index, published_at in enumerate(published)
+            ]
+        )
         db.commit()
 
         provenance = data_provenance(db)

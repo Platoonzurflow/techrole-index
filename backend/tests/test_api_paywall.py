@@ -195,6 +195,9 @@ def test_free_response_does_not_contain_premium_fields():
         assert forbidden not in payload
     assert payload["teaser_only"] is True
     assert payload["official_open_data"]["salary_gross_status"] == "unknown"
+    assert payload["salary_benchmark"]["coverage"] == "category"
+    assert len(payload["salary_benchmark"]["points"]) == 4
+    assert payload["salary_benchmark"]["sources"][0]["tax_status"] == "net"
     official_junior = payload["official_open_data"]["salary_by_seniority"][0]
     assert official_junior["median"] == 150000
     assert official_junior["sample_size"] == 20
@@ -478,19 +481,28 @@ def test_demo_webhook_rejects_bad_signature_amount_and_replays(monkeypatch):
     assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
 
     headers = {"X-Demo-Signature": signature, "Content-Type": "application/json"}
-    assert client.post(
-        "/api/v1/payments/webhooks/demo", content=body, headers=headers
-    ).json()["status"] == "processed"
-    assert client.post(
-        "/api/v1/payments/webhooks/demo", content=body, headers=headers
-    ).json()["status"] == "already_processed"
+    assert (
+        client.post("/api/v1/payments/webhooks/demo", content=body, headers=headers).json()[
+            "status"
+        ]
+        == "processed"
+    )
+    assert (
+        client.post("/api/v1/payments/webhooks/demo", content=body, headers=headers).json()[
+            "status"
+        ]
+        == "already_processed"
+    )
     assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
     assert len(session.scalars(select(PaymentEvent)).all()) == 2
-    assert len(
-        session.scalars(
-            select(Entitlement).where(Entitlement.source == f"payment:{order.public_id}")
-        ).all()
-    ) == 1
+    assert (
+        len(
+            session.scalars(
+                select(Entitlement).where(Entitlement.source == f"payment:{order.public_id}")
+            ).all()
+        )
+        == 1
+    )
     client.close()
     session.close()
     app.dependency_overrides.clear()
@@ -595,16 +607,22 @@ def test_admin_full_refund_is_idempotent_and_revokes_payment_access(monkeypatch)
         "X-Demo-Signature": refund_signature,
         "Content-Type": "application/json",
     }
-    assert client.post(
-        "/api/v1/payments/webhooks/demo",
-        content=refund_body,
-        headers=webhook_headers,
-    ).json()["status"] == "processed"
-    assert client.post(
-        "/api/v1/payments/webhooks/demo",
-        content=refund_body,
-        headers=webhook_headers,
-    ).json()["status"] == "already_processed"
+    assert (
+        client.post(
+            "/api/v1/payments/webhooks/demo",
+            content=refund_body,
+            headers=webhook_headers,
+        ).json()["status"]
+        == "processed"
+    )
+    assert (
+        client.post(
+            "/api/v1/payments/webhooks/demo",
+            content=refund_body,
+            headers=webhook_headers,
+        ).json()["status"]
+        == "already_processed"
+    )
 
     client.post(
         "/api/v1/auth/login",

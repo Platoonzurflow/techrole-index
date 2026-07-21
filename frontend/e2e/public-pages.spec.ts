@@ -22,6 +22,10 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByText("Это не историческое число одновременно активных вакансий", { exact: false })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Зарплата по уровням за 180 дней" })).toBeVisible();
   await expect(page.getByText("gross/net не определён", { exact: false }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Рыночные ориентиры зарплаты" })).toBeVisible();
+  await expect(page.getByText("технологический срез", { exact: true }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toBeVisible();
+  await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
 });
 
 test("support topics stay readable and keyboard selectable", async ({ page }) => {
@@ -355,8 +359,8 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(articleRis).toContain("TY  - ELEC");
 
   const provenance = await (await request.get("/data-status.json")).json();
-  expect(provenance.schema_version).toBe("1.2");
-  expect(provenance.layers).toHaveLength(2);
+  expect(provenance.schema_version).toBe("1.3");
+  expect(provenance.layers).toHaveLength(3);
   expect(provenance.layers.every((layer: { current_market_claim: boolean }) => layer.current_market_claim === false)).toBe(true);
   expect(provenance.observed_publication_daily_page_url).toContain("/open-data-daily");
   expect(provenance.observed_publication_daily_csvw_url).toContain("/open-data-daily.csv-metadata.json");
@@ -364,9 +368,12 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(provenance.observed_publication_daily_croissant_url).toContain("/open-data-daily.croissant.json");
   expect(provenance.dcat_catalog_url).toContain("/catalog.jsonld");
   const officialLayer = provenance.layers.find((layer: { id: string }) => layer.id === "official_publications");
+  const salaryLayer = provenance.layers.find((layer: { id: string }) => layer.id === "salary_benchmarks");
   expect(officialLayer.window_time_basis).toBe("UTC_calendar_days");
   expect(officialLayer.window_start_at).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(officialLayer.window_end_at_exclusive).toMatch(/T00:00:00(?:Z|\+00:00)$/);
+  expect(salaryLayer.profession_count).toBe(50);
+  expect(salaryLayer.latest_total_sample_size).toBe(45226);
 
   const openDataCsv = await (await request.get("/open-data.csv")).text();
   expect(openDataCsv.split(/\r?\n/).filter(Boolean)).toHaveLength(151);
