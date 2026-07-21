@@ -10,25 +10,25 @@ dependencies = [
   "dagster-webserver>=1.13,<2",
   "email-validator>=2.2,<3",
   "fastapi>=0.115,<1",
-  "gunicorn>=23,<24",
+  "gunicorn>=23,<27",
   "httpx>=0.28,<1",
   "psycopg[binary]>=3.2,<4",
   "pydantic-settings>=2.7,<3",
   "prometheus-client>=0.21,<1",
   "PyJWT>=2.10,<3",
   "pwdlib[argon2]>=0.2,<1",
-  "python-json-logger>=3.2,<4",
+  "python-json-logger>=3.2,<5",
   "python-multipart>=0.0.20,<1",
-  "redis>=5.2,<6",
+  "redis>=5.2,<9",
   "sqlalchemy>=2.0.36,<3",
   "uvicorn[standard]>=0.34,<1",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "mypy>=1.14,<2",
-  "pytest>=8.3,<9",
-  "pytest-cov>=6,<7",
+  "mypy>=1.14,<3",
+  "pytest>=8.3,<10",
+  "pytest-cov>=6,<8",
   "ruff>=0.9,<1",
 ]
 
