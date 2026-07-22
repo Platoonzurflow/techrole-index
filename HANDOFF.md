@@ -452,15 +452,15 @@ HhApiProvider использует только официальный API, од
 Backend внутри контейнера:
 
 - Ruff: passed;
-- mypy: passed, 53 source files;
-- pytest: `119 passed`.
+- mypy: passed, 54 source files;
+- pytest: `123 passed`.
 
 Frontend:
 
 - ESLint: passed;
 - source TypeScript: passed;
-- backend Ruff + mypy + pytest: `119 passed`;
-- Vitest: `45 passed`;
+- backend Ruff + mypy + pytest: `123 passed`;
+- Vitest: `46 passed`;
 - Next.js production build: passed, 63 generated page artifacts, включая legal/payment routes, три salary-benchmark routes и 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
 - отдельные production-check Docker images frontend/backend: built and smoke-tested, HTTP 200;
 - Playwright Chromium profile: `30 passed`. Сценарии включают полный demo payment flow с регистрацией, явным принятием условий, sandbox checkout и выдачей Premium, 50 profession links, 150/150 грейдовых зарплатных карточек и salary JSON/CSV, статус аудита зарплатных источников, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, conditional `304`, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, формы/селекты, accessibility/reduced-motion и lab performance budgets;
@@ -468,7 +468,7 @@ Frontend:
 - DCAT JSON-LD дополнительно разобран независимым `rdflib 7.1.4`: 62 RDF-триплета, по одному Catalog, Dataset и DataService, две Distribution; endpoint локально отвечает `200` и strong SHA-256 ETag;
 - официальный `mlcroissant 1.1.0`: validate завершился `Done`, loader скачал объявленный CSV и типизированно прочитал первые три записи всех 30 полей; отсутствие checksum для `isLiveDataset=true` распознано штатно;
 - hosted CI после запуска Compose устанавливает закреплённый `mlcroissant==1.1.0`, повторяет validate и загрузку первых трёх записей до Playwright;
-- sitemap-driven public audit: `85 checked, 0 failed` через текущий внешний HTTPS preview; для каждого canonical HTML URL проверены status/content-type, уникальные title/description, canonical, один h1, `lang=ru`, отсутствие `noindex` и валидность всего JSON-LD;
+- sitemap-driven public audit: `86 checked, 0 failed` через текущий внешний HTTPS preview; для каждого canonical HTML URL проверены status/content-type, уникальные title/description, canonical, один h1, `lang=ru`, отсутствие `noindex` и валидность всего JSON-LD;
 - те же 11 accessibility/reduced-motion сценариев отдельно прошли на immutable production standalone через постоянный public proxy;
 - production lab после исправления assets: в повторных проходах максимум TTFB/FCP/LCP составил `51/140/444 ms`, CLS везде `0`, theme event duration `48-64 ms`; это локальный guardrail, не field p75;
 - все публичные маршруты скомпилированы;
@@ -480,7 +480,7 @@ Frontend:
 - все 50 profession detail SSR routes: passed.
 - внешний production-preview smoke после CSVW/DCAT: homepage/canonical/security headers, browser assets, 50 AI-сущностей, 50 Dataset, 151 aggregate CSV-строка, 742 daily JSON record, 743 daily CSV-строки, 27-field Draft 2020-12 schema и соответствие каждой строки, CSVW и Croissant 1.1 с 30 фактическими CSV-полями, DCAT с двумя distributions, SHA-256 ETag/Last-Modified и conditional `304`, канонический Dataset landing, 3 provenance-слоя, 12 editorial insights, все 12 Article pages и 12 per-article CSL records, 50 LLM-описаний, dataset citation CSL, research aggregate, 85 sitemap URL, Open Graph PNG и backend readiness - passed. Изолированная симуляция недоступного backend подтвердила `503`, `Retry-After: 60` и `Cache-Control: no-store` для daily exports;
 - постоянный loopback `public-proxy` на 3199 пережил force-recreate standalone upstream на 3100; позднее анонимный localhost.run ротировал hostname внутри живого PID, поэтому добавлен refresh последнего URL из логов с историей previous URLs;
-- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; актуальный immutable `.next-public-tsnet-v020` собран с этим canonical. После добавления отдельного предложения стоимости внешний smoke подтвердил поле `/mentorship`, пояснение об отсутствии платежа на этапе заявки, Alembic head `0007`, один комплект Junior/Middle/Senior, 37 прямых / 13 смежных / 0 category-only профессий, 50 профессий и 432 строки salary CSV, 742 daily slices, три provenance-слоя, 86 sitemap URL и условные ответы `304`; все постоянные сервисы healthy. Платежи на preview используют только `demo/test`, terms остаются draft. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
+- после одобрения владельца запущен Tailscale Funnel `https://win-702hpohbtiv.tail044b19.ts.net` на `127.0.0.1:3199`; актуальный immutable `.next-public-tsnet-v021` собран с этим canonical. Внешний smoke подтвердил admin page, новый credential-free readiness bundle, `401` для анонимного payment-readiness API, поле `/mentorship`, Alembic head `0007`, один комплект Junior/Middle/Senior, 37 прямых / 13 смежных / 0 category-only профессий, 50 профессий и 432 строки salary CSV, 742 daily slices, три provenance-слоя, 86 sitemap URL и условные ответы `304`; все постоянные сервисы healthy. Платежи на preview используют только `demo/test`, terms остаются draft, а `PAYMENTS_STABLE_HTTPS_CONFIRMED=false`. Funnel остаётся beta и host-dependent preview, а не отказоустойчивым production;
 - canonical Dataset JSON-LD дополнительно сверён с актуальной документацией Google Dataset Search: самоцитирование удалено из предназначенного для связанных научных работ `Dataset.citation`, а identifier/creator/publisher/canonical URL и отдельные citation formats сохранены; целевой Playwright-сценарий, ESLint и TypeScript прошли;
 - `CITATION.cff` исправлен по CFF 1.2 (`preferred-citation.type=data` при верхнеуровневом GitHub `type=dataset`) и независимо прошёл `cffconvert 2.0.0 --validate`; отдельный CI job повторяет эту проверку на hosted runner;
 - Gitleaks повторно просканировал staged payment diff и всю пятикоммитную очищенную `public-main`: `no leaks found`. Старый синтетический production-settings fixture исключён только точным fingerprint в `.gitleaksignore`; целые файлы, пути и commits не исключаются;
