@@ -1,4 +1,4 @@
-{$SITE_ADDRESS:http://localhost} {
+techrole.ru {
   encode zstd gzip
   header {
     Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -9,5 +9,13 @@
     -Server
   }
   reverse_proxy frontend:3000
+}
+
+www.techrole.ru {
+  redir https://techrole.ru{uri} permanent
+}
+
+94-102-88-123.sslip.io {
+  redir https://techrole.ru{uri} permanent
 }
 

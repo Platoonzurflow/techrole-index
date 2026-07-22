@@ -659,3 +659,6 @@ Next build может автоматически дописывать custom dis
 7. Не возвращать frontend dev cache с `.next-dev` на общий `.next`.
 8. После изменений выполнить обязательные команды из `AGENTS.md`, production build и пропорциональный browser smoke-test.
 9. Любое новое важное предположение добавить в `DECISIONS.md`.
+## Latest infrastructure handoff (2026-07-22)
+
+The permanent domain `techrole.ru` is registered in the owner's Selectel account and DNS records are prepared: apex A `94.102.88.123`, `www` CNAME `techrole.ru.`. Production `.env` on the VDS uses `https://techrole.ru` for all public/origin URL settings. Caddy redirects the legacy `94-102-88-123.sslip.io` address to the new apex. The registry may still report the zone as not delegated while nameserver verification propagates; check `nslookup -type=NS techrole.ru` and only then perform the final HTTPS smoke test. Real Robokassa charges remain disabled.

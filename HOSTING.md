@@ -84,3 +84,9 @@ Always Free не означает SLA. Нужны внешний uptime monitor,
 6. Ежемесячный публичный changelog данных, schema version и проверки качества; исправления должны сохранять стабильные URL.
 
 Подробная белая стратегия описана в `GROWTH.md`.
+## Current production status (2026-07-22)
+
+- Canonical host: `https://techrole.ru` (Selectel VDS `94.102.88.123`).
+- DNS zone is managed in Selectel. Apex `A` points to `94.102.88.123`; `www` is a `CNAME` to `techrole.ru.`.
+- Caddy serves the canonical host and redirects the former `sslip.io` address and `www` to the apex.
+- The domain registration is active through 2027-07-22. DNS delegation can take time after registrar verification; do not enable live payments until the new HTTPS host passes the external smoke checks.
