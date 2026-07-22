@@ -5,6 +5,13 @@ x-production-backend-environment: &production-backend-environment
   DEMO_MODE: "false"
   FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:?FRONTEND_ORIGIN is required for production}
   PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:?PUBLIC_BASE_URL is required for production}
+  INDEXNOW_ENABLED: ${INDEXNOW_ENABLED:-false}
+  INDEXNOW_KEY: ${INDEXNOW_KEY:-}
+  INDEXNOW_TIMEOUT_SECONDS: ${INDEXNOW_TIMEOUT_SECONDS:-20}
+  TELEGRAM_DIGEST_ENABLED: ${TELEGRAM_DIGEST_ENABLED:-false}
+  TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+  TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+  TELEGRAM_TIMEOUT_SECONDS: ${TELEGRAM_TIMEOUT_SECONDS:-15}
 
 services:
   postgres:
@@ -54,6 +61,13 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-live}
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required for production}
+      INDEXNOW_KEY: ${INDEXNOW_KEY:-}
+      SELLER_NAME: ${SELLER_NAME:-}
+      SELLER_INN: ${SELLER_INN:-}
+      SELLER_PHONE: ${SELLER_PHONE:-}
+      SELLER_ADDRESS: ${SELLER_ADDRESS:-}
+      SELLER_EMAIL: ${SELLER_EMAIL:-sqldevelopermoscow@yandex.com}
+      LEGAL_EFFECTIVE_DATE: ${LEGAL_EFFECTIVE_DATE:-2026-07-22}
     command: ["node", "server.js"]
     ports: !reset []
     volumes: !reset []

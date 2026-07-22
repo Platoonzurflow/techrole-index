@@ -12,6 +12,7 @@ import { AccountActions } from "@/components/AccountActions";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 import { AdminPanel } from "@/components/AdminPanel";
 import { ProfessionSearch } from "@/components/ProfessionSearch";
+import { ShareActions } from "@/components/ShareActions";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -319,6 +320,15 @@ describe("analytics components", () => {
       "/api/v1/compare?slugs=frontend%2Cbackend",
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+  });
+
+  it("copies a stable profession citation", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", { clipboard: { writeText } });
+    render(<ShareActions url="https://techrole.ru/professions/backend" title="Backend" citation="TechRole Index. Backend." />);
+    fireEvent.click(screen.getByRole("button", { name: "Скопировать цитату" }));
+    expect(writeText).toHaveBeenCalledWith("TechRole Index. Backend.");
+    expect(await screen.findByText("Цитата скопирована")).toBeInTheDocument();
   });
 
   it("creates a server-priced test payment without sending an amount", async () => {

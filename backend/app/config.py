@@ -20,6 +20,13 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     demo_seed: int = 20260717
     min_salary_sample: int = Field(default=20, ge=3, le=1000)
+    indexnow_enabled: bool = False
+    indexnow_key: str = ""
+    indexnow_timeout_seconds: float = Field(default=20, ge=3, le=60)
+    telegram_digest_enabled: bool = False
+    telegram_bot_token: str = ""
+    telegram_chat_id: str = ""
+    telegram_timeout_seconds: float = Field(default=15, ge=3, le=60)
 
     payments_enabled: bool = False
     payments_provider: str = "demo"

@@ -96,6 +96,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File '.\infra\windows\submit-inde
 
 Скрипт сверяет публичный key-файл, принимает только URL того же host, ограничен содержимым sitemap и намеренно отклоняет localhost, `*.lhr.life` и `*.trycloudflare.com`. Протокол и статусы ответов: <https://www.indexnow.org/documentation>.
 
+В production IndexNow можно включить автоматически: `INDEXNOW_ENABLED=true` и тот же `INDEXNOW_KEY` должны быть доступны frontend и Dagster. Отправка выполняется только после успешного `materialize_observed_publication_metrics`. Telegram-дайджест независим: задайте `TELEGRAM_DIGEST_ENABLED=true`, `TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID`; расписание — понедельник 09:00 Europe/Moscow. Не коммитьте токен.
+
 Внешние ссылки получают через содержательные публикации и справочники: публичный GitHub проекта, техническая статья о методологии, профиль автора, тематические каталоги и партнёрские материалы. Автоматический массовый спам ссылками не используется: он не создаёт доверия и может ухудшить поисковую репутацию.
 
 ## Backup PostgreSQL

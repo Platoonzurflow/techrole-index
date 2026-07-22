@@ -666,3 +666,7 @@ The permanent domain `techrole.ru` is registered in the owner's Selectel account
 ## Latest product handoff (2026-07-23)
 
 The public UI now has a compact profession-page outline, dynamic data-confidence badges, a non-duplicating quick summary, and clearer fallback/retry links. Catalog and home search accept Russian/English names, show browser suggestions, and support a category filter in the same request. API reads abort after eight seconds so a temporary backend issue renders the existing fallback instead of hanging SSR. Premium remains a single 30-day product and its server-side catalog price is now 290 RUB; the pricing page displays that planned price even while payment acquisition is disabled. Live charges remain disabled until the owner completes provider, legal, fiscal, DNS/TLS and hosting gates.
+
+## Distribution and legal handoff (2026-07-23)
+
+Profession pages have dynamic OG images, native share/copy-citation controls, and comparison URLs accept an allowlisted `slugs` query. `/reports/weekly` and `/feed.xml` are public and linked in the footer. Dagster submits the sitemap to IndexNow only after successful publication-metric materialization and only when configured; the separate Monday Telegram schedule skips safely without bot credentials. Legal pages use production `.env` seller details and contain no square-bracket placeholders. The compact header status and larger theme button were restored. Real payments remain test/demo only.

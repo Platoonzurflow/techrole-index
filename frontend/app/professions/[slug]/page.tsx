@@ -5,6 +5,7 @@ import { Paywall } from "@/components/Paywall";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 import { OfficialSalaryChart, PublicationChart, SalaryChart, VacancyChart } from "@/components/Charts";
 import { TrendBadge } from "@/components/TrendBadge";
+import { ShareActions } from "@/components/ShareActions";
 import { api, safeApi } from "@/lib/api";
 import { compact, percent } from "@/lib/format";
 import type { MetricPoint, ProfessionDetail, ProfessionSummary } from "@/lib/types";
@@ -155,6 +156,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         <div><Link href={`/categories/${profession.category_slug}`} className="eyebrow">{profession.category_name}</Link><h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{profession.name_ru}</h1><p className="mt-2 text-lg text-muted">{profession.name_en}</p><p className="mt-5 max-w-3xl leading-7 text-muted">{profession.description}</p></div>
         {profession.score != null ? <div className="panel flex min-w-56 items-center gap-4 p-5"><div className="grid size-20 place-items-center rounded-full" style={{ background: `radial-gradient(circle, var(--panel) 56%, transparent 58%), conic-gradient(var(--accent) ${profession.score}%, var(--line) 0)` }}><strong className="font-mono text-2xl">{profession.score}</strong></div><div><p className="text-sm text-muted">Индекс из 100</p>{(() => { const badge = confidenceBadge(profession.data_confidence); return <span className={`mt-2 ${badge.className}`}>{badge.label}</span>; })()}</div></div> : null}
       </header>
+      <div className="mt-6"><ShareActions url={canonicalUrl} title={`${profession.name_ru} — TechRole Index`} citation={`TechRole Index. ${profession.name_ru}. ${canonicalUrl}. Дата обновления: ${profession.updated_at ?? "не указана"}.`} /></div>
 
       <nav className="profession-toc mt-7 flex flex-wrap gap-2" aria-label="Разделы страницы профессии">
         <a href="#salary-benchmark">Зарплата</a>

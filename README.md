@@ -277,6 +277,10 @@ docker compose run --rm --no-deps -v "$workspace\outputs:/outputs" backend pytho
 docker compose -f compose.yaml -f compose.production.yaml --profile production up --build -d
 ```
 
+Публичные механики распространения: динамическая OG-картинка и кнопки «Поделиться»/«Скопировать цитату» на каждой профессии, сохраняемые ссылки `/compare?slugs=...`, еженедельный отчёт `/reports/weekly` и RSS `/feed.xml`. После успешного nightly materialization Dagster отправляет sitemap в IndexNow, когда `INDEXNOW_ENABLED=true` и задан `INDEXNOW_KEY`. Telegram-дайджест запускается по понедельникам в 09:00 МСК только при `TELEGRAM_DIGEST_ENABLED=true`, `TELEGRAM_BOT_TOKEN` и `TELEGRAM_CHAT_ID`.
+
+Реквизиты юридических страниц читаются только из server-side переменных `SELLER_NAME`, `SELLER_INN`, `SELLER_PHONE`, `SELLER_ADDRESS`, `SELLER_EMAIL` и `LEGAL_EFFECTIVE_DATE`; их реальные значения не коммитятся.
+
 Перед запуском установите сильный `APP_SECRET_KEY`, `DEMO_MODE=false`, один HTTPS origin в `SITE_ADDRESS`/`PUBLIC_BASE_URL`/`FRONTEND_ORIGIN`/`NEXT_PUBLIC_SITE_URL` и отдельные согласованные `POSTGRES_*`/`DATABASE_URL` credentials. Используйте пустую production-БД: local demo volume намеренно отвергается. Production override убирает все host-порты кроме Caddy 80/443, исключает source bind-mounts и передаёт canonical URL как Docker build arg. Rendered config проверьте через `infra/validate-production-config.mjs`. См. [DEPLOYMENT.md](DEPLOYMENT.md) и [SECURITY.md](SECURITY.md).
 
 ## Типичные проблемы Windows / Docker Desktop

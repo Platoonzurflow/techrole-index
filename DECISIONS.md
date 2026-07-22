@@ -128,3 +128,7 @@
 ### 2026-07-23 — Search, resilience and Premium price
 
 The catalog keeps server-side filtering as the source of truth while adding native Russian/English suggestions and a combined category selector. Profession pages expose section anchors, compact non-duplicating facts and confidence labels derived from the underlying layer; temporary API failures have a bounded timeout and friendly recovery links. The only Premium product remains a one-time 30-day access package priced at 290 RUB in the server catalog; payment mode stays disabled until all live guards pass.
+
+### 2026-07-23 — Public distribution and legal configuration
+
+Seller identity is server-only configuration and is never committed. Legal pages render complete operational text from those variables while retaining an explicit pre-live legal-review notice. Every profession gets a generated OG card and share/citation actions; comparisons use allowlisted canonical query links. The weekly report and RSS are public. IndexNow runs only after a successful materialization and fails the Dagster step on a rejected submission; the weekly Telegram job is opt-in and skips without credentials. None of these paths exposes Premium fields or enables real charges.

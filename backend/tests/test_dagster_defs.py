@@ -25,7 +25,16 @@ def test_dagster_midnight_moscow_schedule_is_enabled() -> None:
         "verify_public_salary_benchmarks",
         "collect_and_classify_open_vacancies",
         "materialize_observed_publication_metrics",
+        "notify_search_engines",
     }
+
+
+def test_indexnow_op_skips_without_successful_materialization() -> None:
+    with build_op_context() as context:
+        assert dagster_module.notify_search_engines(context, {"status": "skipped"}) == {
+            "status": "skipped",
+            "reason": "materialization_not_complete",
+        }
 
 
 def test_salary_source_op_persists_audit_result(monkeypatch) -> None:

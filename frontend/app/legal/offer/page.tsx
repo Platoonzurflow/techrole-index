@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { LegalTemplateNotice } from "@/components/LegalTemplateNotice";
+import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Публичная оферта", robots: { index: false, follow: false } };
+export const dynamic = "force-dynamic";
 
 const siteAddress = (process.env.NEXT_PUBLIC_SITE_URL ?? "https://94-102-88-123.sslip.io").replace(/\/$/, "");
 
@@ -20,7 +22,7 @@ export default function OfferPage() {
     <article className="shell py-14">
       <p className="eyebrow">Юридический документ</p>
       <h1 className="mt-3 text-4xl font-bold">Публичная оферта</h1>
-      <p className="mt-3 max-w-4xl text-sm text-muted">Оферта о заключении договора об оказании услуг. Размещена на сайте 22 июля 2026 года.</p>
+      <p className="mt-3 max-w-4xl text-sm text-muted">Оферта о заключении договора об оказании услуг. Размещена на сайте {legal.effectiveDate}.</p>
       <div className="mt-7"><LegalTemplateNotice /></div>
 
       <div className="legal-copy mt-9 max-w-4xl text-muted">
@@ -111,15 +113,16 @@ export default function OfferPage() {
 
         <Section title="Реквизиты Исполнителя">
           <dl className="grid gap-2 sm:grid-cols-[minmax(12rem,auto)_1fr]">
-            <dt className="font-semibold text-foreground">Полное наименование</dt><dd>[ФИО самозанятого — заполнить перед публикацией]</dd>
-            <dt className="font-semibold text-foreground">ИНН</dt><dd>773473575808</dd>
+            <dt className="font-semibold text-foreground">ФИО исполнителя</dt><dd>{legal.sellerName}</dd>
+            <dt className="font-semibold text-foreground">ИНН</dt><dd>{legal.sellerInn}</dd>
             <dt className="font-semibold text-foreground">ОГРН/ОГРНИП</dt><dd>Не применяется для самозанятого без статуса ИП</dd>
-            <dt className="font-semibold text-foreground">Контактный телефон</dt><dd>+7 916 305-82-48</dd>
-            <dt className="font-semibold text-foreground">Контактный e-mail</dt><dd><a href="mailto:sqldevelopermoscow@yandex.com">sqldevelopermoscow@yandex.com</a></dd>
+            <dt className="font-semibold text-foreground">Адрес или регион</dt><dd>{legal.sellerAddress}</dd>
+            <dt className="font-semibold text-foreground">Контактный телефон</dt><dd>{legal.sellerPhone}</dd>
+            <dt className="font-semibold text-foreground">Контактный e-mail</dt><dd><a href={`mailto:${legal.sellerEmail}`}>{legal.sellerEmail}</a></dd>
           </dl>
         </Section>
 
-        <p className="border-t border-black/10 pt-6 text-sm">Источник текста: предоставленный владельцем документ «Публичная оферта» от 22.07.2026. Перед включением реальных платежей незаполненные реквизиты и соответствие условий фактической услуге необходимо проверить.</p>
+        <p className="border-t border-black/10 pt-6 text-sm">Источник текста: предоставленный владельцем документ «Публичная оферта» от 22.07.2026. Перед включением реальных платежей условия необходимо сверить с фактической услугой и настройками фискализации.</p>
         <p className="text-sm">См. также: <Link href="/legal/refunds">правила возврата</Link>, <Link href="/legal/privacy">политику обработки данных</Link> и <Link href="/legal/consent">согласия</Link>.</p>
       </div>
     </article>

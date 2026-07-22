@@ -25,8 +25,8 @@ export function ThemeToggle() {
   };
 
   return (
-    <button type="button" className="icon-button" onClick={toggle} disabled={!ready} aria-label={dark ? "Включить светлую тему" : "Включить тёмную тему"}>
-      {dark ? <Sun size={18} /> : <Moon size={18} />}
+    <button type="button" className="icon-button theme-toggle-button" onClick={toggle} disabled={!ready} aria-label={dark ? "Включить светлую тему" : "Включить тёмную тему"}>
+      {dark ? <Sun size={20} /> : <Moon size={20} />}
     </button>
   );
 }

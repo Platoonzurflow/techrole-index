@@ -36,6 +36,12 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3100}
       NEXT_PUBLIC_DATA_MODE: ${NEXT_PUBLIC_DATA_MODE:-demo}
       INDEXNOW_KEY: ${INDEXNOW_KEY:-}
+      SELLER_NAME: ${SELLER_NAME:-}
+      SELLER_INN: ${SELLER_INN:-}
+      SELLER_PHONE: ${SELLER_PHONE:-}
+      SELLER_ADDRESS: ${SELLER_ADDRESS:-}
+      SELLER_EMAIL: ${SELLER_EMAIL:-sqldevelopermoscow@yandex.com}
+      LEGAL_EFFECTIVE_DATE: ${LEGAL_EFFECTIVE_DATE:-2026-07-22}
     volumes:
       - ${PUBLIC_BUILD_DIR:-./frontend/.next-public-live}/standalone:/app:ro
     ports:

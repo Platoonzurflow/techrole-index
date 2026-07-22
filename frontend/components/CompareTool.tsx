@@ -8,8 +8,8 @@ import type { ProfessionDetail, ProfessionSummary } from "@/lib/types";
 
 const pickerLabels = ["Первая профессия", "Вторая профессия", "Третья профессия"];
 
-export function CompareTool({ professions }: { professions: ProfessionSummary[] }) {
-  const [selected, setSelected] = useState<string[]>(professions.slice(0, 2).map((item) => item.slug));
+export function CompareTool({ professions, initialSlugs = [] }: { professions: ProfessionSummary[]; initialSlugs?: string[] }) {
+  const [selected, setSelected] = useState<string[]>(initialSlugs.length >= 2 ? initialSlugs : professions.slice(0, 2).map((item) => item.slug));
   const [data, setData] = useState<ProfessionDetail[]>([]);
   const [message, setMessage] = useState("");
 
@@ -70,7 +70,7 @@ export function CompareTool({ professions }: { professions: ProfessionSummary[] 
 
       {message ? <p className="mt-4 rounded-xl border border-line bg-panel p-4 text-muted" role="status">{message}</p> : null}
       {data.length ? (
-        <div className="table-wrap mt-6"><table className="data-table"><thead><tr><th>Показатель</th>{data.map((item) => <th key={item.slug}>{item.name_ru}</th>)}</tr></thead><tbody><tr><td>Индекс</td>{data.map((item) => <td key={item.slug} className="font-mono text-xl">{item.score}</td>)}</tr>{(["junior", "middle", "senior"] as const).map((level) => <tr key={level}><td>Медиана {level}</td>{data.map((item) => { const latestDate = item.metrics?.at(-1)?.date; const metric = item.metrics?.find((point) => point.date === latestDate && point.seniority === level); return <td key={item.slug} className="font-mono">{rub(metric?.salary_median)}</td>; })}</tr>)}</tbody></table></div>
+        <><div className="mt-5 flex flex-wrap items-center gap-3"><a className="button-secondary" href={`/compare?slugs=${encodeURIComponent(data.map((item) => item.slug).join(","))}`}>Ссылка на это сравнение</a><span className="text-sm text-muted">Ссылку можно сохранить или отправить коллегам.</span></div><div className="table-wrap mt-6"><table className="data-table"><thead><tr><th>Показатель</th>{data.map((item) => <th key={item.slug}>{item.name_ru}</th>)}</tr></thead><tbody><tr><td>Индекс</td>{data.map((item) => <td key={item.slug} className="font-mono text-xl">{item.score}</td>)}</tr>{(["junior", "middle", "senior"] as const).map((level) => <tr key={level}><td>Медиана {level}</td>{data.map((item) => { const latestDate = item.metrics?.at(-1)?.date; const metric = item.metrics?.find((point) => point.date === latestDate && point.seniority === level); return <td key={item.slug} className="font-mono">{rub(metric?.salary_median)}</td>; })}</tr>)}</tbody></table></div></>
       ) : null}
     </div>
   );

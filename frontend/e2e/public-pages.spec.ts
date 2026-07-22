@@ -45,6 +45,17 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 4, name: "Senior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toHaveCount(0);
   await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Поделиться" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
+});
+
+test("weekly report and legal pages are publication-ready", async ({ page }) => {
+  await page.goto("/reports/weekly");
+  await expect(page.getByRole("heading", { level: 1, name: "Еженедельный отчёт рынка IT" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Подписаться на RSS" })).toHaveAttribute("href", "/feed.xml");
+  await page.goto("/legal/privacy");
+  await expect(page.locator("main")).not.toContainText("ЗАПОЛНИТЬ");
+  await expect(page.locator("main")).not.toContainText("ОПЕРАТОРУ");
 });
 
 test("public calculator median is exact, sourced, and limitation-labeled", async ({ page }) => {
@@ -273,7 +284,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
   test.setTimeout(300_000);
   const publicRoutes = [
     "/", "/professions", "/top", "/pricing", "/mentorship", "/support",
-    "/methodology", "/glossary", "/sources", "/about", "/status", "/compare",
+    "/methodology", "/glossary", "/sources", "/about", "/status", "/compare", "/reports/weekly",
     "/login", "/register", "/legal/offer", "/legal/refunds", "/legal/privacy", "/legal/consent", "/payments/error", "/payments/pending", "/llms.txt", "/.well-known/llms.txt", "/.well-known/linkset.json", "/.well-known/security.txt", "/llms-full.txt",
     "/ai-index.json", "/open-data.json", "/feed.xml", "/sitemap.xml", "/robots.txt",
     "/citation", "/citation.json", "/citation.bib", "/citation.ris", "/datapackage.json", "/catalog.jsonld",
