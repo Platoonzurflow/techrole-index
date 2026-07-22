@@ -47,6 +47,7 @@ def test_related_and_category_scopes_are_not_presented_as_exact() -> None:
 
 def test_public_calculator_medians_expand_exact_role_coverage_without_hidden_values() -> None:
     expected = {
+        "qa-manual": 132500,
         "data-scientist": 235541,
         "mlops-engineer": 351666,
         "computer-vision-engineer": 172500,
@@ -78,8 +79,8 @@ def test_salary_coverage_counts_are_versioned() -> None:
         salary_benchmark_for(slug, category)["coverage"]
         for slug, _, _, category, _ in PROFESSIONS
     ]
-    assert coverage.count("direct") == 36
-    assert coverage.count("related") == 12
+    assert coverage.count("direct") == 37
+    assert coverage.count("related") == 11
     assert coverage.count("category") == 2
 
 

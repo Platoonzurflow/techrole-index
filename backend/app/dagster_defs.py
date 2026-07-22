@@ -23,6 +23,7 @@ from app.providers.email import (
 from app.services.currency_rates import snapshot_configured_currency_rates
 from app.services.open_data_ingestion import ingest_trudvsem_open_data
 from app.services.publication_metrics import refresh_observed_publication_metrics
+from app.services.salary_source_audit import audit_habr_calculator_public_medians
 
 
 def _send_report(*, status: str, started_at: datetime, summary: dict) -> str:
@@ -89,6 +90,38 @@ def collect_and_classify_open_vacancies(context) -> dict:
     return result
 
 
+@op(name="verify_public_salary_benchmarks")
+def verify_public_salary_benchmarks(context) -> dict:
+    if not settings.salary_source_audit_enabled:
+        result: dict[str, object] = {
+            "status": "skipped",
+            "reason": "SALARY_SOURCE_AUDIT_ENABLED=false",
+        }
+        context.log.info(json.dumps(result, ensure_ascii=False))
+        return result
+
+    result = audit_habr_calculator_public_medians(
+        timeout_seconds=settings.salary_source_audit_timeout_seconds
+    )
+    if result["status"] == "changed":
+        context.log.error(json.dumps(result, ensure_ascii=False, default=str))
+        raise Failure(
+            description="Public salary benchmark metadata changed",
+            metadata={
+                "status": str(result["status"]),
+                "checked": int(str(result["checked"])),
+                "verified": int(str(result["verified"])),
+                "changed": int(str(result["changed"])),
+                "unavailable": int(str(result["unavailable"])),
+            },
+        )
+    if result["status"] == "partial":
+        context.log.warning(json.dumps(result, ensure_ascii=False, default=str))
+    else:
+        context.log.info(json.dumps(result, ensure_ascii=False, default=str))
+    return result
+
+
 @op(name="materialize_observed_publication_metrics")
 def materialize_observed_publication_metrics(context, ingestion_result: dict) -> dict:
     if ingestion_result.get("status") != "success":
@@ -145,6 +178,7 @@ def materialize_observed_publication_metrics(context, ingestion_result: dict) ->
 @job(name="techrole_nightly_market_pipeline")
 def nightly_market_pipeline():
     snapshot_official_currency_rates()
+    verify_public_salary_benchmarks()
     ingestion_result = collect_and_classify_open_vacancies()
     materialize_observed_publication_metrics(ingestion_result)
 

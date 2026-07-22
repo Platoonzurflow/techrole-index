@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 import app.api.professions as professions_api
 import app.api.status as status_api
 from app.api.professions import open_data_publications
-from app.api.status import data_provenance, sources
+from app.api.status import data_provenance, data_status, sources
 from app.models import (
     Base,
     Profession,
@@ -28,6 +28,7 @@ def test_sources_include_official_currency_provider() -> None:
     Base.metadata.create_all(engine)
     with Session(engine) as db:
         payload = sources(db)
+        status_payload = data_status(db)
     engine.dispose()
 
     currency = next(item for item in payload if item["code"] == "cbr_currency")
@@ -38,6 +39,8 @@ def test_sources_include_official_currency_provider() -> None:
     assert salary["provider_type"] == "public_salary_report"
     assert salary["salary_tax_status"] == "net"
     assert salary["period"] == "I полугодие 2026"
+    assert isinstance(status_payload["cbr_currency_enabled"], bool)
+    assert isinstance(status_payload["salary_source_audit_enabled"], bool)
 
 
 def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> None:
@@ -94,8 +97,8 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
     assert benchmarks["status"] == "public_reference"
     assert benchmarks["profession_count"] == 50
     assert benchmarks["latest_total_sample_size"] == 45226
-    assert benchmarks["direct_professions"] == 36
-    assert benchmarks["related_professions"] == 12
+    assert benchmarks["direct_professions"] == 37
+    assert benchmarks["related_professions"] == 11
     assert benchmarks["category_only_professions"] == 2
     assert (
         sum(

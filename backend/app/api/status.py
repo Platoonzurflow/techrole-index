@@ -50,6 +50,7 @@ def data_status(db: Session = Depends(get_db)):
         "hh_runtime_enabled": settings.hh_enabled,
         "trudvsem_runtime_enabled": settings.trudvsem_enabled,
         "cbr_currency_enabled": settings.cbr_currency_enabled,
+        "salary_source_audit_enabled": settings.salary_source_audit_enabled,
         "catalog_cache_enabled": settings.catalog_cache_enabled,
         "catalog_cache_ttl_seconds": settings.catalog_cache_ttl_seconds,
         "ai_classifier_enabled": settings.ai_classifier_enabled,

@@ -1,10 +1,28 @@
-import { expect, test, type APIRequestContext } from "@playwright/test";
+import { expect, test, type APIRequestContext, type APIResponse } from "@playwright/test";
+
+async function getWithTransientRetries(
+  request: APIRequestContext,
+  route: string,
+): Promise<APIResponse> {
+  for (let attempt = 1; attempt <= 3; attempt += 1) {
+    try {
+      const response = await request.get(route);
+      if ((response.status() !== 429 && response.status() < 500) || attempt === 3) {
+        return response;
+      }
+    } catch (error) {
+      if (attempt === 3) throw error;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250 * attempt));
+  }
+  throw new Error(`unreachable route retry state: ${route}`);
+}
 
 async function expectHealthyRoutes(request: APIRequestContext, routes: string[]) {
   const batchSize = 4;
   for (let start = 0; start < routes.length; start += batchSize) {
     await Promise.all(routes.slice(start, start + batchSize).map(async (route) => {
-      const response = await request.get(route);
+      const response = await getWithTransientRetries(request, route);
       expect(response.status(), `${route} returned ${response.status()}`).toBeLessThan(400);
     }));
   }
@@ -37,6 +55,14 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await expect(source).toBeVisible();
   await expect(source.locator("xpath=ancestor::article"))
     .toContainText("gross/net не указан");
+});
+
+test("status page exposes the salary source audit runtime state", async ({ page }) => {
+  await page.goto("/status");
+  await expect(page.getByRole("heading", { level: 1, name: "Статус обновления данных" }))
+    .toBeVisible();
+  await expect(page.getByText(/Аудит зарплатных источников: (enabled|disabled)/))
+    .toBeVisible();
 });
 
 test("support topics stay readable and keyboard selectable", async ({ page }) => {
@@ -384,8 +410,8 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(officialLayer.window_start_at).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(officialLayer.window_end_at_exclusive).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(salaryLayer.profession_count).toBe(50);
-  expect(salaryLayer.direct_professions).toBe(36);
-  expect(salaryLayer.related_professions).toBe(12);
+  expect(salaryLayer.direct_professions).toBe(37);
+  expect(salaryLayer.related_professions).toBe(11);
   expect(salaryLayer.category_only_professions).toBe(2);
   expect(salaryLayer.latest_total_sample_size).toBe(45226);
 

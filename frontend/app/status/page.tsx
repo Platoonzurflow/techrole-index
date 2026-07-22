@@ -18,6 +18,8 @@ interface Status {
   sources: Array<{ code: string; name: string; enabled: boolean }>;
   hh_runtime_enabled: boolean;
   trudvsem_runtime_enabled: boolean;
+  cbr_currency_enabled: boolean;
+  salary_source_audit_enabled: boolean;
   catalog_cache_enabled: boolean;
   catalog_cache_ttl_seconds: number;
   ai_classifier_enabled: boolean;
@@ -59,6 +61,7 @@ export default async function StatusPage() {
             </div>
             <div className="mt-5 grid gap-2 text-sm text-muted">
               <p>Работа России: {status.trudvsem_runtime_enabled ? "enabled" : "disabled"} · HH runtime: {status.hh_runtime_enabled ? "enabled" : "disabled"}</p>
+              <p>Курсы ЦБ: {status.cbr_currency_enabled ? "enabled" : "disabled"} · Аудит зарплатных источников: {status.salary_source_audit_enabled ? "enabled" : "disabled"}</p>
               <p>Redis catalog/detail cache: {status.catalog_cache_enabled ? `enabled · TTL ${status.catalog_cache_ttl_seconds}с` : "disabled"}</p>
               <p>Локальная модель: {status.ai_classifier_enabled ? status.ollama_model ?? "enabled" : "disabled"}</p>
               <p>Ночной запуск: <span className="font-mono">{status.nightly_schedule}</span> · Email-отчёт: {status.nightly_report_email_enabled ? "enabled" : "disabled"}</p>

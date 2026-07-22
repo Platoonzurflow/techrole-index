@@ -55,6 +55,8 @@ class Settings(BaseSettings):
     cbr_currency_enabled: bool = False
     cbr_currency_base_url: str = "https://www.cbr.ru/scripts/XML_daily.asp"
     cbr_currency_timeout_seconds: float = Field(default=15, ge=3, le=60)
+    salary_source_audit_enabled: bool = False
+    salary_source_audit_timeout_seconds: float = Field(default=15, ge=3, le=60)
 
     demo_free_password: str = "FreeDemo-ChangeMe1!"
     demo_premium_password: str = "PremiumDemo-ChangeMe1!"

@@ -41,6 +41,7 @@ SeniorityPoint = tuple[
 # Only the median deliberately exposed in the public page title/description is
 # retained. Values hidden behind account access are not extracted.
 HABR_CALCULATOR_PUBLIC_MEDIANS = {
+    "qa-manual": ("manual_testing", "Инженер по ручному тестированию", 132500),
     "data-scientist": ("data_scientist", "Ученый по данным", 235541),
     "mlops-engineer": ("mlops", "MLOps-инженер", 351666),
     "computer-vision-engineer": (
