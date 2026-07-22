@@ -55,12 +55,21 @@ def test_live_payments_fail_closed_until_legal_and_fiscal_details_are_final() ->
         "yookassa_secret_key": "production-key-placeholder",
         "payments_live_confirmed": True,
         "payments_legal_approved": True,
+        "payments_stable_https_confirmed": True,
         "payments_seller_status": "sole_proprietor",
         "payments_fiscalization_mode": "yookassa",
         "yookassa_vat_code": 1,
     }
     with pytest.raises(ValidationError, match="PAYMENTS_TERMS_VERSION"):
         Settings(_env_file=None, **base)
+
+    unstable = {**base, "payments_stable_https_confirmed": False}
+    with pytest.raises(ValidationError, match="PAYMENTS_STABLE_HTTPS_CONFIRMED"):
+        Settings(
+            _env_file=None,
+            **unstable,
+            payments_terms_version="offer-2026-07-21",
+        )
 
     configured = Settings(
         _env_file=None,
@@ -81,6 +90,7 @@ def test_live_self_employed_mode_cannot_claim_online_cash_register_fiscalization
             yookassa_secret_key="production-key-placeholder",
             payments_live_confirmed=True,
             payments_legal_approved=True,
+            payments_stable_https_confirmed=True,
             payments_terms_version="offer-2026-07-21",
             payments_seller_status="self_employed",
             payments_fiscalization_mode="yookassa",
@@ -98,6 +108,7 @@ def test_live_self_employed_robokassa_requires_automatic_receipts_and_refund_key
         "robokassa_password2": "test-password-two",
         "payments_live_confirmed": True,
         "payments_legal_approved": True,
+        "payments_stable_https_confirmed": True,
         "payments_terms_version": "offer-2026-07-22",
         "payments_seller_status": "self_employed",
     }
@@ -134,6 +145,7 @@ def test_live_payment_providers_reject_non_official_api_endpoints() -> None:
         "robokassa_password3": "test-password-three",
         "payments_live_confirmed": True,
         "payments_legal_approved": True,
+        "payments_stable_https_confirmed": True,
         "payments_terms_version": "offer-2026-07-22",
         "payments_seller_status": "self_employed",
         "payments_fiscalization_mode": "robokassa",
@@ -156,6 +168,7 @@ def test_live_payment_providers_reject_non_official_api_endpoints() -> None:
             yookassa_api_url="https://example.test/v3",
             payments_live_confirmed=True,
             payments_legal_approved=True,
+            payments_stable_https_confirmed=True,
             payments_terms_version="offer-2026-07-22",
             payments_seller_status="self_employed",
             payments_fiscalization_mode="self_employed_manual",
@@ -175,6 +188,7 @@ def test_robokassa_company_receipts_fail_closed_until_vat_contract_exists() -> N
             robokassa_password3="test-password-three",
             payments_live_confirmed=True,
             payments_legal_approved=True,
+            payments_stable_https_confirmed=True,
             payments_terms_version="offer-2026-07-22",
             payments_seller_status="sole_proprietor",
             payments_fiscalization_mode="robokassa",

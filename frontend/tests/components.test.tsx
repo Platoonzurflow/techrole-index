@@ -10,6 +10,7 @@ import { SupportForm } from "@/components/SupportForm";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
 import { AccountActions } from "@/components/AccountActions";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
+import { AdminPanel } from "@/components/AdminPanel";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -29,6 +30,52 @@ afterEach(() => {
 });
 
 describe("analytics components", () => {
+  it("shows admin-only payment readiness without rendering provider secrets", async () => {
+    const privatePassword = "provider-password-must-not-render";
+    const request = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([{
+          id: 1,
+          slug: "data-engineer",
+          name_ru: "Инженер по данным",
+          name_en: "Data Engineer",
+          is_premium: false,
+          is_active: true,
+        }]),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          provider: "robokassa",
+          mode: "test",
+          payments_enabled: false,
+          test_ready: false,
+          live_ready: false,
+          test_checks: [
+            { code: "credentials", label: "Заданы тестовые параметры магазина", ready: false },
+          ],
+          live_checks: [
+            { code: "owner_confirmation", label: "Владелец разрешил реальные списания", ready: false },
+          ],
+          result_url: "https://techrole.example/api/v1/payments/webhooks/robokassa",
+        }),
+      });
+    vi.stubGlobal("fetch", request);
+
+    render(<AdminPanel />);
+
+    expect(await screen.findByText("Готовность Robokassa")).toBeInTheDocument();
+    expect(screen.getByText("Реальные списания заблокированы")).toBeInTheDocument();
+    expect(screen.getByText(/https:\/\/techrole\.example\/api\/v1\/payments/)).toBeInTheDocument();
+    expect(screen.queryByText(privatePassword)).not.toBeInTheDocument();
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      "/api/v1/admin/payment-readiness",
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
   it("shows the exact benchmark without a separate category fallback block", () => {
     render(<SalaryBenchmarks data={{
       coverage: "direct",

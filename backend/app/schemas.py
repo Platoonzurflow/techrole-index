@@ -289,6 +289,23 @@ class PaymentRefundResponse(BaseModel):
     currency: str
 
 
+class PaymentReadinessCheck(BaseModel):
+    code: str
+    label: str
+    ready: bool
+
+
+class PaymentReadinessOut(BaseModel):
+    provider: Literal["demo", "yookassa", "robokassa"]
+    mode: Literal["test", "live"]
+    payments_enabled: bool
+    test_ready: bool
+    live_ready: bool
+    test_checks: list[PaymentReadinessCheck]
+    live_checks: list[PaymentReadinessCheck]
+    result_url: str | None
+
+
 class AlertCreate(BaseModel):
     profession_id: int = Field(gt=0)
     metric: str = Field(pattern=r"^(salary|demand)$")

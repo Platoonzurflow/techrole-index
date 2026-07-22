@@ -312,7 +312,7 @@ Auth: Argon2 password hash, JWT HttpOnly/SameSite cookie, CSRF для mutation e
 
 `DemoPaymentProvider` проводит локальный sandbox без списания. Серверный product catalog определяет цену и 30-дневный доступ; `payment_orders` сохраняет idempotency key, provider id, сумму, test/live и принятую версию условий. HMAC demo webhook проверяет raw body, повторы дедуплицируются, отмена терминальна. Полный admin refund идемпотентен и отзывает только entitlement соответствующего заказа.
 
-Владелец подтвердил статус самозанятого НПД. Основной кандидат — Robokassa с «Робочеками СМЗ», резервный — ЮKassa. `RobokassaPaymentProvider` создаёт подписанный redirect с числовым `InvId`, server-side Receipt и Success/Fail URL, проверяет подпись ResultURL Паролем №2, test/live режим и обязательный `OK<InvId>`. Live refund получает `OpKey`, отправляет HS256 JWT по Password3, а Celery сверяет pending-состояние каждые пять минут. `YooKassaPaymentProvider` сохраняет REST idempotency, возврат и авторизованную проверку webhook. Оба адаптера покрыты MockTransport/HTTP contract tests, но официальный test shop владельца ещё не вызван: нет выданных владельцем test credentials. Реальный режим fail closed требует отдельного подтверждения, утверждённой оферты, фискализации и постоянного HTTPS-host. Полная памятка: `PAYMENTS.md`.
+Владелец подтвердил статус самозанятого НПД. Основной кандидат — Robokassa с «Робочеками СМЗ», резервный — ЮKassa. `RobokassaPaymentProvider` создаёт подписанный redirect с числовым `InvId`, server-side Receipt и Success/Fail URL, проверяет подпись ResultURL Паролем №2, test/live режим и обязательный `OK<InvId>`. Live refund получает `OpKey`, отправляет HS256 JWT по Password3, а Celery сверяет pending-состояние каждые пять минут. `YooKassaPaymentProvider` сохраняет REST idempotency, возврат и авторизованную проверку webhook. Оба адаптера покрыты MockTransport/HTTP contract tests, но официальный test shop владельца ещё не вызван: нет выданных владельцем test credentials. `/admin` теперь показывает отдельную готовность test/live через admin-only `/admin/payment-readiness`; ответ содержит только признаки и ResultURL, без credentials. Реальный режим fail closed требует отдельного подтверждения, утверждённой оферты, фискализации и `PAYMENTS_STABLE_HTTPS_CONFIRMED=true` после проверки постоянного host. Полная памятка: `PAYMENTS.md`.
 
 ## 11. Административная панель
 
@@ -380,6 +380,7 @@ Payments:
 - `POST /payments/webhooks/demo`;
 - `POST /payments/webhooks/yookassa`;
 - `POST /payments/webhooks/robokassa`.
+- `GET /admin/payment-readiness` только admin, без секретных значений.
 
 Admin: endpoints находятся под `/api/v1/admin/*`; точный контракт смотреть в Swagger.
 

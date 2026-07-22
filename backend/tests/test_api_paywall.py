@@ -722,3 +722,38 @@ def test_admin_full_refund_is_idempotent_and_revokes_payment_access(monkeypatch)
     client.close()
     session.close()
     app.dependency_overrides.clear()
+
+
+def test_payment_readiness_is_admin_only_and_contains_no_secrets(monkeypatch):
+    client, session = build_client()
+    assert client.get("/api/v1/admin/payment-readiness").status_code == 401
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    assert client.get("/api/v1/admin/payment-readiness").status_code == 403
+
+    secret_values = {
+        "robokassa_merchant_login": "merchant-private-value",
+        "robokassa_password1": "password-one-private-value",
+        "robokassa_password2": "password-two-private-value",
+        "robokassa_password3": "password-three-private-value",
+    }
+    for name, value in secret_values.items():
+        monkeypatch.setattr(settings, name, value)
+    monkeypatch.setattr(settings, "payments_provider", "robokassa")
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPassword1!"},
+    )
+    response = client.get("/api/v1/admin/payment-readiness")
+    serialized = response.text
+
+    assert response.status_code == 200
+    assert response.json()["provider"] == "robokassa"
+    assert not any(value in serialized for value in secret_values.values())
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()

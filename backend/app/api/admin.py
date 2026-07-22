@@ -6,6 +6,7 @@ from sqlalchemy import desc, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.database import get_db
 from app.domain.scoring import DEFAULT_WEIGHTS
 from app.models import (
@@ -18,11 +19,23 @@ from app.models import (
     User,
     Vacancy,
 )
-from app.schemas import AliasCreate, ProfessionUpdate, ScoreVersionCreate
+from app.schemas import (
+    AliasCreate,
+    PaymentReadinessOut,
+    ProfessionUpdate,
+    ScoreVersionCreate,
+)
 from app.security import require_admin, require_csrf
+from app.services.payment_readiness import payment_readiness
 from app.worker import celery_app
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_csrf)])
+
+
+@router.get("/payment-readiness", response_model=PaymentReadinessOut)
+def get_payment_readiness(admin: User = Depends(require_admin)) -> PaymentReadinessOut:
+    del admin
+    return payment_readiness(settings)
 
 
 def audit(

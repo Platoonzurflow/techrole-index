@@ -65,6 +65,7 @@ PAYMENTS_PROVIDER=demo
 PAYMENTS_MODE=test
 PAYMENTS_LIVE_CONFIRMED=false
 PAYMENTS_LEGAL_APPROVED=false
+PAYMENTS_STABLE_HTTPS_CONFIRMED=false
 PAYMENTS_TERMS_VERSION=draft-2026-07-22
 PAYMENTS_SELLER_STATUS=self_employed
 PAYMENTS_FISCALIZATION_MODE=disabled
@@ -121,6 +122,7 @@ YOOKASSA_SECRET_KEY=<test secret key>
 Live-конфигурация намеренно не стартует, пока одновременно не выполнены все условия:
 
 - `PAYMENTS_ENABLED=true`, `PAYMENTS_PROVIDER=robokassa`, `PAYMENTS_MODE=live`;
+- `PAYMENTS_STABLE_HTTPS_CONFIRMED=true` только после проверки постоянного домена, TLS и круглосуточного host;
 - production `ROBOKASSA_MERCHANT_LOGIN`, Password №1/№2 и Password3 только в secret store;
 - `PAYMENTS_LIVE_CONFIRMED=true` после явного решения владельца;
 - `PAYMENTS_LEGAL_APPROVED=true` и версия оферты без префикса `draft-`;
@@ -133,3 +135,9 @@ Live-конфигурация намеренно не стартует, пока
 После переключения выполнить тест минимальной суммы разрешённой провайдером, проверить платёж, чек, повтор webhook, отмену и полный возврат в кабинете провайдера и локальной БД. Только затем разрешать обычную цену.
 
 Текущий реализованный продукт — разовый доступ Premium на 30 дней в рублях, без автопродления. Перед test shop владелец должен подтвердить конечную цену и что не требуется подписка; изменить это решение можно отдельно, не доверяя параметрам браузера.
+
+## Проверка готовности без раскрытия секретов
+
+После входа администратором откройте `/admin`. Раздел «Готовность Robokassa» показывает два независимых checklist: тестовый магазин и реальные платежи. ResultURL можно скопировать в технические настройки магазина.
+
+`GET /api/v1/admin/payment-readiness` возвращает только названия проверок и `ready: true/false`. MerchantLogin, Пароли №1/№2/№3 и ключи других провайдеров не сериализуются. Endpoint закрыт admin-auth; live остаётся заблокированным, пока не выполнены все legal, fiscalization, hosting и owner-confirmation guards.

@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     payments_mode: str = "test"
     payments_live_confirmed: bool = False
     payments_legal_approved: bool = False
+    payments_stable_https_confirmed: bool = False
     payments_terms_version: str = "draft-2026-07-21"
     payments_seller_status: str = "unconfirmed"
     payments_fiscalization_mode: str = "disabled"
@@ -170,6 +171,10 @@ class Settings(BaseSettings):
                 raise ValueError("Live payments require PAYMENTS_LIVE_CONFIRMED=true")
             if not self.payments_legal_approved:
                 raise ValueError("Live payments require PAYMENTS_LEGAL_APPROVED=true")
+            if not self.payments_stable_https_confirmed:
+                raise ValueError(
+                    "Live payments require PAYMENTS_STABLE_HTTPS_CONFIRMED=true"
+                )
             if not self.payments_terms_version or self.payments_terms_version.startswith(
                 "draft-"
             ):
