@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ArrowRight, Database, Gauge, GitCompareArrows, Search } from "lucide-react";
+import { ArrowRight, Database, Gauge, GitCompareArrows } from "lucide-react";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
 import { ProfessionCard } from "@/components/ProfessionCard";
+import { ProfessionSearch } from "@/components/ProfessionSearch";
 import { TrendBadge } from "@/components/TrendBadge";
 import { safeApi } from "@/lib/api";
 import type { ProfessionSummary } from "@/lib/types";
@@ -40,17 +41,13 @@ export default async function HomePage() {
           <div className="cinematic-copy reveal">
             <div className="flex flex-wrap items-center gap-3">
               <span className="cinematic-eyebrow"><Database size={15} /> Аналитика рынка IT-профессий</span>
-              <span className="cinematic-status"><span className="live-dot" /> Расчёты по расписанию</span>
+              <span className="cinematic-status"><span className="live-dot" /> Показатели с датой обновления</span>
             </div>
             <h1>Сравните IT-профессии. <span>Выберите направление по данным.</span></h1>
             <p>TechRole Index показывает зарплаты Junior, Middle и Senior, количество вакансий, недельную динамику и востребованный стек. Сервис помогает понять, какое направление подходит именно для вашего следующего карьерного шага.</p>
 
-            <form className="career-search" action="/professions" method="get" role="search">
-              <Search size={22} aria-hidden="true" />
-              <label className="sr-only" htmlFor="career-query">Название профессии</label>
-              <input id="career-query" name="query" type="search" placeholder="Например: Python-разработчик" maxLength={120} />
-              <button type="submit">Найти профессию</button>
-            </form>
+            <ProfessionSearch suggestions={professions} />
+            <p className="mt-2 text-xs text-muted">Можно искать по русскому или английскому названию; подсказки появляются после загрузки каталога.</p>
 
             <div className="quick-directions" aria-label="Быстрый выбор направления">
               <span>Популярное:</span>

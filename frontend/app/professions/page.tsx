@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BriefcaseBusiness } from "lucide-react";
 import { ProfessionCard } from "@/components/ProfessionCard";
+import { ProfessionSearch } from "@/components/ProfessionSearch";
 import { safeApi } from "@/lib/api";
+import { categoryMetadata } from "@/lib/category-metadata";
 import type { ProfessionSummary } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +16,8 @@ export const metadata: Metadata = {
 
 interface Category { slug: string; name: string; description: string; profession_count: number }
 
+const categoryFallback: Category[] = Object.entries(categoryMetadata).map(([slug, value]) => ({ slug, name: value.name, description: value.description, profession_count: 0 }));
+
 export default async function ProfessionsPage({ searchParams }: { searchParams: Promise<{ category?: string; query?: string }> }) {
   const { category, query } = await searchParams;
   const apiParams = new URLSearchParams();
@@ -22,7 +26,7 @@ export default async function ProfessionsPage({ searchParams }: { searchParams: 
   const apiQuery = apiParams.toString();
   const [professions, categories] = await Promise.all([
     safeApi<ProfessionSummary[]>(`/professions${apiQuery ? `?${apiQuery}` : ""}`, []),
-    safeApi<Category[]>("/categories", []),
+    safeApi<Category[]>("/categories", categoryFallback),
   ]);
   const currentCategory = categories.find((item) => item.slug === category);
 
@@ -45,6 +49,11 @@ export default async function ProfessionsPage({ searchParams }: { searchParams: 
         </div>
       </header>
 
+      <div className="mt-8 max-w-4xl reveal" style={{ animationDelay: "40ms" }}>
+        <ProfessionSearch suggestions={professions} categories={categories} initialQuery={query} initialCategory={category} compact />
+        <p className="mt-2 text-xs text-muted">Поиск учитывает русское и английское название. Направление можно выбрать одновременно с запросом.</p>
+      </div>
+
       <nav className="scrollbar-none mt-8 flex gap-2 overflow-x-auto pb-3 reveal" style={{ animationDelay: "80ms" }} aria-label="Категории">
         <Link href="/professions" className={`category-chip badge shrink-0 px-4 py-2.5 ${!category ? "border-accent bg-accent/10 text-accent" : "bg-panel"}`}>Все · 50</Link>
         {categories.map((item) => (
@@ -55,15 +64,22 @@ export default async function ProfessionsPage({ searchParams }: { searchParams: 
       </nav>
 
       {professions.length ? (
-        <div className="mt-7 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <>
+          <p className="mt-7 text-sm text-muted" aria-live="polite">Найдено профессий: <strong className="text-foreground">{professions.length}</strong></p>
+          <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {professions.map((item, index) => (
             <div key={item.slug} className="reveal" style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }}>
               <ProfessionCard profession={item} />
             </div>
           ))}
-        </div>
+          </div>
+        </>
       ) : (
-        <div className="panel mt-8 p-12 text-center text-muted">{query ? `По запросу «${query}» ничего не найдено. Попробуйте название профессии из каталога.` : "Каталог пока недоступен. Убедитесь, что backend и seed-контейнер запущены."}</div>
+        <div className="panel mt-8 p-12 text-center">
+          <p className="text-muted">{query ? `По запросу «${query}» ничего не найдено.` : "Каталог временно не загрузился."}</p>
+          <p className="mt-2 text-sm text-muted">Попробуйте Python, SQL, DevOps или откройте полный список направлений.</p>
+          <Link href="/professions" className="button-secondary mt-5">Сбросить поиск</Link>
+        </div>
       )}
     </div>
   );

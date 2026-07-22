@@ -11,6 +11,7 @@ import { CareerTransformationHero } from "@/components/CareerTransformationHero"
 import { AccountActions } from "@/components/AccountActions";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 import { AdminPanel } from "@/components/AdminPanel";
+import { ProfessionSearch } from "@/components/ProfessionSearch";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -30,6 +31,18 @@ afterEach(() => {
 });
 
 describe("analytics components", () => {
+  it("keeps search suggestions and category filter in one GET form", () => {
+    render(<ProfessionSearch compact initialQuery="Data" initialCategory="data-ai" suggestions={[{ slug: "data-engineer", name_ru: "Инженер по данным", name_en: "Data Engineer" }]} categories={[{ slug: "data-ai", name: "Data & AI" }]} />);
+
+    const form = screen.getByRole("search");
+    expect(form).toHaveAttribute("action", "/professions");
+    expect(form).toHaveAttribute("method", "get");
+    expect(screen.getByDisplayValue("Data")).toHaveAttribute("name", "query");
+    expect(screen.getByDisplayValue("Data & AI")).toHaveAttribute("name", "category");
+    const suggestionValues = Array.from(document.querySelectorAll("datalist option")).map((option) => option.getAttribute("value"));
+    expect(suggestionValues).toEqual(expect.arrayContaining(["Инженер по данным", "Data Engineer"]));
+  });
+
   it("shows admin-only payment readiness without rendering provider secrets", async () => {
     const privatePassword = "provider-password-must-not-render";
     const request = vi.fn()

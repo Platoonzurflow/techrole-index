@@ -4,7 +4,7 @@
 [![Secret scan](https://github.com/Platoonzurflow/techrole-index/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/Platoonzurflow/techrole-index/actions/workflows/secret-scan.yml)
 [![Public preview](https://github.com/Platoonzurflow/techrole-index/actions/workflows/public-preview.yml/badge.svg)](https://github.com/Platoonzurflow/techrole-index/actions/workflows/public-preview.yml)
 
-[Открыть сайт](https://win-702hpohbtiv.tail044b19.ts.net) · [Daily dataset](https://win-702hpohbtiv.tail044b19.ts.net/open-data-daily) · [Как цитировать](https://win-702hpohbtiv.tail044b19.ts.net/citation) · [RFC 9264 Linkset](https://win-702hpohbtiv.tail044b19.ts.net/.well-known/linkset.json)
+[Открыть сайт](https://techrole.ru) · [Daily dataset](https://techrole.ru/open-data-daily) · [Как цитировать](https://techrole.ru/citation) · [RFC 9264 Linkset](https://techrole.ru/.well-known/linkset.json)
 
 Полный контекст текущего состояния, история работ и план продолжения для нового чата находятся в [`HANDOFF.md`](HANDOFF.md). Описание публикуемого набора, ограничений и правил атрибуции вынесено в [`DATASET_CARD.md`](DATASET_CARD.md).
 

@@ -662,3 +662,7 @@ Next build может автоматически дописывать custom dis
 ## Latest infrastructure handoff (2026-07-22)
 
 The permanent domain `techrole.ru` is registered in the owner's Selectel account and DNS records are prepared: apex A `94.102.88.123`, `www` CNAME `techrole.ru.`. Production `.env` on the VDS uses `https://techrole.ru` for all public/origin URL settings. Caddy redirects the legacy `94-102-88-123.sslip.io` address to the new apex. The registry may still report the zone as not delegated while nameserver verification propagates; check `nslookup -type=NS techrole.ru` and only then perform the final HTTPS smoke test. Real Robokassa charges remain disabled.
+
+## Latest product handoff (2026-07-23)
+
+The public UI now has a compact profession-page outline, dynamic data-confidence badges, a non-duplicating quick summary, and clearer fallback/retry links. Catalog and home search accept Russian/English names, show browser suggestions, and support a category filter in the same request. API reads abort after eight seconds so a temporary backend issue renders the existing fallback instead of hanging SSR. Premium remains a single 30-day product and its server-side catalog price is now 290 RUB; the pricing page displays that planned price even while payment acquisition is disabled. Live charges remain disabled until the owner completes provider, legal, fiscal, DNS/TLS and hosting gates.

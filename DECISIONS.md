@@ -124,3 +124,7 @@
 ### 2026-07-22 — Selectel permanent domain
 
 `techrole.ru` is the canonical public host on the existing Selectel VDS. DNS stays with Selectel (`A @` to `94.102.88.123`, `CNAME www` to the apex) and Caddy terminates HTTPS. The legacy `sslip.io` URL is retained only as a redirect for continuity. Live payments remain disabled until DNS/TLS and Robokassa production prerequisites are independently verified.
+
+### 2026-07-23 — Search, resilience and Premium price
+
+The catalog keeps server-side filtering as the source of truth while adding native Russian/English suggestions and a combined category selector. Profession pages expose section anchors, compact non-duplicating facts and confidence labels derived from the underlying layer; temporary API failures have a bounded timeout and friendly recovery links. The only Premium product remains a one-time 30-day access package priced at 290 RUB in the server catalog; payment mode stays disabled until all live guards pass.

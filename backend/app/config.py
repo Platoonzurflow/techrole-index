@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     payments_terms_version: str = "draft-2026-07-21"
     payments_seller_status: str = "unconfirmed"
     payments_fiscalization_mode: str = "disabled"
-    premium_30_days_price_rub: Decimal = Field(default=Decimal("1.00"), gt=0)
+    premium_30_days_price_rub: Decimal = Field(default=Decimal("290.00"), gt=0)
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
     yookassa_api_url: str = "https://api.yookassa.ru/v3"
