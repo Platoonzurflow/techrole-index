@@ -12,7 +12,8 @@ def test_migration_up_and_down(tmp_path):
     config = Config("alembic.ini")
     try:
         command.upgrade(config, "head")
-        tables = set(inspect(create_engine(database_url)).get_table_names())
+        inspector = inspect(create_engine(database_url))
+        tables = set(inspector.get_table_names())
         assert {
             "professions",
             "vacancies",
@@ -26,6 +27,10 @@ def test_migration_up_and_down(tmp_path):
             "payment_orders",
             "payment_refunds",
         } <= tables
+        mentorship_columns = {
+            column["name"] for column in inspector.get_columns("mentorship_requests")
+        }
+        assert "proposed_budget_rub" in mentorship_columns
         command.downgrade(config, "base")
         assert inspect(create_engine(database_url)).get_table_names() == ["alembic_version"]
     finally:

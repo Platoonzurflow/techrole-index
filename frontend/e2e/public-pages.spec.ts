@@ -106,6 +106,7 @@ test("mentorship application is complete without sending data", async ({ page })
   await page.getByLabel("Email или Telegram").fill("test@example.com");
   await page.locator('select[name="direction"]').selectOption("Backend");
   await page.locator('select[name="level"]').selectOption("Junior");
+  await page.getByLabel("Предлагаемая стоимость, ₽").fill("30000");
   await page.getByLabel("Что происходит сейчас и к чему хотите прийти", { exact: true }).fill("Проверка формы без отправки");
   await page.getByRole("checkbox").check();
   await expect(page.getByRole("button", { name: "Отправить заявку" })).toBeEnabled();

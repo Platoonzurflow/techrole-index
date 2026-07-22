@@ -469,6 +469,7 @@ class MentorshipRequest(Base, TimestampMixin):
     contact: Mapped[str] = mapped_column(String(320), index=True)
     direction: Mapped[str] = mapped_column(String(80), index=True)
     level: Mapped[str] = mapped_column(String(80), index=True)
+    proposed_budget_rub: Mapped[int | None] = mapped_column(Integer, nullable=True)
     context: Mapped[str] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(32), default="received", index=True)
     delivery_attempts: Mapped[int] = mapped_column(Integer, default=0)

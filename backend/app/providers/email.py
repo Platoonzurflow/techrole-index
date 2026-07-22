@@ -32,6 +32,7 @@ class MentorshipEmail:
     contact: str
     direction: str
     level: str
+    proposed_budget_rub: int | None
     context: str
 
 
@@ -140,6 +141,11 @@ class SmtpEmailProvider:
                     f"Контакт: {mentorship_email.contact}",
                     f"Направление: {mentorship_email.direction}",
                     f"Текущий уровень: {mentorship_email.level}",
+                    (
+                        f"Предлагаемая стоимость: {mentorship_email.proposed_budget_rub:,} ₽".replace(",", " ")
+                        if mentorship_email.proposed_budget_rub is not None
+                        else "Предлагаемая стоимость: не указана"
+                    ),
                     "",
                     "Текущая ситуация и цель:",
                     mentorship_email.context,

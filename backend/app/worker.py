@@ -172,6 +172,7 @@ def deliver_mentorship_request(self, mentorship_id: int) -> dict:
                     contact=mentorship_request.contact,
                     direction=mentorship_request.direction,
                     level=mentorship_request.level,
+                    proposed_budget_rub=mentorship_request.proposed_budget_rub,
                     context=mentorship_request.context,
                 )
             )

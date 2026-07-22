@@ -343,6 +343,7 @@ class MentorshipRequestCreate(BaseModel):
         "Middle",
         "Меняю направление",
     ]
+    proposed_budget_rub: int = Field(ge=1000, le=1_000_000)
     context: str = Field(min_length=20, max_length=3000)
     website: str = Field(default="", max_length=120)
 

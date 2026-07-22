@@ -22,6 +22,7 @@ VALID_REQUEST = {
     "contact": "applicant@example.com",
     "direction": "Backend",
     "level": "Junior",
+    "proposed_budget_rub": 30000,
     "context": "Хочу системно подготовиться к поиску работы и техническим интервью.",
     "website": "",
 }
@@ -100,6 +101,7 @@ def test_mentorship_request_is_persisted_and_queued(
         assert request.contact == "applicant@example.com"
         assert request.direction == "Backend"
         assert request.level == "Junior"
+        assert request.proposed_budget_rub == 30000
         assert request.status == "pending"
         request_id = request.id
     assert queued == [request_id]
@@ -118,6 +120,45 @@ def test_mentorship_request_requires_csrf(
     assert queued == []
 
 
+def test_mentorship_request_rejects_budget_outside_safe_range(
+    mentorship_api: tuple[
+        TestClient, sessionmaker[Session], RecordingLimiter, list[int]
+    ],
+) -> None:
+    client, testing_session, limiter, queued = mentorship_api
+    response = client.post(
+        "/api/v1/mentorship/requests",
+        json={**VALID_REQUEST, "proposed_budget_rub": 999},
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 422
+    with testing_session() as db:
+        assert db.scalar(select(MentorshipRequest)) is None
+    assert limiter.calls == []
+    assert queued == []
+
+
+def test_mentorship_request_requires_proposed_budget(
+    mentorship_api: tuple[
+        TestClient, sessionmaker[Session], RecordingLimiter, list[int]
+    ],
+) -> None:
+    client, testing_session, limiter, queued = mentorship_api
+    payload = {key: value for key, value in VALID_REQUEST.items() if key != "proposed_budget_rub"}
+    response = client.post(
+        "/api/v1/mentorship/requests",
+        json=payload,
+        headers=csrf_headers(client),
+    )
+
+    assert response.status_code == 422
+    with testing_session() as db:
+        assert db.scalar(select(MentorshipRequest)) is None
+    assert limiter.calls == []
+    assert queued == []
+
+
 def test_mentorship_delivery_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> None:
     engine = create_engine(
         "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
@@ -130,6 +171,7 @@ def test_mentorship_delivery_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> N
             contact="anna@example.com",
             direction="Data / Analytics",
             level="Junior",
+            proposed_budget_rub=25000,
             context="Хочу подготовиться к поиску первой позиции аналитика данных.",
             status="pending",
         )
@@ -155,4 +197,5 @@ def test_mentorship_delivery_is_idempotent(monkeypatch: pytest.MonkeyPatch) -> N
     assert second == {"status": "already_sent", "mentorship_id": request_id}
     assert len(sent) == 1
     assert sent[0].contact == "anna@example.com"
+    assert sent[0].proposed_budget_rub == 25000
     engine.dispose()

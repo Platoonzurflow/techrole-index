@@ -291,7 +291,7 @@ Demand проходит `log1p`, экстремумы ограничиваютс
 3. проекты и позиционирование;
 4. отклики и интервью.
 
-`MentorshipForm` отправляет данные на отдельный `/api/v1/mentorship/requests`: заявка сохраняется в `mentorship_requests`, получает номер и ставит `deliver_mentorship_request`. Перед полями явно сказано предложить комфортную стоимость в описании; формат, объём и итоговые условия рассматриваются индивидуально. Письмо имеет префикс `[TechRole Mentorship]`. Офер не гарантируется - это явно указано на странице.
+`MentorshipForm` отправляет данные на отдельный `/api/v1/mentorship/requests`: заявка сохраняется в `mentorship_requests`, получает номер и ставит `deliver_mentorship_request`. Миграция `0007` добавляет nullable-колонку `proposed_budget_rub` для совместимости со старыми строками; UI и API требуют новое предложение от 1 000 до 1 000 000 ₽, сохраняют его и включают в письмо. Это только часть обращения, не browser-controlled сумма платежа. Формат, объём и итоговые условия рассматриваются индивидуально. Письмо имеет префикс `[TechRole Mentorship]`. Офер не гарантируется - это явно указано на странице.
 
 Плавающая кнопка техподдержки ведёт на `/support`. Форма имеет собственный CSRF cookie, сохраняет обращение в `support_requests` и ставит `deliver_support_request`. Письмо имеет префикс `[TechRole Support]`. Обе формы используют Origin check, Redis rate limit и honeypot.
 
@@ -452,13 +452,13 @@ Backend внутри контейнера:
 
 - Ruff: passed;
 - mypy: passed, 53 source files;
-- pytest: `115 passed`.
+- pytest: `119 passed`.
 
 Frontend:
 
 - ESLint: passed;
 - source TypeScript: passed;
-- backend Ruff + mypy + pytest: `116 passed`;
+- backend Ruff + mypy + pytest: `119 passed`;
 - Vitest: `45 passed`;
 - Next.js production build: passed, 63 generated page artifacts, включая legal/payment routes, три salary-benchmark routes и 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
 - отдельные production-check Docker images frontend/backend: built and smoke-tested, HTTP 200;
@@ -491,6 +491,7 @@ Frontend:
 - Dagster `verify_public_salary_benchmarks` включён локально; последний выборочный запуск `37c084d7-e020-409c-9f1e-625dd6aa73ea` подтвердил 10 из 10 публичных metadata SEO-медиан, включая два смежных среза. Аудит делает до трёх ограниченных попыток, отличает сетевую недоступность от изменения числа, запрещает автоматическую перезапись и сохраняет результат в `audit_logs` для краткого summary на `/status`;
 - миграция `0005` применена; PostgreSQL full refresh создал 691 observed-publication slice для 1 052 классифицированных публикаций, повторный overlap refresh обработал только 7 дней, stale/invalid/leaked slices равны 0;
 - миграция `0006` применена; `payment_orders` и `payment_refunds` находятся на Alembic head, sandbox API/webhook/refund/replay/tampering, YooKassa и Robokassa contract tests прошли; Robokassa ResultURL и live refund reconciliation покрыты отдельно;
+- миграция `0007` применена; существующие обращения сохранены, а новые заявки личного ведения требуют и передают отдельное предложение стоимости без создания payment order;
 - rolling research/provenance window выровнено по 180 полным UTC-календарным дням: schema `1.3` публикует полуоткрытые timestamp-границы и третий зарплатный слой, а live catalog и provenance оба дают 1 278 классифицированных публикаций за 2026-01-23..2026-07-21;
 - `rules-v2` повторно классифицировал только записи без решения или с rule-based решением: 1 050 -> 1 130 rule-managed строк, `cleared=0`; две AI-классификации сохранены, представлены 36 из 50 профессий, достаточная зарплатная выборка есть у 7;
 - 2026-07-21 новый PostgreSQL custom backup (3 864 514 bytes) создан с SHA-256 manifest и действительно восстановлен `infra/windows/test-postgres-restore.ps1` в изолированную БД: revision `0005`, 26 public tables, 50 professions, 108 000 prepared metric rows, 691 observed slices, 5 535 vacancies и 3 users. После проверки временная БД и container archive удалены; основная БД не останавливалась.

@@ -111,6 +111,7 @@ def create_mentorship_request(
         contact=payload.contact,
         direction=payload.direction,
         level=payload.level,
+        proposed_budget_rub=payload.proposed_budget_rub,
         context=payload.context,
         status="pending",
         ip_hash=ip_hash,

@@ -12,6 +12,7 @@ export interface MentorshipApplication {
   contact: string;
   direction: string;
   level: string;
+  proposedBudgetRub: number;
   context: string;
 }
 
@@ -31,6 +32,7 @@ export function buildMentorshipMailto(application: MentorshipApplication) {
     `Контакт: ${application.contact}`,
     `Направление: ${application.direction}`,
     `Текущий уровень: ${application.level}`,
+    `Предлагаемая стоимость: ${application.proposedBudgetRub} ₽`,
     "",
     "Текущая ситуация и цель:",
     application.context || "Не указано",
@@ -68,6 +70,7 @@ export function MentorshipForm() {
           contact: String(data.get("contact") ?? "").trim(),
           direction: String(data.get("direction") ?? "Не определился(ась)"),
           level: String(data.get("level") ?? "Без коммерческого опыта"),
+          proposed_budget_rub: Number(data.get("proposed_budget_rub")),
           context: String(data.get("context") ?? "").trim(),
           website: String(data.get("website") ?? ""),
         }),
@@ -96,7 +99,7 @@ export function MentorshipForm() {
         <span className="insight-icon"><Mail size={19} /></span>
       </div>
       <p className="mt-5 rounded-xl border border-accent/25 bg-accent/5 p-4 text-sm leading-6 text-muted">
-        Предложите комфортную для вас стоимость в описании заявки. Каждое обращение рассматривается индивидуально: формат, объём работы и итоговые условия согласуем вместе.
+        Предложите комфортную для вас стоимость. Каждое обращение рассматривается индивидуально: формат, объём работы и итоговые условия согласуем вместе.
       </p>
       <div className="mt-7 grid gap-5 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-bold">Имя
@@ -118,16 +121,21 @@ export function MentorshipForm() {
             <option>Junior</option><option>Middle</option><option>Меняю направление</option>
           </select>
         </label>
+        <div className="grid gap-2 sm:col-span-2">
+          <label className="text-sm font-bold" htmlFor="proposed_budget_rub">Предлагаемая стоимость, ₽</label>
+          <input className="field" id="proposed_budget_rub" name="proposed_budget_rub" type="number" inputMode="numeric" aria-describedby="proposed-budget-help" required min={1000} max={1000000} step={1000} placeholder="Например, 30 000" />
+          <p id="proposed-budget-help" className="text-xs leading-5 text-muted">Это предложение для обсуждения, а не сумма списания. Платёж на этом этапе не создаётся.</p>
+        </div>
       </div>
       <label className="mt-5 grid gap-2 text-sm font-bold">Что происходит сейчас и к чему хотите прийти
-        <textarea className="field min-h-32 py-3" name="context" minLength={20} maxLength={3000} required placeholder="Опыт, сложности, сроки, желаемая роль, комфортный бюджет и любые важные детали" />
+        <textarea className="field min-h-32 py-3" name="context" minLength={20} maxLength={3000} required placeholder="Опыт, сложности, сроки, желаемая роль и любые важные детали" />
       </label>
       <label className="absolute -left-[9999px]" aria-hidden="true">Сайт
         <input name="website" tabIndex={-1} autoComplete="off" />
       </label>
       <label className="mt-5 flex items-start gap-3 text-sm leading-6 text-muted">
         <input className="mt-1 size-4 accent-[var(--accent)]" type="checkbox" required />
-        <span>Согласен передать имя, контакт и описание ситуации для ответа по заявке. Не отправляйте пароли, коды подтверждения и платёжные данные.</span>
+        <span>Согласен передать имя, контакт, предлагаемую стоимость и описание ситуации для ответа по заявке. Не отправляйте пароли, коды подтверждения и платёжные данные.</span>
       </label>
       <button className="button-primary mt-6 w-full sm:w-auto" type="submit" disabled={state === "sending"}>{state === "sending" ? "Отправляем…" : "Отправить заявку"} <Send className="ml-2" size={17} /></button>
       {message ? (

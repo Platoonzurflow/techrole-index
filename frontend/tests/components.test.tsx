@@ -156,11 +156,13 @@ describe("analytics components", () => {
       contact: "@ivan",
       direction: "Backend",
       level: "Junior",
+      proposedBudgetRub: 30000,
       context: "Хочу подготовиться к собеседованиям",
     });
 
     expect(url).toMatch(new RegExp(`^mailto:${MENTORSHIP_EMAIL}\\?`));
     expect(decodeURIComponent(url)).toContain("Заявка на личное ведение - Иван");
+    expect(decodeURIComponent(url)).toContain("Предлагаемая стоимость: 30000 ₽");
     expect(decodeURIComponent(url)).toContain("около 20 часов в неделю");
   });
 
@@ -186,6 +188,7 @@ describe("analytics components", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Email или Telegram" }), { target: { value: "ivan@example.com" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Направление" }), { target: { value: "Backend" } });
     fireEvent.change(screen.getByRole("combobox", { name: "Текущий уровень" }), { target: { value: "Junior" } });
+    fireEvent.change(screen.getByRole("spinbutton", { name: "Предлагаемая стоимость, ₽" }), { target: { value: "30000" } });
     fireEvent.change(screen.getByRole("textbox", { name: "Что происходит сейчас и к чему хотите прийти" }), { target: { value: "Хочу подготовиться к поиску первой работы Backend-разработчиком." } });
     fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.click(screen.getByRole("button", { name: "Отправить заявку" }));
@@ -204,6 +207,7 @@ describe("analytics components", () => {
         contact: "ivan@example.com",
         direction: "Backend",
         level: "Junior",
+        proposed_budget_rub: 30000,
         context: "Хочу подготовиться к поиску первой работы Backend-разработчиком.",
         website: "",
       }),

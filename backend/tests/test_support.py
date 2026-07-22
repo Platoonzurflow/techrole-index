@@ -328,6 +328,7 @@ def test_smtp_provider_sends_to_configured_recipient_with_safe_reply_to(
             contact="anna@example.com",
             direction="Backend",
             level="Junior",
+            proposed_budget_rub=30000,
             context="Хочу подготовиться к поиску первой работы в разработке.",
         )
     )
@@ -339,6 +340,7 @@ def test_smtp_provider_sends_to_configured_recipient_with_safe_reply_to(
     assert mentorship_message["Reply-To"] == "anna@example.com"
     assert mentorship_message["Subject"] == "[TechRole Mentorship] Новая заявка: Анна"
     assert "mentorship-1" in mentorship_message.get_content()
+    assert "30 000" in mentorship_message.get_content()
 
     provider.send_pipeline_report(
         PipelineReportEmail(
