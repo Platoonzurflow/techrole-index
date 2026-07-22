@@ -109,6 +109,23 @@ SOURCES: dict[str, SalarySource] = {
             "по сторонним базам и открытым данным. Gross/net в отчёте не указан."
         ),
     },
+    "ruitunion_2026_h1": {
+        "id": "ruitunion_2026_h1",
+        "name": "Профсоюз работников ИТ — зарплатный опрос",
+        "url": "https://ruitunion.org/posts/2026-05-29-salaries/",
+        "methodology_url": "https://ruitunion.org/posts/2026-05-29-salaries/",
+        "period": "I полугодие 2026",
+        "published_at": "2026-05-28",
+        "total_sample_size": 1539,
+        "currency": "RUB",
+        "tax_status": "unknown",
+        "income_type": "salary",
+        "methodology_note": (
+            "Опрос специалистов, проживающих в России, работающих на российские "
+            "компании и указавших зарплату в рублях. Публикация сообщает медианы "
+            "Junior, Middle и Senior по всему IT-рынку; gross/net не указан."
+        ),
+    },
 }
 
 for _profession_slug, (_alias, _label, _median) in HABR_CALCULATOR_PUBLIC_MEDIANS.items():
@@ -628,6 +645,16 @@ DEVELOPER_MARKET_LEVELS = [
 ]
 
 
+# Public nationwide medians by grade. These points are used only when a more
+# specific profession, technology or developer-market grade is unavailable.
+# They keep every profession comparable without inventing a role-level value.
+IT_MARKET_LEVELS = [
+    ("junior", 114500),
+    ("middle", 200000),
+    ("senior", 310000),
+]
+
+
 def _point(
     *,
     source_id: str,
@@ -786,6 +813,26 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
                 )
             )
 
+    existing_levels = {point["seniority"] for point in points if point["seniority"] is not None}
+    for seniority, value in IT_MARKET_LEVELS:
+        if seniority in existing_levels:
+            continue
+        points.append(
+            _point(
+                source_id="ruitunion_2026_h1",
+                scope="market_level",
+                label="IT-специалисты в России",
+                metric="median",
+                value=value,
+                seniority=seniority,
+                note=(
+                    "Общерыночная медиана грейда используется только потому, что "
+                    "отдельное значение для этой профессии не опубликовано."
+                ),
+                is_fallback=True,
+            )
+        )
+
     category_key = _category_key(slug, category_slug)
     label, national, moscow, petersburg, regions = CATEGORY_BENCHMARKS[category_key]
     for geography, value in (
@@ -820,8 +867,24 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
         "points": points,
         "sources": [SOURCES[source_id] for source_id in source_ids],
         "methodology_note": (
-            "Ориентиры фактических доходов показаны отдельно от вилок вакансий. "
-            "Точный ролевой срез имеет приоритет; технологический или смежный срез "
-            "помечен явно. Категорийный срез используется только как fallback."
+            "Сначала показаны данные самой профессии. Если отдельного значения для "
+            "грейда нет, используется подписанный ориентир смежной роли, технологии "
+            "или всего IT-рынка — вместе с периодом и первоисточником."
         ),
     }
+
+
+def salary_benchmark_catalog() -> list[dict[str, Any]]:
+    """Build the complete static catalog without requiring API dependencies."""
+    from app.data.catalog import PROFESSIONS
+
+    return [
+        {
+            "slug": slug,
+            "name_ru": name_ru,
+            "name_en": name_en,
+            "category_slug": category_slug,
+            "benchmark": salary_benchmark_for(slug, category_slug),
+        }
+        for slug, name_ru, name_en, category_slug, _aliases in PROFESSIONS
+    ]

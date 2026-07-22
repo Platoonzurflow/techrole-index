@@ -67,16 +67,34 @@ export function VacancyChart({ metrics }: { metrics: MetricPoint[] }) {
   return <Chart option={option} label="История активных вакансий по уровням" />;
 }
 
+export function aggregatePublicationsByWeek(
+  points: OfficialOpenDataSummary["daily_publications"],
+) {
+  const weeks: Array<{ label: string; count: number }> = [];
+  for (let index = 0; index < points.length; index += 7) {
+    const slice = points.slice(index, index + 7);
+    if (!slice.length) continue;
+    weeks.push({
+      label: `${slice[0].date} — ${slice.at(-1)?.date}`,
+      count: slice.reduce((sum, item) => sum + item.count, 0),
+    });
+  }
+  return weeks;
+}
+
 export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
+  const weeks = aggregatePublicationsByWeek(data.daily_publications);
+  const categoryWeeks = aggregatePublicationsByWeek(data.category_daily_publications);
   const option: echarts.EChartsOption = {
     tooltip: {
       trigger: "axis",
       valueFormatter: (value) => `${Number(value)} публикаций`,
     },
-    grid: { left: 10, right: 16, top: 24, bottom: 10, containLabel: true },
+    legend: { top: 4, textStyle: { color: "#64748b" } },
+    grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
     xAxis: {
       type: "category",
-      data: data.daily_publications.map((item) => item.date),
+      data: weeks.map((item) => item.label),
       axisLabel: { color: "#64748b", hideOverlap: true },
       axisLine: { lineStyle: { color: "#334155" } },
     },
@@ -86,15 +104,26 @@ export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
       axisLabel: { color: "#64748b" },
       splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } },
     },
-    series: [{
-      name: "Публикации",
-      type: "bar",
-      large: true,
-      itemStyle: { color: "#c85a38", borderRadius: [3, 3, 0, 0] },
-      data: data.daily_publications.map((item) => item.count),
-    }],
+    series: [
+      {
+        name: "Точно по профессии",
+        type: "bar",
+        large: true,
+        itemStyle: { color: "#c85a38", borderRadius: [3, 3, 0, 0] },
+        data: weeks.map((item) => item.count),
+      },
+      {
+        name: "По направлению",
+        type: "line",
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 2.5, color: "#2563eb" },
+        itemStyle: { color: "#2563eb" },
+        data: categoryWeeks.map((item) => item.count),
+      },
+    ],
   };
-  return <Chart option={option} label="Публикации вакансий в официальном открытом API за 180 дней" />;
+  return <Chart option={option} label="Точные публикации профессии и публикации направления по неделям за 180 дней" />;
 }
 
 export function OfficialSalaryChart({ data }: { data: OfficialOpenDataSummary }) {

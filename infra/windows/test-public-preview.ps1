@@ -109,6 +109,30 @@ if (
 ) {
     throw 'Salary benchmark provenance verification failed.'
 }
+$salaryDatasetResponse = Invoke-WebRequest -Uri "$BaseUrl/salary-benchmarks.json" -UseBasicParsing -TimeoutSec 30
+$salaryDataset = ([Text.Encoding]::UTF8.GetString($salaryDatasetResponse.RawContentStream.ToArray())) | ConvertFrom-Json
+$salaryCsv = Invoke-WebRequest -Uri "$BaseUrl/salary-benchmarks.csv" -UseBasicParsing -TimeoutSec 30
+$salaryPage = Invoke-WebRequest -Uri "$BaseUrl/salary-benchmarks" -UseBasicParsing -TimeoutSec 30
+$salaryCsvRows = @($salaryCsv.Content -split "`r?`n" | Where-Object { $_ }).Count
+$salaryConditionalStatus = Get-ConditionalStatus -Uri "$BaseUrl/salary-benchmarks.json" -Headers @{
+    'If-None-Match' = $salaryDatasetResponse.Headers['ETag']
+}
+if (
+    $salaryDataset.status -ne 'public_reference' -or
+    $salaryDataset.current_market_claim -ne $false -or
+    $salaryDataset.profession_count -ne 50 -or
+    $salaryDataset.dataset.Count -ne 50 -or
+    $salaryDataset.coverage.direct -ne 37 -or
+    $salaryDataset.coverage.related -ne 11 -or
+    $salaryDataset.coverage.category -ne 2 -or
+    $salaryDatasetResponse.Headers['ETag'] -notmatch '^"sha256-[a-f0-9]{64}"$' -or
+    $salaryConditionalStatus -ne 304 -or
+    $salaryCsvRows -le 200 -or
+    $salaryPage.StatusCode -ne 200 -or
+    $salaryPage.Content -notmatch '/salary-benchmarks\.csv'
+) {
+    throw 'Salary benchmark dataset verification failed.'
+}
 if ($officialLayer.classified_publications -gt 0 -and (
     $officialLayer.materialized_slice_count -le 0 -or
     $officialLayer.materialized_publications -le 0 -or
@@ -251,14 +275,16 @@ if (
 
 $linkContexts = @($linkset.linkset)
 $landingLinkContext = $linkContexts | Where-Object { $_.anchor -eq "$BaseUrl/open-data-daily" }
+$salaryLinkContext = $linkContexts | Where-Object { $_.anchor -eq "$BaseUrl/salary-benchmarks" }
 if (
     $linksetResponse.Headers['Content-Type'] -notlike 'application/linkset+json*' -or
     $linksetResponse.Headers['ETag'] -notmatch '^"sha256-[a-f0-9]{64}"$' -or
     $linksetConditionalStatus -ne 304 -or
-    $linkContexts.Count -ne 4 -or
+    $linkContexts.Count -ne 7 -or
     @($landingLinkContext.'cite-as' | Where-Object { $_.href -eq "$BaseUrl/open-data-daily" }).Count -ne 1 -or
     @($landingLinkContext.item | Where-Object { $_.href -in @("$BaseUrl/open-data-daily.json", "$BaseUrl/open-data-daily.csv") }).Count -ne 2 -or
-    @($landingLinkContext.describedby | Where-Object { $_.href -eq "$BaseUrl/open-data-daily.croissant.json" }).Count -ne 1
+    @($landingLinkContext.describedby | Where-Object { $_.href -eq "$BaseUrl/open-data-daily.croissant.json" }).Count -ne 1 -or
+    @($salaryLinkContext.item | Where-Object { $_.href -in @("$BaseUrl/salary-benchmarks.json", "$BaseUrl/salary-benchmarks.csv") }).Count -ne 2
 ) {
     throw "RFC 9264 Linkset verification failed: contexts=$($linkContexts.Count), conditional=$linksetConditionalStatus"
 }
@@ -333,6 +359,9 @@ if ($ready.StatusCode -ne 200) {
     open_datasets = $openData.dataset.Count
     open_csv_rows = $csvRows
     provenance_layers = $provenance.layers.Count
+    salary_dataset_professions = $salaryDataset.profession_count
+    salary_csv_rows = $salaryCsvRows
+    salary_json_conditional_status = $salaryConditionalStatus
     materialized_slices = $officialLayer.materialized_slice_count
     materialized_publications = $officialLayer.materialized_publications
     daily_json_rows = $dailyData.row_count

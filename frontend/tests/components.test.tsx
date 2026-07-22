@@ -9,7 +9,7 @@ import { SupportButton } from "@/components/SupportButton";
 import { SupportForm } from "@/components/SupportForm";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
 import { AccountActions } from "@/components/AccountActions";
-import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
+import { SalaryBenchmarks, SalaryBySeniority } from "@/components/SalaryBenchmarks";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("analytics components", () => {
-  it("labels salary fallbacks separately from an exact benchmark", () => {
+  it("shows the exact benchmark without a separate category fallback block", () => {
     render(<SalaryBenchmarks data={{
       coverage: "direct",
       methodology_note: "Слои не смешиваются.",
@@ -57,12 +57,84 @@ describe("analytics components", () => {
 
     expect(screen.getByText("есть прямой срез")).toBeInTheDocument();
     expect(screen.getByText("точная профессия")).toBeInTheDocument();
-    expect(screen.getByText("Категорийный fallback")).toBeInTheDocument();
+    expect(screen.queryByText("Категорийный fallback")).not.toBeInTheDocument();
     expect(screen.getByText(/n=45[\s\u00a0]226/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Источник/ })).toHaveAttribute(
       "href",
       "https://habr.com/ru/specials/1060148/",
     );
+  });
+
+  it("fills Junior, Middle and Senior from a sourced study when vacancy samples are small", () => {
+    const sources = [{
+      id: "survey",
+      name: "Публичный зарплатный опрос",
+      url: "https://example.org/survey",
+      methodology_url: "https://example.org/survey",
+      period: "I полугодие 2026",
+      published_at: "2026-05-28",
+      total_sample_size: 1539,
+      currency: "RUB" as const,
+      tax_status: "unknown" as const,
+      income_type: "salary" as const,
+      methodology_note: "Открытый опрос.",
+    }];
+    const benchmark = {
+      coverage: "category" as const,
+      methodology_note: "Лучший доступный срез.",
+      points: ([
+        ["junior", 114500],
+        ["middle", 200000],
+        ["senior", 310000],
+      ] as const).map(([seniority, value]) => ({
+        source_id: "survey",
+        scope: "market_level" as const,
+        label: "IT-специалисты в России",
+        geography: "russia" as const,
+        metric: "median" as const,
+        value,
+        seniority,
+        is_fallback: true,
+      })),
+      sources,
+    };
+    const official = {
+      source_name: "Работа России",
+      source_url: "https://trudvsem.ru/opendata/api",
+      period_days: 180,
+      date_from: "2026-01-24",
+      date_to: "2026-07-22",
+      total_publications: 3,
+      salary_disclosed_count: 3,
+      remote_count: 0,
+      confidence_level: "low" as const,
+      daily_publications: [],
+      category_total_publications: 3,
+      category_daily_publications: [],
+      salary_currency: "RUB" as const,
+      salary_gross_status: "unknown" as const,
+      salary_min_sample: 20,
+      salary_by_seniority: (["junior", "middle", "senior"] as const).map((seniority) => ({
+        seniority,
+        vacancy_count: 1,
+        salary_count: 1,
+        salary_coverage: 1,
+        sample_size: 1,
+        confidence_level: "insufficient" as const,
+      })),
+      salary_history: [],
+      salary_methodology_note: "Только полные вилки.",
+      methodology_note: "Публикации.",
+    };
+
+    render(<SalaryBySeniority official={official} benchmark={benchmark} />);
+
+    const headings = screen.getAllByRole("heading", { level: 4 }).map((item) => item.textContent);
+    expect(headings).toEqual(["Junior", "Middle", "Senior"]);
+    expect(screen.getByText("114 500 ₽")).toBeInTheDocument();
+    expect(screen.getByText("200 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("310 000 ₽")).toBeInTheDocument();
+    expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();
   });
 
   it("renders a server-safe premium teaser", () => {

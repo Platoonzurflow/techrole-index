@@ -9,7 +9,7 @@ from sqlalchemy import desc, func, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.data.salary_benchmarks import salary_benchmark_for
+from app.data.salary_benchmarks import salary_benchmark_catalog, salary_benchmark_for
 from app.data.tech_stacks import tech_stack_for
 from app.database import get_db
 from app.domain.salary import SalaryInput, calculate_salary_statistics
@@ -36,6 +36,7 @@ from app.schemas import (
     ProfessionDetail,
     ProfessionSummary,
     PublicationPoint,
+    SalaryBenchmarkCatalogItem,
     TrendOut,
 )
 from app.security import has_premium, optional_user, require_premium
@@ -47,6 +48,15 @@ profession_cache = RedisJsonCache(
     redis_url=settings.redis_url,
     ttl_seconds=settings.catalog_cache_ttl_seconds,
 )
+
+
+@router.get(
+    "/salary-benchmarks",
+    response_model=list[SalaryBenchmarkCatalogItem],
+    response_model_exclude_none=True,
+)
+def salary_benchmarks():
+    return salary_benchmark_catalog()
 
 
 @router.get(
@@ -68,9 +78,11 @@ def open_data_publications(db: Session = Depends(get_db)):
             Profession.id,
             Profession.slug,
             Profession.name_ru,
+            ProfessionCategory.slug,
             func.count(Vacancy.id),
             func.max(Vacancy.last_seen_at),
         )
+        .join(ProfessionCategory, Profession.category_id == ProfessionCategory.id)
         .outerjoin(
             Vacancy,
             (Vacancy.profession_id == Profession.id)
@@ -79,16 +91,17 @@ def open_data_publications(db: Session = Depends(get_db)):
             & (Vacancy.published_at < window.end_at_exclusive),
         )
         .where(Profession.is_active.is_(True))
-        .group_by(Profession.id)
+        .group_by(Profession.id, ProfessionCategory.slug)
         .order_by(Profession.name_ru)
     ).all()
     publications: list[OpenDataCatalogItem] = []
-    for profession_id, slug, name_ru, total, last_ingested_at in rows:
+    for profession_id, slug, name_ru, category_slug, total, last_ingested_at in rows:
         official = _official_open_data_summary(db, profession_id, period_days)
         publications.append(
             OpenDataCatalogItem(
                 slug=slug,
                 name_ru=name_ru,
+                category_slug=category_slug,
                 period_days=period_days,
                 date_from=date_from,
                 date_to=date_to,
@@ -108,7 +121,11 @@ def _latest_score_date(db: Session):
 
 
 def _official_open_data_summary(
-    db: Session, profession_id: int, period_days: int = 180
+    db: Session,
+    profession_id: int,
+    period_days: int = 180,
+    *,
+    include_category_context: bool = False,
 ) -> OfficialOpenDataSummary:
     now = datetime.now(timezone.utc)
     window = utc_calendar_window(now, days=period_days)
@@ -139,6 +156,7 @@ def _official_open_data_summary(
             ).all()
         ]
     daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
+    category_daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
     salary_disclosed_count = remote_count = 0
     last_ingested_at = None
     salary_rows: dict[str, list[tuple[Any, ...]]] = {
@@ -171,6 +189,27 @@ def _official_open_data_summary(
                 )
             )
     total = len(rows)
+    category_total = 0
+    if include_category_context and source_id is not None:
+        category_id = db.scalar(
+            select(Profession.category_id).where(Profession.id == profession_id)
+        )
+        if category_id is not None:
+            category_dates = db.scalars(
+                select(Vacancy.published_at)
+                .join(Profession, Vacancy.profession_id == Profession.id)
+                .where(
+                    Vacancy.source_id == source_id,
+                    Profession.category_id == category_id,
+                    Vacancy.published_at >= window.start_at,
+                    Vacancy.published_at < window.end_at_exclusive,
+                )
+            ).all()
+            category_total = len(category_dates)
+            for published_at in category_dates:
+                published_date = published_at.date()
+                if published_date in category_daily:
+                    category_daily[published_date] += 1
     confidence = (
         "high"
         if total >= 100
@@ -259,6 +298,11 @@ def _official_open_data_summary(
         last_ingested_at=last_ingested_at,
         daily_publications=[
             PublicationPoint(date=metric_date, count=count) for metric_date, count in daily.items()
+        ],
+        category_total_publications=category_total,
+        category_daily_publications=[
+            PublicationPoint(date=metric_date, count=count)
+            for metric_date, count in category_daily.items()
         ],
         salary_currency="RUB",
         salary_gross_status="unknown",
@@ -434,7 +478,11 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
     premium = has_premium(db, user)
     summary = _summary(profession, category, score, premium)
     tech_stack = tech_stack_for(profession.slug)
-    official_open_data = _official_open_data_summary(db, profession.id)
+    official_open_data = _official_open_data_summary(
+        db,
+        profession.id,
+        include_category_context=True,
+    )
     salary_benchmark = salary_benchmark_for(profession.slug, category.slug)
     if summary.teaser_only:
         return ProfessionDetail(
@@ -560,6 +608,19 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
         updated_at=max_date,
         scoring_version=scoring_version.version if scoring_version else None,
         score_breakdown=score.breakdown if score else None,
+        score_weights=(
+            {key: float(value) for key, value in scoring_version.weights.items()}
+            if score and scoring_version
+            else None
+        ),
+        score_contributions=(
+            {
+                key: round(float(component) * float(scoring_version.weights.get(key, 0)), 1)
+                for key, component in score.breakdown.items()
+            }
+            if score and scoring_version
+            else None
+        ),
         metrics=metrics,
         vacancy_trends=to_trends(vacancy_trends),
         salary_trends=to_trends(salary_trends),
@@ -586,7 +647,7 @@ def get_profession(
     premium = has_premium(db, user)
     effective_days = min(days, 180 if premium else 30)
     cache_parts = {
-        "schema": "salary-benchmark-v1",
+        "schema": "salary-benchmark-v3",
         "tier": "premium" if premium else "public",
         "slug": slug,
         "days": effective_days,

@@ -1,5 +1,5 @@
 from app.data.catalog import PROFESSIONS
-from app.data.salary_benchmarks import SOURCES, salary_benchmark_for
+from app.data.salary_benchmarks import SOURCES, salary_benchmark_catalog, salary_benchmark_for
 from app.schemas import SalaryBenchmarkSummary
 
 
@@ -101,3 +101,27 @@ def test_sources_use_https_and_have_methodology() -> None:
         assert source["url"].startswith("https://")
         assert source["methodology_url"].startswith("https://")
         assert source["methodology_note"]
+
+
+def test_salary_benchmark_catalog_exports_every_profession() -> None:
+    catalog = salary_benchmark_catalog()
+
+    assert len(catalog) == 50
+    assert len({item["slug"] for item in catalog}) == 50
+    assert {item["benchmark"]["coverage"] for item in catalog} == {
+        "direct",
+        "related",
+        "category",
+    }
+    assert sum(item["benchmark"]["coverage"] == "direct" for item in catalog) == 37
+    assert all(item["benchmark"]["points"] for item in catalog)
+    assert all(item["benchmark"]["sources"] for item in catalog)
+    assert all(
+        {
+            point["seniority"]
+            for point in item["benchmark"]["points"]
+            if point["seniority"] is not None
+        }
+        == {"junior", "middle", "senior"}
+        for item in catalog
+    )

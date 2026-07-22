@@ -190,6 +190,8 @@ def test_free_response_does_not_contain_premium_fields():
         "metrics",
         "score",
         "score_breakdown",
+        "score_weights",
+        "score_contributions",
         "vacancy_trends",
         "salary_trends",
         "history_days",
@@ -197,13 +199,27 @@ def test_free_response_does_not_contain_premium_fields():
         assert forbidden not in payload
     assert payload["teaser_only"] is True
     assert payload["official_open_data"]["salary_gross_status"] == "unknown"
+    assert payload["official_open_data"]["category_total_publications"] >= 20
+    assert sum(
+        point["count"]
+        for point in payload["official_open_data"]["category_daily_publications"]
+    ) == payload["official_open_data"]["category_total_publications"]
     assert payload["salary_benchmark"]["coverage"] == "category"
-    assert len(payload["salary_benchmark"]["points"]) == 4
-    assert payload["salary_benchmark"]["sources"][0]["tax_status"] == "net"
+    assert len(payload["salary_benchmark"]["points"]) == 7
+    assert {
+        point["seniority"]
+        for point in payload["salary_benchmark"]["points"]
+        if point.get("seniority")
+    } == {"junior", "middle", "senior"}
+    assert {source["tax_status"] for source in payload["salary_benchmark"]["sources"]} == {
+        "net",
+        "unknown",
+    }
     official_junior = payload["official_open_data"]["salary_by_seniority"][0]
     assert official_junior["median"] == 150000
     assert official_junior["sample_size"] == 20
     catalog = client.get("/api/v1/open-data/publications").json()
+    assert catalog[0]["category_slug"] == "development"
     assert catalog[0]["salary_by_seniority"][0]["median"] == 150000
     client.close()
     session.close()

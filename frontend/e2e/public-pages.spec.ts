@@ -28,7 +28,7 @@ async function expectHealthyRoutes(request: APIRequestContext, routes: string[])
   }
 }
 
-test("public methodology is rendered and keyboard reachable", async ({ page }) => { await page.goto("/methodology"); await expect(page.getByRole("heading", { level: 1, name: /Методология/ })).toBeVisible(); await page.keyboard.press("Tab"); await expect(page.locator(":focus")).toBeVisible(); await expect(page.getByText("Midpoint", { exact: false }).first()).toBeVisible(); });
+test("public methodology is rendered and keyboard reachable", async ({ page }) => { await page.goto("/methodology"); await expect(page.getByRole("heading", { level: 1, name: "Как считаются показатели" })).toBeVisible(); await page.keyboard.press("Tab"); await expect(page.locator(":focus")).toBeVisible(); await expect(page.getByText("Midpoint", { exact: false }).first()).toBeVisible(); });
 
 test("public profession SSR contains seeded level metrics", async ({ page }) => {
   await page.goto("/professions/python-developer");
@@ -42,7 +42,10 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByText("gross/net не определён", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Рыночные ориентиры зарплаты" })).toBeVisible();
   await expect(page.getByText("технологический срез", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 4, name: "Junior" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 4, name: "Middle" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 4, name: "Senior" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toHaveCount(0);
   await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
 });
 
@@ -227,6 +230,45 @@ test("daily dataset landing explains, links and identifies the observed layer", 
   expect(croissant.recordSet[0].field).toHaveLength(30);
 });
 
+test("salary benchmark dataset is complete, downloadable, and limitation-labeled", async ({ page, request }) => {
+  const jsonResponse = await request.get("/salary-benchmarks.json");
+  expect(jsonResponse.status()).toBe(200);
+  expect(jsonResponse.headers().etag).toMatch(/^"sha256-[a-f0-9]{64}"$/);
+  const payload = await jsonResponse.json();
+  expect(payload.status).toBe("public_reference");
+  expect(payload.current_market_claim).toBe(false);
+  expect(payload.profession_count).toBe(50);
+  expect(payload.seniority_coverage).toEqual({ complete_roles: 50, points: 150 });
+  expect(payload.coverage).toEqual({ direct: 37, related: 11, category: 2 });
+  expect(payload.dataset).toHaveLength(50);
+  expect(payload.dataset.every((item: Record<string, unknown>) =>
+    JSON.stringify(Object.keys(item).sort()) === JSON.stringify([
+      "benchmark", "category_slug", "name_en", "name_ru", "slug",
+    ]))).toBe(true);
+
+  const notModified = await request.get("/salary-benchmarks.json", {
+    headers: { "If-None-Match": jsonResponse.headers().etag },
+  });
+  expect(notModified.status()).toBe(304);
+
+  const csvResponse = await request.get("/salary-benchmarks.csv");
+  expect(csvResponse.status()).toBe(200);
+  expect(csvResponse.headers()["content-type"]).toContain("text/csv");
+  const csv = await csvResponse.text();
+  expect(csv.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0]).toContain(
+    "profession_slug,profession_name_ru,profession_name_en,category_slug,coverage",
+  );
+  expect(csv.split(/\r?\n/).filter(Boolean).length).toBeGreaterThan(200);
+
+  await page.goto("/salary-benchmarks");
+  await expect(page.getByRole("heading", { level: 1, name: /Зарплаты IT-специалистов/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Все профессии" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Скачать CSV" })).toBeVisible();
+  await expect(page.getByText("Не смешивать с вакансиями", { exact: true })).toBeVisible();
+  await expect(page.getByText("150 из 150", { exact: true })).toBeVisible();
+  await expect(page.locator("tbody tr")).toHaveCount(50);
+});
+
 test("public navigation and machine-readable endpoints have no broken links", async ({ page, request }) => {
   test.setTimeout(300_000);
   const publicRoutes = [
@@ -243,7 +285,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
     "/insights/llm-friendly-open-text-dataset-citation/cite/csl-json",
     "/insights/llm-friendly-open-text-dataset-citation/cite/bibtex",
     "/insights/llm-friendly-open-text-dataset-citation/cite/ris",
-    "/data-status", "/data-status.json", "/open-data.csv", "/open-data-daily",
+    "/data-status", "/data-status.json", "/salary-benchmarks", "/salary-benchmarks.json", "/salary-benchmarks.csv", "/open-data.csv", "/open-data-daily",
     "/open-data-daily.json", "/open-data-daily.csv", "/open-data-daily.csv-metadata.json", "/open-data-daily.schema.json",
     "/open-data-daily.croissant.json",
   ];
@@ -258,6 +300,9 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(aiIndex.observed_publication_daily_croissant_url).toContain("/open-data-daily.croissant.json");
   expect(aiIndex.observed_publication_linkset_url).toContain("/.well-known/linkset.json");
   expect(aiIndex.dcat_catalog_url).toContain("/catalog.jsonld");
+  expect(aiIndex.salary_benchmarks_page_url).toContain("/salary-benchmarks");
+  expect(aiIndex.salary_benchmarks_json_url).toContain("/salary-benchmarks.json");
+  expect(aiIndex.salary_benchmarks_csv_url).toContain("/salary-benchmarks.csv");
 
   const openData = await (await request.get("/open-data.json")).json();
   expect(openData.dataset).toHaveLength(50);
@@ -278,7 +323,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(linksetResponse.headers()["content-type"]).toContain("application/linkset+json");
   expect(linksetResponse.headers().etag).toMatch(/^"sha256-[a-f0-9]{64}"$/);
   const linkset = await linksetResponse.json();
-  expect(linkset.linkset).toHaveLength(4);
+  expect(linkset.linkset).toHaveLength(7);
   expect(linkset.linkset[0].anchor).toContain("/open-data-daily");
   expect(linkset.linkset[0].item).toEqual(expect.arrayContaining([
     expect.objectContaining({ href: expect.stringContaining("/open-data-daily.json") }),

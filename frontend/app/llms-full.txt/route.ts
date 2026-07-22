@@ -72,6 +72,9 @@ Croissant 1.1 metadata ежедневного датасета: ${siteUrl}/open-
 DCAT 3 каталог открытых данных: ${siteUrl}/catalog.jsonld
 Статус и происхождение данных: ${siteUrl}/data-status
 Машиночитаемый provenance: ${siteUrl}/data-status.json
+Зарплатный датасет: ${siteUrl}/salary-benchmarks
+Зарплатный JSON: ${siteUrl}/salary-benchmarks.json
+Зарплатный CSV: ${siteUrl}/salary-benchmarks.csv
 RSS обновлений: ${siteUrl}/feed.xml
 Исследование рынка: ${siteUrl}/research
 Машиночитаемый отчёт: ${siteUrl}/research.json

@@ -66,6 +66,8 @@ export interface OfficialOpenDataSummary {
   confidence_level: "insufficient" | "low" | "medium" | "high";
   last_ingested_at?: string;
   daily_publications: Array<{ date: string; count: number }>;
+  category_total_publications: number;
+  category_daily_publications: Array<{ date: string; count: number }>;
   salary_currency: "RUB";
   salary_gross_status: "unknown";
   salary_min_sample: number;
@@ -118,10 +120,20 @@ export interface SalaryBenchmarkSummary {
   methodology_note: string;
 }
 
+export interface SalaryBenchmarkCatalogItem {
+  slug: string;
+  name_ru: string;
+  name_en: string;
+  category_slug: string;
+  benchmark: SalaryBenchmarkSummary;
+}
+
 export interface ProfessionDetail extends ProfessionSummary {
   updated_at?: string;
   scoring_version?: string;
   score_breakdown?: Record<string, number>;
+  score_weights?: Record<string, number>;
+  score_contributions?: Record<string, number>;
   metrics?: MetricPoint[];
   vacancy_trends?: Record<string, Trend>;
   salary_trends?: Record<string, Trend>;
@@ -131,6 +143,21 @@ export interface ProfessionDetail extends ProfessionSummary {
   history_days?: number;
   official_open_data?: OfficialOpenDataSummary;
   salary_benchmark?: SalaryBenchmarkSummary;
+}
+
+export interface OpenDataCatalogItem {
+  slug: string;
+  name_ru: string;
+  category_slug: string;
+  period_days: number;
+  date_from: string;
+  date_to: string;
+  total_publications: number;
+  last_ingested_at?: string;
+  salary_currency: "RUB";
+  salary_gross_status: "unknown";
+  salary_min_sample: number;
+  salary_by_seniority: OfficialSalarySlice[];
 }
 
 export interface PreparedAnalyticsLayer {

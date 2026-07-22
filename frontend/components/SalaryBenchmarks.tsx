@@ -1,7 +1,16 @@
 import { ExternalLink } from "lucide-react";
 
 import { rub } from "@/lib/format";
-import type { SalaryBenchmarkPoint, SalaryBenchmarkSummary } from "@/lib/types";
+import {
+  salaryBenchmarkLevelPoints,
+  salaryBenchmarkSourceForPoint,
+  salaryLevelOrder,
+} from "@/lib/salary-benchmark-data";
+import type {
+  OfficialOpenDataSummary,
+  SalaryBenchmarkPoint,
+  SalaryBenchmarkSummary,
+} from "@/lib/types";
 
 
 const geographyLabels = {
@@ -18,13 +27,13 @@ const scopeLabels = {
   related_role: "смежная профессия",
   technology: "технологический срез",
   category: "категория",
-  market_level: "общий рынок разработки",
+  market_level: "общий IT-рынок",
 };
 
 const coverageLabels = {
   direct: "есть прямой срез",
   related: "есть смежный срез",
-  category: "только категорийный ориентир",
+  category: "нет отдельного ролевого среза",
 };
 
 function pointValue(point: SalaryBenchmarkPoint) {
@@ -39,6 +48,12 @@ function metricLabel(point: SalaryBenchmarkPoint) {
   return "Медиана";
 }
 
+function taxLabel(value: "gross" | "net" | "unknown") {
+  if (value === "gross") return "до вычета налогов";
+  if (value === "net") return "на руки";
+  return "gross/net не указан";
+}
+
 function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
   return (
     <article className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
@@ -48,6 +63,7 @@ function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
       </div>
       <p className="mt-5 text-sm text-muted">{metricLabel(point)} · {geographyLabels[point.geography]}</p>
       <p className="mt-1 font-mono text-2xl font-semibold">{pointValue(point)}</p>
+      {point.seniority ? <p className="mt-2 text-xs text-muted">Срез: {point.label}</p> : null}
       {point.p10 != null && point.p90 != null ? (
         <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm">
           <div><dt className="text-muted">P10</dt><dd className="mt-1 font-mono">{rub(point.p10)}</dd></div>
@@ -67,8 +83,7 @@ export function SalaryBenchmarks({ data }: { data: SalaryBenchmarkSummary }) {
   const regional = data.points.filter(
     (point) => !point.is_fallback && point.seniority == null && point.geography !== "russia",
   );
-  const levels = data.points.filter((point) => point.seniority != null);
-  const category = data.points.filter((point) => point.scope === "category");
+  const levels = salaryBenchmarkLevelPoints(data);
 
   return (
     <section className="panel mt-10 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
@@ -95,24 +110,10 @@ export function SalaryBenchmarks({ data }: { data: SalaryBenchmarkSummary }) {
       {levels.length ? (
         <div className="mt-8">
           <h3 className="text-lg font-semibold">По уровню</h3>
-          <p className="mt-2 text-sm text-muted">Если точного ролевого среза нет, показан явно подписанный общий ориентир рынка разработки.</p>
+          <p className="mt-2 text-sm text-muted">Карточки всегда идут в порядке Junior → Middle → Senior. Под каждой суммой указан фактический срез, к которому она относится.</p>
           <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
         </div>
       ) : null}
-
-      <div className="mt-8 border-t border-line pt-8">
-        <h3 className="text-lg font-semibold">Категорийный fallback</h3>
-        <p className="mt-2 text-sm text-muted">Он заполняет контекст, но не подменяет зарплату конкретной профессии.</p>
-        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          {category.map((point) => (
-            <article key={point.geography} className="rounded-2xl border border-line p-4">
-              <p className="text-sm text-muted">{geographyLabels[point.geography]}</p>
-              <p className="mt-2 font-mono text-xl font-semibold">{rub(point.value)}</p>
-              <p className="mt-2 text-xs text-muted">{point.label}</p>
-            </article>
-          ))}
-        </div>
-      </div>
 
       <div className="mt-8 grid gap-3 lg:grid-cols-2">
         {data.sources.map((source) => (
@@ -126,5 +127,71 @@ export function SalaryBenchmarks({ data }: { data: SalaryBenchmarkSummary }) {
         ))}
       </div>
     </section>
+  );
+}
+
+export function SalaryBySeniority({
+  official,
+  benchmark,
+}: {
+  official: OfficialOpenDataSummary;
+  benchmark: SalaryBenchmarkSummary;
+}) {
+  const benchmarkByLevel = new Map(
+    salaryBenchmarkLevelPoints(benchmark).map((point) => [point.seniority, point]),
+  );
+  const officialByLevel = new Map(
+    official.salary_by_seniority.map((item) => [item.seniority, item]),
+  );
+
+  return (
+    <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      {salaryLevelOrder.map((seniority) => {
+        const observed = officialByLevel.get(seniority);
+        const reference = benchmarkByLevel.get(seniority);
+        const useObserved = observed?.median != null;
+        const source = reference
+          ? salaryBenchmarkSourceForPoint(benchmark, reference)
+          : undefined;
+        const sourceName = useObserved ? official.source_name : source?.name;
+        const period = useObserved
+          ? `${official.date_from} — ${official.date_to}`
+          : source?.period;
+        const value = useObserved
+          ? rub(observed.median)
+          : reference
+            ? pointValue(reference)
+            : "Источник не найден";
+        const basis = useObserved
+          ? "Медиана midpoint опубликованных вилок"
+          : reference
+            ? `${metricLabel(reference)} · ${reference.label}`
+            : "Нет проверяемого среза";
+
+        return (
+          <article key={seniority} className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
+            <div className="flex items-center justify-between gap-3">
+              <h4 className="text-lg font-semibold">{levelLabels[seniority]}</h4>
+              <span className={`badge ${useObserved ? "confidence-medium" : ""}`}>
+                {useObserved ? "180 дней" : scopeLabels[reference?.scope ?? "market_level"]}
+              </span>
+            </div>
+            <p className="mt-5 text-sm text-muted">{basis}</p>
+            <p className="mt-1 font-mono text-2xl font-semibold">{value}</p>
+            <dl className="mt-5 grid gap-3 border-t border-line pt-4 text-sm">
+              <div><dt className="text-muted">Источник</dt><dd className="mt-1 font-medium">{sourceName}</dd></div>
+              <div><dt className="text-muted">Период</dt><dd className="mt-1">{period}</dd></div>
+              <div><dt className="text-muted">Вилки «Работы России»</dt><dd className="mt-1 font-mono">n={observed?.sample_size ?? 0}</dd></div>
+              {!useObserved && source ? (
+                <div><dt className="text-muted">Данные исследования</dt><dd className="mt-1">{reference?.sample_size ? `n=${reference.sample_size}` : source.total_sample_size ? `вся база n=${source.total_sample_size.toLocaleString("ru-RU")}` : "публичный агрегат"} · {taxLabel(source.tax_status)}</dd></div>
+              ) : (
+                <div><dt className="text-muted">Налоговый статус</dt><dd className="mt-1">gross/net не указан</dd></div>
+              )}
+            </dl>
+            {!useObserved ? <p className="mt-4 text-xs leading-5 text-muted">В официальном 180-дневном срезе меньше {official.salary_min_sample} полных вилок. Поэтому сумма взята из указанного открытого исследования, а число официальных вилок сохранено отдельно.</p> : null}
+          </article>
+        );
+      })}
+    </div>
   );
 }

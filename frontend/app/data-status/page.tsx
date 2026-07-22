@@ -105,7 +105,7 @@ export default async function DataStatusPage() {
         </ol>
       </section>
 
-      <div className="mt-8 flex flex-wrap gap-3"><Link href="/methodology" className="button-primary">Методология</Link><Link href="/sources" className="button-secondary">Источники</Link><Link href="/data-status.json" className="button-secondary">JSON статуса</Link><Link href="/open-data-daily" className="button-secondary">Ежедневный датасет</Link><Link href="/open-data-daily.json" className="button-secondary">Daily JSON</Link><Link href="/open-data-daily.csv" className="button-secondary">Daily CSV</Link><Link href="/open-data-daily.croissant.json" className="button-secondary">Croissant 1.1</Link></div>
+      <div className="mt-8 flex flex-wrap gap-3"><Link href="/methodology" className="button-primary">Методология</Link><Link href="/sources" className="button-secondary">Источники</Link><Link href="/data-status.json" className="button-secondary">JSON статуса</Link><Link href="/salary-benchmarks" className="button-secondary">Зарплатный датасет</Link><Link href="/open-data-daily" className="button-secondary">Ежедневный датасет</Link><Link href="/open-data-daily.json" className="button-secondary">Daily JSON</Link><Link href="/open-data-daily.csv" className="button-secondary">Daily CSV</Link><Link href="/open-data-daily.croissant.json" className="button-secondary">Croissant 1.1</Link></div>
     </div>
   );
 }

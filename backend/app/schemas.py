@@ -100,6 +100,8 @@ class OfficialOpenDataSummary(BaseModel):
     confidence_level: str
     last_ingested_at: datetime | None = None
     daily_publications: list[PublicationPoint]
+    category_total_publications: int = 0
+    category_daily_publications: list[PublicationPoint] = Field(default_factory=list)
     salary_currency: str
     salary_gross_status: Literal["unknown"]
     salary_min_sample: int
@@ -153,9 +155,18 @@ class SalaryBenchmarkSummary(BaseModel):
     methodology_note: str
 
 
+class SalaryBenchmarkCatalogItem(BaseModel):
+    slug: str
+    name_ru: str
+    name_en: str
+    category_slug: str
+    benchmark: SalaryBenchmarkSummary
+
+
 class OpenDataCatalogItem(BaseModel):
     slug: str
     name_ru: str
+    category_slug: str
     period_days: int
     date_from: date
     date_to: date
@@ -206,6 +217,8 @@ class ProfessionDetail(ProfessionSummary):
     updated_at: date | None = None
     scoring_version: str | None = None
     score_breakdown: dict[str, float] | None = None
+    score_weights: dict[str, float] | None = None
+    score_contributions: dict[str, float] | None = None
     metrics: list[MetricPoint] | None = None
     vacancy_trends: dict[str, TrendOut] | None = None
     salary_trends: dict[str, TrendOut] | None = None

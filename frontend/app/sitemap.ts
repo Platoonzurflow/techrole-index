@@ -17,13 +17,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     : status.last_metric_date
       ? new Date(`${status.last_metric_date}T00:00:00Z`)
       : undefined;
-  const staticRoutes = ["", "/professions", "/top", "/research", "/insights", "/data-status", "/open-data-daily", "/pricing", "/mentorship", "/support", "/methodology", "/glossary", "/sources", "/citation", "/about"];
+  const staticRoutes = ["", "/professions", "/top", "/research", "/insights", "/data-status", "/salary-benchmarks", "/open-data-daily", "/pricing", "/mentorship", "/support", "/methodology", "/glossary", "/sources", "/citation", "/about"];
 
   return [
     ...staticRoutes.map((path) => ({
       url: `${base}${path}`,
       changeFrequency: path === "/open-data-daily" ? "daily" as const : "weekly" as const,
-      priority: path === "" ? 1 : path === "/open-data-daily" ? 0.8 : 0.7,
+      priority: path === "" ? 1 : ["/open-data-daily", "/salary-benchmarks"].includes(path) ? 0.8 : 0.7,
       lastModified,
     })),
     ...categories.map((item) => ({
