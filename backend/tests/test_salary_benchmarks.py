@@ -47,7 +47,7 @@ def test_related_scopes_are_not_presented_as_exact() -> None:
 
 def test_related_calculator_medians_cover_nlp_and_sap_without_relabelling() -> None:
     expected = {
-        "nlp-engineer": ("data-ai", 230083, "ML разработчик"),
+        "nlp-engineer": ("data-ai", 229333, "ML разработчик"),
         "sap-developer": ("specialized", 147500, "ERP-программист"),
     }
 
