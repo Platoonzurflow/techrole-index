@@ -5,7 +5,11 @@ import type { ProfessionSummary } from "@/lib/types";
 
 interface OpenDataItem { slug: string; total_publications: number; date_from: string; date_to: string; last_ingested_at?: string }
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Еженедельный отчёт рынка IT", description: "Публичный еженедельный снимок TechRole Index: рейтинг и наблюдавшиеся публикации." };
+export const metadata: Metadata = {
+  title: "Еженедельный отчёт рынка IT",
+  description: "Публичный еженедельный снимок TechRole Index: рейтинг и наблюдавшиеся публикации.",
+  alternates: { canonical: "/reports/weekly" },
+};
 
 export default async function WeeklyReportPage() {
   const [catalog, publications] = await Promise.all([safeApi<ProfessionSummary[]>("/professions", []), safeApi<OpenDataItem[]>("/open-data/publications", [])]);

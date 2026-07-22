@@ -107,7 +107,8 @@ jobs:
           mlcroissant validate --jsonld=http://127.0.0.1:3000/open-data-daily.croissant.json
           mlcroissant load --jsonld=http://127.0.0.1:3000/open-data-daily.croissant.json --record_set=observed_publication_daily --num_records=3
       - run: docker compose --profile e2e run --rm e2e
-      - run: docker compose exec -T frontend npm run audit:public
+      - name: Audit public pages serially on the development server
+        run: docker compose exec -T -e PUBLIC_AUDIT_CONCURRENCY=1 frontend npm run audit:public
       - name: Show service logs on failure
         if: failure()
         run: docker compose logs --no-color --tail=200 backend frontend postgres redis
