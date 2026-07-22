@@ -9,7 +9,7 @@ import { SupportButton } from "@/components/SupportButton";
 import { SupportForm } from "@/components/SupportForm";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
 import { AccountActions } from "@/components/AccountActions";
-import { SalaryBenchmarks, SalaryBySeniority } from "@/components/SalaryBenchmarks";
+import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -127,7 +127,7 @@ describe("analytics components", () => {
       methodology_note: "Публикации.",
     };
 
-    render(<SalaryBySeniority official={official} benchmark={benchmark} />);
+    render(<SalaryBenchmarks data={benchmark} official={official} />);
 
     const headings = screen.getAllByRole("heading", { level: 4 }).map((item) => item.textContent);
     expect(headings).toEqual(["Junior", "Middle", "Senior"]);

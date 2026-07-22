@@ -101,7 +101,7 @@ export default async function DataStatusPage() {
           <li className="rounded-2xl border border-line p-5"><strong>2. Публикации не равны активным вакансиям.</strong><p className="mt-2 text-sm leading-6 text-muted">Официальный ряд группируется по дате создания записи.</p></li>
           <li className="rounded-2xl border border-line p-5"><strong>3. Unknown gross/net нельзя считать gross.</strong><p className="mt-2 text-sm leading-6 text-muted">Поэтому официальные вилки не смешиваются с подготовленной gross-витриной.</p></li>
           <li className="rounded-2xl border border-line p-5"><strong>4. Недостаточно данных не означает ноль.</strong><p className="mt-2 text-sm leading-6 text-muted">Зарплатное значение скрывается, если quality gate не пройден.</p></li>
-          <li className="rounded-2xl border border-line p-5"><strong>5. Категория не равна профессии.</strong><p className="mt-2 text-sm leading-6 text-muted">Категорийный fallback даёт контекст, но всегда подписан и не становится ролевой оценкой.</p></li>
+          <li className="rounded-2xl border border-line p-5"><strong>5. Категория не равна профессии.</strong><p className="mt-2 text-sm leading-6 text-muted">Значение по направлению даёт общий контекст, но всегда подписано и не становится зарплатой конкретной профессии.</p></li>
         </ol>
       </section>
 

@@ -33,18 +33,16 @@ test("public methodology is rendered and keyboard reachable", async ({ page }) =
 test("public profession SSR contains seeded level metrics", async ({ page }) => {
   await page.goto("/professions/python-developer");
   await expect(page.getByRole("heading", { level: 1, name: "Python-разработчик" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Медиана и среднее" })).toBeVisible();
-  await expect(page.getByRole("heading", { level: 3, name: "Junior" })).toBeVisible();
   await expect(page.getByText("n=", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Публикации за последние 180 дней" })).toBeVisible();
   await expect(page.getByText("Это не историческое число одновременно активных вакансий", { exact: false })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Зарплата по уровням за 180 дней" })).toBeVisible();
   await expect(page.getByText("gross/net не определён", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Рыночные ориентиры зарплаты" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
   await expect(page.getByText("технологический срез", { exact: true }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { level: 4, name: "Junior" }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { level: 4, name: "Middle" }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { level: 4, name: "Senior" }).first()).toBeVisible();
+  await expect(page.getByRole("heading", { level: 4, name: "Junior" })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 4, name: "Middle" })).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 4, name: "Senior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toHaveCount(0);
   await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
 });

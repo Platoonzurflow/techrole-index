@@ -76,7 +76,13 @@ function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
   );
 }
 
-export function SalaryBenchmarks({ data }: { data: SalaryBenchmarkSummary }) {
+export function SalaryBenchmarks({
+  data,
+  official,
+}: {
+  data: SalaryBenchmarkSummary;
+  official?: OfficialOpenDataSummary;
+}) {
   const national = data.points.filter(
     (point) => !point.is_fallback && point.seniority == null && point.geography === "russia",
   );
@@ -109,9 +115,13 @@ export function SalaryBenchmarks({ data }: { data: SalaryBenchmarkSummary }) {
 
       {levels.length ? (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold">По уровню</h3>
-          <p className="mt-2 text-sm text-muted">Карточки всегда идут в порядке Junior → Middle → Senior. Под каждой суммой указан фактический срез, к которому она относится.</p>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
+          <h3 className="text-lg font-semibold">Зарплата Junior, Middle и Senior</h3>
+          <p className="mt-2 text-sm leading-6 text-muted">Для каждого уровня показано одно лучшее проверяемое значение. Точная медиана полных вилок за 180 дней имеет приоритет при выборке от {official?.salary_min_sample ?? 20}; иначе используется наиболее точный доступный срез открытого исследования. Это выбор источника по качеству, а не наибольшей суммы.</p>
+          {official ? (
+            <SalaryBySeniority official={official} benchmark={data} />
+          ) : (
+            <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
+          )}
         </div>
       ) : null}
 
