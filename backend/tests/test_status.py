@@ -94,6 +94,9 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
     assert benchmarks["status"] == "public_reference"
     assert benchmarks["profession_count"] == 50
     assert benchmarks["latest_total_sample_size"] == 45226
+    assert benchmarks["direct_professions"] == 36
+    assert benchmarks["related_professions"] == 12
+    assert benchmarks["category_only_professions"] == 2
     assert (
         sum(
             benchmarks[key]

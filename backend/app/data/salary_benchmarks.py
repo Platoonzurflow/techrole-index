@@ -36,6 +36,28 @@ SeniorityPoint = tuple[
     str | None,
 ]
 
+
+# profession slug -> Habr Career specialization alias, public label, SEO median.
+# Only the median deliberately exposed in the public page title/description is
+# retained. Values hidden behind account access are not extracted.
+HABR_CALCULATOR_PUBLIC_MEDIANS = {
+    "data-scientist": ("data_scientist", "Ученый по данным", 235541),
+    "mlops-engineer": ("mlops", "MLOps-инженер", 351666),
+    "computer-vision-engineer": (
+        "cv_engineer",
+        "Инженер по компьютерному зрению",
+        172500,
+    ),
+    "information-security-specialist": (
+        "infosecspec",
+        "Специалист по информационной безопасности",
+        168036,
+    ),
+    "security-engineer": ("security_engineer", "Инженер по безопасности", 207333),
+    "soc-analyst": ("SOC_analyst", "Аналитик SOC", 146000),
+    "penetration-tester": ("pentester", "Пентестер", 170833),
+}
+
 SOURCES: dict[str, SalarySource] = {
     "habr_2026_h1": {
         "id": "habr_2026_h1",
@@ -87,6 +109,30 @@ SOURCES: dict[str, SalarySource] = {
         ),
     },
 }
+
+for _profession_slug, (_alias, _label, _median) in HABR_CALCULATOR_PUBLIC_MEDIANS.items():
+    _source_id = f"habr_calculator_{_alias.lower()}_2026_07_22"
+    SOURCES[_source_id] = {
+        "id": _source_id,
+        "name": f"Хабр Карьера — калькулятор зарплат: {_label}",
+        "url": (
+            "https://career.habr.com/salaries?"
+            f"spec_aliases%5B%5D={_alias}&qualification=All"
+        ),
+        "methodology_url": "https://career.habr.com/info/salaries",
+        "period": "публичный снимок 22 июля 2026",
+        "published_at": "2026-07-22",
+        "total_sample_size": None,
+        "currency": "RUB",
+        "tax_status": "unknown",
+        "income_type": "salary_plus_bonus",
+        "methodology_note": (
+            "Зафиксирована только медиана общего дохода, которую отфильтрованная "
+            "страница публично сообщает в title/description. Расширенные значения, "
+            "скрытые входом в аккаунт, не извлекались. Живой калькулятор меняется; "
+            "проект хранит датированный снимок и не утверждает gross/net."
+        ),
+    }
 
 
 # label, national median, Moscow, Saint Petersburg, other Russian regions
@@ -627,6 +673,22 @@ def _category_key(slug: str, category_slug: str) -> str:
 def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
     """Return a fully sourced benchmark layer for a profession."""
     points: list[dict[str, Any]] = []
+
+    calculator_snapshot = HABR_CALCULATOR_PUBLIC_MEDIANS.get(slug)
+    if calculator_snapshot:
+        alias, label, median = calculator_snapshot
+        points.append(
+            _point(
+                source_id=f"habr_calculator_{alias.lower()}_2026_07_22",
+                scope="exact_role",
+                label=label,
+                value=median,
+                note=(
+                    "Публичная SEO-медиана живого калькулятора на дату снимка; "
+                    "размер выборки и gross/net публично не подтверждены."
+                ),
+            )
+        )
 
     distribution = ROLE_DISTRIBUTIONS.get(slug)
     if distribution:

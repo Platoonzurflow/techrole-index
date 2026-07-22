@@ -5,6 +5,7 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 ## [Unreleased]
 
 - Added a third, provenance-rich salary benchmark layer for all 50 professions using Habr Career H1 2026 (`n=45,226`) plus explicitly labeled grade references; exact, related, technology and category scopes never overwrite vacancy metrics.
+- Expanded exact salary coverage from 29 to 36 professions with dated public SEO medians from filtered Habr Career calculator pages; account-gated values are not extracted and unknown sample/tax fields remain explicit.
 - Updated profession pages, sources and data-status schema 1.3 with regional salary references, source periods, tax status, sample sizes and mapping caveats.
 - Added a no-charge payment sandbox, server-priced 30-day Premium orders, auditable terms acceptance, idempotent webhooks/refunds and payment result pages.
 - Added fail-closed YooKassa and Robokassa adapters. The Robokassa path signs redirects/ResultURL receipts, acknowledges duplicate notifications safely, supports Password3 refund requests and reconciles pending refunds; real charges remain disabled.

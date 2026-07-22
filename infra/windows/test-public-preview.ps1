@@ -100,6 +100,9 @@ if (
 if (
     $salaryLayer.status -ne 'public_reference' -or
     $salaryLayer.profession_count -ne 50 -or
+    $salaryLayer.direct_professions -ne 36 -or
+    $salaryLayer.related_professions -ne 12 -or
+    $salaryLayer.category_only_professions -ne 2 -or
     ($salaryLayer.direct_professions + $salaryLayer.related_professions + $salaryLayer.category_only_professions) -ne 50 -or
     $salaryLayer.latest_total_sample_size -ne 45226 -or
     @($salaryLayer.source_urls).Count -lt 3

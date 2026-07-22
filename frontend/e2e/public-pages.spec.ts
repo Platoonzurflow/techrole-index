@@ -28,6 +28,17 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
 });
 
+test("public calculator median is exact, sourced, and limitation-labeled", async ({ page }) => {
+  await page.goto("/professions/data-scientist");
+  await expect(page.getByRole("heading", { level: 1, name: "Data Scientist" })).toBeVisible();
+  await expect(page.getByText("235 541 ₽", { exact: true })).toBeVisible();
+  await expect(page.getByText("точная профессия", { exact: true })).toBeVisible();
+  const source = page.locator('a[href*="spec_aliases%5B%5D=data_scientist"]');
+  await expect(source).toBeVisible();
+  await expect(source.locator("xpath=ancestor::article"))
+    .toContainText("gross/net не указан");
+});
+
 test("support topics stay readable and keyboard selectable", async ({ page }) => {
   await page.goto("/support");
   const accountTopic = page.getByRole("radio", { name: "Аккаунт и вход Регистрация и доступ" });
@@ -373,6 +384,9 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(officialLayer.window_start_at).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(officialLayer.window_end_at_exclusive).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(salaryLayer.profession_count).toBe(50);
+  expect(salaryLayer.direct_professions).toBe(36);
+  expect(salaryLayer.related_professions).toBe(12);
+  expect(salaryLayer.category_only_professions).toBe(2);
   expect(salaryLayer.latest_total_sample_size).toBe(45226);
 
   const openDataCsv = await (await request.get("/open-data.csv")).text();

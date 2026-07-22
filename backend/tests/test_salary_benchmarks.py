@@ -45,6 +45,44 @@ def test_related_and_category_scopes_are_not_presented_as_exact() -> None:
     assert all(point.is_fallback for point in sap.points)
 
 
+def test_public_calculator_medians_expand_exact_role_coverage_without_hidden_values() -> None:
+    expected = {
+        "data-scientist": 235541,
+        "mlops-engineer": 351666,
+        "computer-vision-engineer": 172500,
+        "information-security-specialist": 168036,
+        "security-engineer": 207333,
+        "soc-analyst": 146000,
+        "penetration-tester": 170833,
+    }
+    categories = {slug: category for slug, _, _, category, _ in PROFESSIONS}
+
+    for slug, median in expected.items():
+        parsed = SalaryBenchmarkSummary.model_validate(
+            salary_benchmark_for(slug, categories[slug])
+        )
+        direct = next(point for point in parsed.points if point.scope == "exact_role")
+        source = next(source for source in parsed.sources if source.id == direct.source_id)
+
+        assert parsed.coverage == "direct"
+        assert direct.value == median
+        assert direct.p10 is None and direct.p90 is None and direct.sample_size is None
+        assert source.tax_status == "unknown"
+        assert source.total_sample_size is None
+        assert source.url.startswith("https://career.habr.com/salaries?")
+        assert "qualification=All" in source.url
+
+
+def test_salary_coverage_counts_are_versioned() -> None:
+    coverage = [
+        salary_benchmark_for(slug, category)["coverage"]
+        for slug, _, _, category, _ in PROFESSIONS
+    ]
+    assert coverage.count("direct") == 36
+    assert coverage.count("related") == 12
+    assert coverage.count("category") == 2
+
+
 def test_small_samples_and_unknown_tax_status_remain_visible() -> None:
     parsed = SalaryBenchmarkSummary.model_validate(
         salary_benchmark_for("dotnet-developer", "development")
