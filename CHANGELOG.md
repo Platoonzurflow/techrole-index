@@ -11,6 +11,7 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 - Added a no-charge payment sandbox, server-priced 30-day Premium orders, auditable terms acceptance, idempotent webhooks/refunds and payment result pages.
 - Added fail-closed YooKassa and Robokassa adapters. The Robokassa path signs redirects/ResultURL receipts, acknowledges duplicate notifications safely, supports Password3 refund requests and reconciles pending refunds; real charges remain disabled.
 - Added an admin-only payment readiness checklist that exposes no credentials and a separate stable-HTTPS guard that prevents live charges on temporary hosting.
+- Made category titles and descriptions deterministic so transient API failures cannot publish incomplete SEO metadata.
 - Documented the confirmed self-employed NPD path, Robokassa as primary with automatic SMZ receipts, YooKassa as reserve, and a concrete owner-only domain/VPS cutover plan.
 - Updated Apache ECharts to 6.1.0 and forced patched PostCSS 8.5.19 after dependency audit.
 

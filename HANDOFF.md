@@ -460,7 +460,7 @@ Frontend:
 - ESLint: passed;
 - source TypeScript: passed;
 - backend Ruff + mypy + pytest: `123 passed`;
-- Vitest: `46 passed`;
+- Vitest: `48 passed`;
 - Next.js production build: passed, 63 generated page artifacts, включая legal/payment routes, три salary-benchmark routes и 12 SSG insights; динамические `/open-data-daily`, `/open-data-daily.csv-metadata.json`, `/open-data-daily.schema.json`, `/open-data-daily.croissant.json` и `/catalog.jsonld` присутствуют в route manifest;
 - отдельные production-check Docker images frontend/backend: built and smoke-tested, HTTP 200;
 - Playwright Chromium profile: `30 passed`. Сценарии включают полный demo payment flow с регистрацией, явным принятием условий, sandbox checkout и выдачей Premium, 50 profession links, 150/150 грейдовых зарплатных карточек и salary JSON/CSV, статус аудита зарплатных источников, 12 Article routes, Dataset landing/count/JSON-LD, строгий 27-field JSON Schema, Croissant 1.1 и CSVW с 30 фактическими CSV-полями, DCAT Catalog/Dataset/DataService с двумя distributions, conditional `304`, заполненность AI/open-data/citation/research endpoints, светлую/тёмную палитру, формы/селекты, accessibility/reduced-motion и lab performance budgets;
@@ -469,6 +469,7 @@ Frontend:
 - официальный `mlcroissant 1.1.0`: validate завершился `Done`, loader скачал объявленный CSV и типизированно прочитал первые три записи всех 30 полей; отсутствие checksum для `isLiveDataset=true` распознано штатно;
 - hosted CI после запуска Compose устанавливает закреплённый `mlcroissant==1.1.0`, повторяет validate и загрузку первых трёх записей до Playwright;
 - sitemap-driven public audit: `86 checked, 0 failed` через текущий внешний HTTPS preview; для каждого canonical HTML URL проверены status/content-type, уникальные title/description, canonical, один h1, `lang=ru`, отсутствие `noindex` и валидность всего JSON-LD;
+- после одного hosted audit failure на `/categories/specialized` category metadata переведены с повторного API-вызова на локальный стабильный reference с SSR fallback; два последовательных локальных crawl снова дали `86 checked, 0 failed`;
 - те же 11 accessibility/reduced-motion сценариев отдельно прошли на immutable production standalone через постоянный public proxy;
 - production lab после исправления assets: в повторных проходах максимум TTFB/FCP/LCP составил `51/140/444 ms`, CLS везде `0`, theme event duration `48-64 ms`; это локальный guardrail, не field p75;
 - все публичные маршруты скомпилированы;
