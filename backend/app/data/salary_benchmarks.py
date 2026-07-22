@@ -65,7 +65,7 @@ HABR_CALCULATOR_RELATED_MEDIANS = {
     "nlp-engineer": (
         "ml-engineer",
         "ML разработчик",
-        229333,
+        230083,
         "NLP входит в задачи ML-разработки, но источник публикует более широкий ML-срез.",
     ),
     "sap-developer": (
