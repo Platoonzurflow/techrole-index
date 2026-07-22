@@ -3,12 +3,17 @@ from __future__ import annotations
 import json
 import re
 import sys
+from datetime import datetime, timezone
 from html.parser import HTMLParser
 from urllib.parse import urlsplit
 
 import httpx
+from sqlalchemy.orm import Session
 
 from app.data.salary_benchmarks import HABR_CALCULATOR_PUBLIC_MEDIANS, SOURCES
+from app.models import AuditLog
+
+SALARY_SOURCE_AUDIT_ACTION = "salary_source.public_metadata_audit"
 
 AUDIT_USER_AGENT = (
     "TechRoleIndex/0.1 salary-source-audit; "
@@ -144,6 +149,25 @@ def audit_habr_calculator_public_medians(
         timeout=timeout_seconds,
     ) as owned_client:
         return _audit_with_client(owned_client, attempts=attempts)
+
+
+def record_salary_source_audit(
+    db: Session,
+    result: dict[str, object],
+    *,
+    occurred_at: datetime | None = None,
+) -> AuditLog:
+    """Persist one public-metadata check without changing benchmark values."""
+    audit_log = AuditLog(
+        occurred_at=occurred_at or datetime.now(timezone.utc),
+        action=SALARY_SOURCE_AUDIT_ACTION,
+        entity_type="salary_benchmark_snapshot",
+        entity_id="habr_calculator_public_medians",
+        details=result,
+    )
+    db.add(audit_log)
+    db.flush()
+    return audit_log
 
 
 def main() -> int:

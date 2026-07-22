@@ -23,7 +23,10 @@ from app.providers.email import (
 from app.services.currency_rates import snapshot_configured_currency_rates
 from app.services.open_data_ingestion import ingest_trudvsem_open_data
 from app.services.publication_metrics import refresh_observed_publication_metrics
-from app.services.salary_source_audit import audit_habr_calculator_public_medians
+from app.services.salary_source_audit import (
+    audit_habr_calculator_public_medians,
+    record_salary_source_audit,
+)
 
 
 def _send_report(*, status: str, started_at: datetime, summary: dict) -> str:
@@ -100,9 +103,40 @@ def verify_public_salary_benchmarks(context) -> dict:
         context.log.info(json.dumps(result, ensure_ascii=False))
         return result
 
-    result = audit_habr_calculator_public_medians(
-        timeout_seconds=settings.salary_source_audit_timeout_seconds
-    )
+    checked_at = datetime.now(timezone.utc)
+    try:
+        result = audit_habr_calculator_public_medians(
+            timeout_seconds=settings.salary_source_audit_timeout_seconds
+        )
+    except Exception as exc:
+        result = {
+            "status": "failed",
+            "checked": 0,
+            "verified": 0,
+            "changed": 0,
+            "unavailable": 0,
+            "error": type(exc).__name__,
+        }
+        try:
+            with SessionLocal.begin() as db:
+                record_salary_source_audit(db, result, occurred_at=checked_at)
+        except Exception:
+            context.log.exception("Could not persist failed salary source audit")
+        context.log.exception("Public salary benchmark audit failed")
+        raise Failure(
+            description="Public salary benchmark audit failed",
+            metadata={"status": "failed", "error": type(exc).__name__},
+        ) from exc
+
+    try:
+        with SessionLocal.begin() as db:
+            record_salary_source_audit(db, result, occurred_at=checked_at)
+    except Exception as exc:
+        context.log.exception("Could not persist salary source audit")
+        raise Failure(
+            description="Could not persist public salary benchmark audit",
+            metadata={"status": "failed", "error": type(exc).__name__},
+        ) from exc
     if result["status"] == "changed":
         context.log.error(json.dumps(result, ensure_ascii=False, default=str))
         raise Failure(

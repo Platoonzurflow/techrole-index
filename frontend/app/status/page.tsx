@@ -20,6 +20,14 @@ interface Status {
   trudvsem_runtime_enabled: boolean;
   cbr_currency_enabled: boolean;
   salary_source_audit_enabled: boolean;
+  latest_salary_source_audit?: {
+    status: string;
+    checked_at: string;
+    checked: number;
+    verified: number;
+    changed: number;
+    unavailable: number;
+  } | null;
   catalog_cache_enabled: boolean;
   catalog_cache_ttl_seconds: number;
   ai_classifier_enabled: boolean;
@@ -30,6 +38,20 @@ interface Status {
 
 function sourceTitle(source: Status["sources"][number]) {
   return source.code === "demo" ? "Встроенный аналитический источник" : source.name;
+}
+
+function salaryAuditSummary(audit: Status["latest_salary_source_audit"]) {
+  if (!audit) return "ещё не запускался";
+  const checkedAt = new Intl.DateTimeFormat("ru-RU", {
+    dateStyle: "medium",
+    timeStyle: "short",
+    timeZone: "Europe/Moscow",
+  }).format(new Date(audit.checked_at));
+  const exceptions = [
+    audit.changed ? `изменено: ${audit.changed}` : null,
+    audit.unavailable ? `недоступно: ${audit.unavailable}` : null,
+  ].filter(Boolean);
+  return `${audit.status} · подтверждено ${audit.verified}/${audit.checked} · ${checkedAt}${exceptions.length ? ` · ${exceptions.join(" · ")}` : ""}`;
 }
 
 export default async function StatusPage() {
@@ -62,6 +84,7 @@ export default async function StatusPage() {
             <div className="mt-5 grid gap-2 text-sm text-muted">
               <p>Работа России: {status.trudvsem_runtime_enabled ? "enabled" : "disabled"} · HH runtime: {status.hh_runtime_enabled ? "enabled" : "disabled"}</p>
               <p>Курсы ЦБ: {status.cbr_currency_enabled ? "enabled" : "disabled"} · Аудит зарплатных источников: {status.salary_source_audit_enabled ? "enabled" : "disabled"}</p>
+              <p>Последний аудит зарплатных источников: {salaryAuditSummary(status.latest_salary_source_audit)}</p>
               <p>Redis catalog/detail cache: {status.catalog_cache_enabled ? `enabled · TTL ${status.catalog_cache_ttl_seconds}с` : "disabled"}</p>
               <p>Локальная модель: {status.ai_classifier_enabled ? status.ollama_model ?? "enabled" : "disabled"}</p>
               <p>Ночной запуск: <span className="font-mono">{status.nightly_schedule}</span> · Email-отчёт: {status.nightly_report_email_enabled ? "enabled" : "disabled"}</p>

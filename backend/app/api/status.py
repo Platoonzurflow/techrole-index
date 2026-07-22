@@ -11,12 +11,14 @@ from app.data.salary_benchmarks import SOURCES, salary_benchmark_for
 from app.database import get_db
 from app.domain.time_windows import utc_calendar_window
 from app.models import (
+    AuditLog,
     IngestionRun,
     ObservedPublicationMetricDaily,
     ProfessionMetricDaily,
     Vacancy,
     VacancySource,
 )
+from app.services.salary_source_audit import SALARY_SOURCE_AUDIT_ACTION
 
 router = APIRouter(tags=["service"])
 
@@ -24,6 +26,13 @@ router = APIRouter(tags=["service"])
 @router.get("/status")
 def data_status(db: Session = Depends(get_db)):
     latest = db.scalar(select(IngestionRun).order_by(desc(IngestionRun.started_at)).limit(1))
+    latest_salary_audit = db.scalar(
+        select(AuditLog)
+        .where(AuditLog.action == SALARY_SOURCE_AUDIT_ACTION)
+        .order_by(desc(AuditLog.occurred_at), desc(AuditLog.id))
+        .limit(1)
+    )
+    salary_audit_details = latest_salary_audit.details if latest_salary_audit else {}
     last_metric_date = db.scalar(
         select(ProfessionMetricDaily.metric_date)
         .order_by(desc(ProfessionMetricDaily.metric_date))
@@ -51,6 +60,16 @@ def data_status(db: Session = Depends(get_db)):
         "trudvsem_runtime_enabled": settings.trudvsem_enabled,
         "cbr_currency_enabled": settings.cbr_currency_enabled,
         "salary_source_audit_enabled": settings.salary_source_audit_enabled,
+        "latest_salary_source_audit": None
+        if latest_salary_audit is None
+        else {
+            "status": str(salary_audit_details.get("status", "unknown")),
+            "checked_at": latest_salary_audit.occurred_at,
+            "checked": int(salary_audit_details.get("checked", 0)),
+            "verified": int(salary_audit_details.get("verified", 0)),
+            "changed": int(salary_audit_details.get("changed", 0)),
+            "unavailable": int(salary_audit_details.get("unavailable", 0)),
+        },
         "catalog_cache_enabled": settings.catalog_cache_enabled,
         "catalog_cache_ttl_seconds": settings.catalog_cache_ttl_seconds,
         "ai_classifier_enabled": settings.ai_classifier_enabled,

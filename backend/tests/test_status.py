@@ -10,6 +10,7 @@ import app.api.status as status_api
 from app.api.professions import open_data_publications
 from app.api.status import data_provenance, data_status, sources
 from app.models import (
+    AuditLog,
     Base,
     Profession,
     ProfessionCategory,
@@ -19,6 +20,7 @@ from app.models import (
     Vacancy,
     VacancySource,
 )
+from app.services.salary_source_audit import SALARY_SOURCE_AUDIT_ACTION
 
 
 def test_sources_include_official_currency_provider() -> None:
@@ -41,6 +43,58 @@ def test_sources_include_official_currency_provider() -> None:
     assert salary["period"] == "I полугодие 2026"
     assert isinstance(status_payload["cbr_currency_enabled"], bool)
     assert isinstance(status_payload["salary_source_audit_enabled"], bool)
+    assert status_payload["latest_salary_source_audit"] is None
+
+
+def test_status_exposes_latest_persisted_salary_source_audit() -> None:
+    engine = create_engine(
+        "sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool
+    )
+    Base.metadata.create_all(engine)
+    older = datetime(2026, 7, 21, 20, 0, tzinfo=timezone.utc)
+    latest = datetime(2026, 7, 22, 0, 0, tzinfo=timezone.utc)
+    with Session(engine) as db:
+        db.add_all(
+            [
+                AuditLog(
+                    occurred_at=older,
+                    action=SALARY_SOURCE_AUDIT_ACTION,
+                    entity_type="salary_benchmark_snapshot",
+                    details={
+                        "status": "partial",
+                        "checked": 8,
+                        "verified": 7,
+                        "changed": 0,
+                        "unavailable": 1,
+                    },
+                ),
+                AuditLog(
+                    occurred_at=latest,
+                    action=SALARY_SOURCE_AUDIT_ACTION,
+                    entity_type="salary_benchmark_snapshot",
+                    details={
+                        "status": "verified",
+                        "checked": 8,
+                        "verified": 8,
+                        "changed": 0,
+                        "unavailable": 0,
+                    },
+                ),
+            ]
+        )
+        db.commit()
+        payload = data_status(db)
+    engine.dispose()
+
+    audit = payload["latest_salary_source_audit"]
+    assert audit["checked_at"].replace(tzinfo=timezone.utc) == latest
+    assert {key: value for key, value in audit.items() if key != "checked_at"} == {
+        "status": "verified",
+        "checked": 8,
+        "verified": 8,
+        "changed": 0,
+        "unavailable": 0,
+    }
 
 
 def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> None:
