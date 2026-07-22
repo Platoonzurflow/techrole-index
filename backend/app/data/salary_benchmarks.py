@@ -59,6 +59,31 @@ HABR_CALCULATOR_PUBLIC_MEDIANS = {
     "penetration-tester": ("pentester", "Пентестер", 170833),
 }
 
+# Public calculator medians for a broader neighbouring specialization. They
+# improve context without being relabelled as an exact profession match.
+HABR_CALCULATOR_RELATED_MEDIANS = {
+    "nlp-engineer": (
+        "ml-engineer",
+        "ML разработчик",
+        230083,
+        "NLP входит в задачи ML-разработки, но источник публикует более широкий ML-срез.",
+    ),
+    "sap-developer": (
+        "erp",
+        "ERP-программист",
+        147500,
+        "SAP относится к ERP-системам, но источник объединяет разные ERP-платформы.",
+    ),
+}
+
+HABR_CALCULATOR_MEDIANS = {
+    **HABR_CALCULATOR_PUBLIC_MEDIANS,
+    **{
+        slug: (alias, label, median)
+        for slug, (alias, label, median, _note) in HABR_CALCULATOR_RELATED_MEDIANS.items()
+    },
+}
+
 SOURCES: dict[str, SalarySource] = {
     "habr_2026_h1": {
         "id": "habr_2026_h1",
@@ -128,7 +153,7 @@ SOURCES: dict[str, SalarySource] = {
     },
 }
 
-for _profession_slug, (_alias, _label, _median) in HABR_CALCULATOR_PUBLIC_MEDIANS.items():
+for _profession_slug, (_alias, _label, _median) in HABR_CALCULATOR_MEDIANS.items():
     _source_id = f"habr_calculator_{_alias.lower()}_2026_07_22"
     SOURCES[_source_id] = {
         "id": _source_id,
@@ -714,6 +739,22 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
                 note=(
                     "Публичная SEO-медиана живого калькулятора на дату снимка; "
                     "размер выборки и gross/net публично не подтверждены."
+                ),
+            )
+        )
+
+    related_calculator_snapshot = HABR_CALCULATOR_RELATED_MEDIANS.get(slug)
+    if related_calculator_snapshot:
+        alias, label, median, calculator_note = related_calculator_snapshot
+        points.append(
+            _point(
+                source_id=f"habr_calculator_{alias.lower()}_2026_07_22",
+                scope="related_role",
+                label=label,
+                value=median,
+                note=(
+                    f"{calculator_note} Публичная SEO-медиана живого калькулятора на дату "
+                    "снимка; размер выборки и gross/net публично не подтверждены."
                 ),
             )
         )

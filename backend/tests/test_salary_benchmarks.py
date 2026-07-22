@@ -31,7 +31,7 @@ def test_direct_distribution_keeps_percentiles_and_tax_status() -> None:
     assert parsed.sources[0].total_sample_size == 45226
 
 
-def test_related_and_category_scopes_are_not_presented_as_exact() -> None:
+def test_related_scopes_are_not_presented_as_exact() -> None:
     analytics_engineer = SalaryBenchmarkSummary.model_validate(
         salary_benchmark_for("analytics-engineer", "data-ai")
     )
@@ -41,8 +41,30 @@ def test_related_and_category_scopes_are_not_presented_as_exact() -> None:
 
     assert analytics_engineer.coverage == "related"
     assert not any(point.scope == "exact_role" for point in analytics_engineer.points)
-    assert sap.coverage == "category"
-    assert all(point.is_fallback for point in sap.points)
+    assert sap.coverage == "related"
+    assert not any(point.scope == "exact_role" for point in sap.points)
+
+
+def test_related_calculator_medians_cover_nlp_and_sap_without_relabelling() -> None:
+    expected = {
+        "nlp-engineer": ("data-ai", 230083, "ML разработчик"),
+        "sap-developer": ("specialized", 147500, "ERP-программист"),
+    }
+
+    for slug, (category, median, label) in expected.items():
+        parsed = SalaryBenchmarkSummary.model_validate(
+            salary_benchmark_for(slug, category)
+        )
+        related = next(point for point in parsed.points if point.scope == "related_role")
+        source = next(source for source in parsed.sources if source.id == related.source_id)
+
+        assert parsed.coverage == "related"
+        assert related.value == median
+        assert related.label == label
+        assert related.is_fallback is False
+        assert related.sample_size is None
+        assert source.tax_status == "unknown"
+        assert source.url.startswith("https://career.habr.com/salaries?")
 
 
 def test_public_calculator_medians_expand_exact_role_coverage_without_hidden_values() -> None:
@@ -80,8 +102,8 @@ def test_salary_coverage_counts_are_versioned() -> None:
         for slug, _, _, category, _ in PROFESSIONS
     ]
     assert coverage.count("direct") == 37
-    assert coverage.count("related") == 11
-    assert coverage.count("category") == 2
+    assert coverage.count("related") == 13
+    assert coverage.count("category") == 0
 
 
 def test_small_samples_and_unknown_tax_status_remain_visible() -> None:
@@ -108,12 +130,9 @@ def test_salary_benchmark_catalog_exports_every_profession() -> None:
 
     assert len(catalog) == 50
     assert len({item["slug"] for item in catalog}) == 50
-    assert {item["benchmark"]["coverage"] for item in catalog} == {
-        "direct",
-        "related",
-        "category",
-    }
+    assert {item["benchmark"]["coverage"] for item in catalog} == {"direct", "related"}
     assert sum(item["benchmark"]["coverage"] == "direct" for item in catalog) == 37
+    assert sum(item["benchmark"]["coverage"] == "related" for item in catalog) == 13
     assert all(item["benchmark"]["points"] for item in catalog)
     assert all(item["benchmark"]["sources"] for item in catalog)
     assert all(

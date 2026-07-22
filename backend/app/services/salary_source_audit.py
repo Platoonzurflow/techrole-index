@@ -10,7 +10,7 @@ from urllib.parse import urlsplit
 import httpx
 from sqlalchemy.orm import Session
 
-from app.data.salary_benchmarks import HABR_CALCULATOR_PUBLIC_MEDIANS, SOURCES
+from app.data.salary_benchmarks import HABR_CALCULATOR_MEDIANS, SOURCES
 from app.models import AuditLog
 
 SALARY_SOURCE_AUDIT_ACTION = "salary_source.public_metadata_audit"
@@ -75,7 +75,7 @@ def _parse_public_median(html: str) -> tuple[str, str, int | None]:
 
 def _audit_with_client(client: httpx.Client, *, attempts: int) -> dict[str, object]:
     entries: list[dict[str, object]] = []
-    for slug, (alias, label, expected_median) in HABR_CALCULATOR_PUBLIC_MEDIANS.items():
+    for slug, (alias, label, expected_median) in HABR_CALCULATOR_MEDIANS.items():
         url = SOURCES[_source_id(alias)]["url"]
         parsed_url = urlsplit(url)
         if parsed_url.scheme != "https" or parsed_url.hostname != "career.habr.com":

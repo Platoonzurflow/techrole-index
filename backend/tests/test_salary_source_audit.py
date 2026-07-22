@@ -2,14 +2,14 @@ from __future__ import annotations
 
 import httpx
 
-from app.data.salary_benchmarks import HABR_CALCULATOR_PUBLIC_MEDIANS
+from app.data.salary_benchmarks import HABR_CALCULATOR_MEDIANS
 from app.services.salary_source_audit import audit_habr_calculator_public_medians
 
 
 def _expected_by_alias() -> dict[str, tuple[str, int]]:
     return {
         alias: (label, median)
-        for alias, label, median in HABR_CALCULATOR_PUBLIC_MEDIANS.values()
+        for alias, label, median in HABR_CALCULATOR_MEDIANS.values()
     }
 
 

@@ -95,6 +95,9 @@ export function MentorshipForm() {
         <div><p className="eyebrow">Заявка</p><h2 className="mt-2 text-2xl font-extrabold">Расскажите, где вы сейчас и чего хотите достичь</h2></div>
         <span className="insight-icon"><Mail size={19} /></span>
       </div>
+      <p className="mt-5 rounded-xl border border-accent/25 bg-accent/5 p-4 text-sm leading-6 text-muted">
+        Предложите комфортную для вас стоимость в описании заявки. Каждое обращение рассматривается индивидуально: формат, объём работы и итоговые условия согласуем вместе.
+      </p>
       <div className="mt-7 grid gap-5 sm:grid-cols-2">
         <label className="grid gap-2 text-sm font-bold">Имя
           <input className="field" name="name" required maxLength={80} autoComplete="name" placeholder="Как к вам обращаться" />
@@ -117,7 +120,7 @@ export function MentorshipForm() {
         </label>
       </div>
       <label className="mt-5 grid gap-2 text-sm font-bold">Что происходит сейчас и к чему хотите прийти
-        <textarea className="field min-h-32 py-3" name="context" minLength={20} maxLength={3000} required placeholder="Опыт, сложности, сроки, желаемая роль и любые важные детали" />
+        <textarea className="field min-h-32 py-3" name="context" minLength={20} maxLength={3000} required placeholder="Опыт, сложности, сроки, желаемая роль, комфортный бюджет и любые важные детали" />
       </label>
       <label className="absolute -left-[9999px]" aria-hidden="true">Сайт
         <input name="website" tabIndex={-1} autoComplete="off" />

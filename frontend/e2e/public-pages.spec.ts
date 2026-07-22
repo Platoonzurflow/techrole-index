@@ -101,6 +101,7 @@ test("popular profession card opens from its arrow area", async ({ page }) => {
 test("mentorship application is complete without sending data", async ({ page }) => {
   await page.goto("/mentorship");
   await expect(page.getByRole("heading", { level: 1, name: /Личное ведение/ })).toBeVisible();
+  await expect(page.getByText(/Предложите комфортную для вас стоимость/)).toBeVisible();
   await page.getByLabel("Имя", { exact: true }).fill("Тестовый кандидат");
   await page.getByLabel("Email или Telegram").fill("test@example.com");
   await page.locator('select[name="direction"]').selectOption("Backend");
@@ -237,7 +238,7 @@ test("salary benchmark dataset is complete, downloadable, and limitation-labeled
   expect(payload.current_market_claim).toBe(false);
   expect(payload.profession_count).toBe(50);
   expect(payload.seniority_coverage).toEqual({ complete_roles: 50, points: 150 });
-  expect(payload.coverage).toEqual({ direct: 37, related: 11, category: 2 });
+  expect(payload.coverage).toEqual({ direct: 37, related: 13, category: 0 });
   expect(payload.dataset).toHaveLength(50);
   expect(payload.dataset.every((item: Record<string, unknown>) =>
     JSON.stringify(Object.keys(item).sort()) === JSON.stringify([
@@ -454,8 +455,8 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(officialLayer.window_end_at_exclusive).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(salaryLayer.profession_count).toBe(50);
   expect(salaryLayer.direct_professions).toBe(37);
-  expect(salaryLayer.related_professions).toBe(11);
-  expect(salaryLayer.category_only_professions).toBe(2);
+  expect(salaryLayer.related_professions).toBe(13);
+  expect(salaryLayer.category_only_professions).toBe(0);
   expect(salaryLayer.latest_total_sample_size).toBe(45226);
 
   const openDataCsv = await (await request.get("/open-data.csv")).text();
