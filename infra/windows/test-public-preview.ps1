@@ -101,8 +101,8 @@ if (
     $salaryLayer.status -ne 'public_reference' -or
     $salaryLayer.profession_count -ne 50 -or
     $salaryLayer.direct_professions -ne 37 -or
-    $salaryLayer.related_professions -ne 11 -or
-    $salaryLayer.category_only_professions -ne 2 -or
+    $salaryLayer.related_professions -ne 13 -or
+    $salaryLayer.category_only_professions -ne 0 -or
     ($salaryLayer.direct_professions + $salaryLayer.related_professions + $salaryLayer.category_only_professions) -ne 50 -or
     $salaryLayer.latest_total_sample_size -ne 45226 -or
     @($salaryLayer.source_urls).Count -lt 3
@@ -123,8 +123,8 @@ if (
     $salaryDataset.profession_count -ne 50 -or
     $salaryDataset.dataset.Count -ne 50 -or
     $salaryDataset.coverage.direct -ne 37 -or
-    $salaryDataset.coverage.related -ne 11 -or
-    $salaryDataset.coverage.category -ne 2 -or
+    $salaryDataset.coverage.related -ne 13 -or
+    $salaryDataset.coverage.category -ne 0 -or
     $salaryDatasetResponse.Headers['ETag'] -notmatch '^"sha256-[a-f0-9]{64}"$' -or
     $salaryConditionalStatus -ne 304 -or
     $salaryCsvRows -le 200 -or
