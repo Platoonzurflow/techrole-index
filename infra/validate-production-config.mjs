@@ -68,6 +68,11 @@ requireCondition(
   "NEXT_PUBLIC_SITE_URL must be passed to both frontend build and runtime.",
 );
 requireCondition(
+  services.frontend?.build?.args?.INTERNAL_API_URL === "http://backend:8000"
+    && environment("frontend", "INTERNAL_API_URL") === "http://backend:8000",
+  "Production frontend must route API requests to the backend service at build and runtime.",
+);
+requireCondition(
   services.frontend?.build?.args?.NEXT_PUBLIC_DATA_MODE !== "demo"
     && environment("frontend", "NEXT_PUBLIC_DATA_MODE") !== "demo",
   "Production frontend data mode must not be demo.",

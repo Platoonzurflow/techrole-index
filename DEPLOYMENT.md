@@ -28,7 +28,7 @@ docker compose -f compose.yaml -f compose.production.yaml --profile production c
 ```
 
 5. Запустить `docker compose -f compose.yaml -f compose.production.yaml --profile production up --build -d`.
-6. Проверить `/health/live`, `/api/v1/health/ready`, `/status`, Celery ping, `dagster-daemon liveness-check`, расписание в Dagster и Caddy TLS.
+6. Проверить `/health/live`, `/api/v1/health/ready`, `/status`, Celery ping, `dagster-daemon liveness-check`, расписание в Dagster и Caddy TLS. Production validator также требует, чтобы Next.js standalone получил `INTERNAL_API_URL=http://backend:8000` одновременно как build arg и runtime environment.
 
 Валидатор требует, чтобы только Caddy публиковал host-порты 80/443, backend/worker/scheduler/Dagster не монтировали исходники в `/app`, Gunicorn работал с `APP_ENV=production`, а Caddy, frontend build/runtime и backend использовали один HTTPS origin. Те же проверки выполняются в CI на синтетических production credentials. Backend дополнительно завершает любой процесс до старта, если обнаруживает demo mode, localhost/HTTP origin, известный/короткий secret или слабый PostgreSQL password.
 

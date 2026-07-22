@@ -14,6 +14,7 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 - Made category titles and descriptions deterministic so transient API failures cannot publish incomplete SEO metadata.
 - Documented the confirmed self-employed NPD path, Robokassa as primary with automatic SMZ receipts, YooKassa as reserve, and a concrete owner-only domain/VPS cutover plan.
 - Updated Apache ECharts to 6.1.0 and forced patched PostCSS 8.5.19 after dependency audit.
+- Fixed production standalone API rewrites so same-origin `/api/*` requests reach the backend container instead of frontend localhost.
 
 ## [0.1.0] - 2026-07-21
 
