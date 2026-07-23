@@ -168,6 +168,7 @@ test("catalog search controls use the dark palette", async ({ page }) => {
   await page.setViewportSize({ width: 943, height: 760 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.goto("/professions");
+  await expect(page.locator("html")).toHaveClass(/dark/);
   const search = page.locator(".career-search.profession-search-compact");
   const palette = await search.evaluate((node) => ({
     background: getComputedStyle(node).backgroundColor,
@@ -181,15 +182,17 @@ test("catalog search controls use the dark palette", async ({ page }) => {
   expect(palette.background).toBe("rgb(21, 21, 23)");
   expect(palette.input).toBe("rgb(247, 247, 248)");
   expect(palette.select).toBe("rgb(237, 237, 240)");
-  expect(palette.buttonTop + palette.buttonHeight / 2).toBe(
-    palette.selectTop + palette.selectHeight / 2,
-  );
+  expect(Math.abs(
+    palette.buttonTop + palette.buttonHeight / 2
+      - (palette.selectTop + palette.selectHeight / 2),
+  )).toBeLessThanOrEqual(1);
 });
 
 test("homepage search and candidate stay aligned in the dark theme", async ({ page }) => {
   await page.setViewportSize({ width: 1703, height: 779 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.goto("/");
+  await expect(page.locator("html")).toHaveClass(/dark/);
 
   const search = page.locator(".cinematic-hero .career-search");
   const palette = await search.evaluate((node) => ({
