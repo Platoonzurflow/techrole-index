@@ -164,6 +164,20 @@ test("light and dark career scenes have distinct intentional palettes", async ({
   expect(darkPalette.card).not.toBe(lightPalette.card);
 });
 
+test("catalog search controls use the dark palette", async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
+  await page.goto("/professions");
+  const search = page.locator(".career-search.profession-search-compact");
+  const palette = await search.evaluate((node) => ({
+    background: getComputedStyle(node).backgroundColor,
+    input: getComputedStyle(node.querySelector("input")!).color,
+    select: getComputedStyle(node.querySelector("select")!).color,
+  }));
+  expect(palette.background).toBe("rgb(21, 21, 23)");
+  expect(palette.input).toBe("rgb(247, 247, 248)");
+  expect(palette.select).toBe("rgb(237, 237, 240)");
+});
+
 test("mobile navigation keeps account reachable without horizontal page overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
