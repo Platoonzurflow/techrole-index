@@ -5,7 +5,10 @@ import { ArrowRight, Scale } from "lucide-react";
 import { AppSelect } from "@/components/AppSelect";
 import { browserCsrf } from "@/lib/browser";
 import { rub } from "@/lib/format";
-import { salaryBenchmarkLevelPoints } from "@/lib/salary-benchmark-data";
+import {
+  salaryBenchmarkLevelPoints,
+  salaryBenchmarkSourceForPoint,
+} from "@/lib/salary-benchmark-data";
 import type {
   OfficialSalarySlice,
   ProfessionDetail,
@@ -47,15 +50,6 @@ function comparisonSalary(
     };
   }
 
-  const categorySlices = official?.category_salary_by_seniority;
-  const category = categorySlices?.find((slice) => slice.seniority === level);
-  if (category?.median != null && salarySlicesAreCoherent(categorySlices)) {
-    return {
-      value: rub(category.median),
-      basis: `${item.category_name} · n=${category.sample_size}`,
-    };
-  }
-
   const benchmark = item.salary_benchmark
     ? salaryBenchmarkLevelPoints(item.salary_benchmark).find(
       (point) => point.seniority === level,
@@ -63,11 +57,24 @@ function comparisonSalary(
     : undefined;
   const value = benchmarkValue(benchmark);
   if (value) {
+    const source = item.salary_benchmark && benchmark
+      ? salaryBenchmarkSourceForPoint(item.salary_benchmark, benchmark)
+      : undefined;
     return {
       value,
-      basis: benchmark?.scope === "market_level"
-        ? "Ориентир IT-рынка"
-        : benchmark?.label ?? "Открытое исследование",
+      basis: [
+        source?.name ?? benchmark?.label ?? "Открытое исследование",
+        benchmark?.sample_size ? `n=${benchmark.sample_size}` : null,
+      ].filter(Boolean).join(" · "),
+    };
+  }
+
+  const categorySlices = official?.category_salary_by_seniority;
+  const category = categorySlices?.find((slice) => slice.seniority === level);
+  if (category?.median != null && salarySlicesAreCoherent(categorySlices)) {
+    return {
+      value: rub(category.median),
+      basis: `Работа России · ${item.category_name} · n=${category.sample_size}`,
     };
   }
 
@@ -88,12 +95,14 @@ function publicationComparison(item: ProfessionDetail) {
   if (official.total_publications > 0) {
     return {
       value: official.total_publications.toLocaleString("ru-RU"),
-      basis: "Профессия",
+      basis: "Работа России · профессия",
     };
   }
   return {
     value: official.category_total_publications.toLocaleString("ru-RU"),
-    basis: official.category_total_publications > 0 ? item.category_name : "",
+    basis: official.category_total_publications > 0
+      ? `Работа России · ${item.category_name}`
+      : "",
   };
 }
 
@@ -103,7 +112,7 @@ function remoteComparison(item: ProfessionDetail) {
   if (official.total_publications > 0) {
     return {
       value: `${Math.round((official.remote_count / official.total_publications) * 100)}%`,
-      basis: "Профессия",
+      basis: `Работа России · ${official.remote_count} из ${official.total_publications}`,
     };
   }
   if (official.category_total_publications > 0) {
@@ -111,7 +120,7 @@ function remoteComparison(item: ProfessionDetail) {
       value: `${Math.round(
         ((official.category_remote_count ?? 0) / official.category_total_publications) * 100,
       )}%`,
-      basis: item.category_name,
+      basis: `Работа России · ${item.category_name}: ${official.category_remote_count ?? 0} из ${official.category_total_publications}`,
     };
   }
   return { value: "Данных пока нет", basis: "" };

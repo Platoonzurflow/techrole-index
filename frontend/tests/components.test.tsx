@@ -449,7 +449,7 @@ describe("analytics components", () => {
     );
   });
 
-  it("uses direction data when a profession has no complete salary sample", async () => {
+  it("prefers a sourced market benchmark and keeps direction salary as the last fallback", async () => {
     const slices = (values: number[]) => (["junior", "middle", "senior"] as const).map((seniority, index) => ({
       seniority,
       vacancy_count: 10,
@@ -508,6 +508,27 @@ describe("analytics components", () => {
         name_en: "Analytics Engineer",
         category_slug: "data-ai",
         category_name: "Data & AI",
+        salary_benchmark: {
+          coverage: "category" as const,
+          points: [
+            { source_id: "market", scope: "market_level" as const, label: "IT-рынок", geography: "russia" as const, metric: "median" as const, value: 114500, seniority: "junior" as const, is_fallback: true },
+            { source_id: "market", scope: "market_level" as const, label: "IT-рынок", geography: "russia" as const, metric: "median" as const, value: 200000, seniority: "middle" as const, is_fallback: true },
+            { source_id: "market", scope: "market_level" as const, label: "IT-рынок", geography: "russia" as const, metric: "median" as const, value: 310000, seniority: "senior" as const, is_fallback: true },
+          ],
+          sources: [{
+            id: "market",
+            name: "Проверяемый зарплатный опрос",
+            url: "https://example.com/report",
+            methodology_url: "https://example.com/methodology",
+            period: "2026",
+            published_at: "2026-07-01",
+            currency: "RUB" as const,
+            tax_status: "net" as const,
+            income_type: "salary" as const,
+            methodology_note: "Методика",
+          }],
+          methodology_note: "Методика",
+        },
       },
     ];
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
@@ -518,9 +539,12 @@ describe("analytics components", () => {
     render(<CompareTool professions={response} />);
     fireEvent.click(screen.getByRole("button", { name: "Сравнить" }));
 
-    expect(await screen.findAllByText("120 000 ₽")).toHaveLength(2);
+    expect(await screen.findAllByText("120 000 ₽")).toHaveLength(1);
+    expect(screen.getAllByText("114 500 ₽")).toHaveLength(1);
     expect(screen.getAllByText("200 000 ₽")).toHaveLength(2);
-    expect(screen.getAllByText("300 000 ₽")).toHaveLength(2);
+    expect(screen.getAllByText("300 000 ₽")).toHaveLength(1);
+    expect(screen.getAllByText("310 000 ₽")).toHaveLength(1);
+    expect(screen.getAllByText("Проверяемый зарплатный опрос")).toHaveLength(3);
     expect(screen.getAllByText("50")).toHaveLength(2);
     expect(screen.getAllByText("20%")).toHaveLength(2);
     expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();

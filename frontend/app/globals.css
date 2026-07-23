@@ -322,8 +322,14 @@ html:not(.dark) .career-scene.is-active .candidate-bag { border-color: rgb(104 6
 .compare-builder-action p { color: var(--muted); font-size: .86rem; font-weight: 700; }
 .premium-plan-card { transition: border-color .2s ease, background-color .2s ease, filter .2s ease; }
 .premium-plan-card-active { border-color: var(--line); background: rgb(var(--muted-rgb) / .07); filter: grayscale(.35) saturate(.72); box-shadow: none; }
-.premium-old-price { position: relative; color: var(--muted); font: 750 1.02rem/1.2 ui-monospace, monospace; }
-.premium-old-price::after { position: absolute; right: -.18rem; bottom: 48%; left: -.18rem; height: 2px; border-radius: 99px; background: var(--accent); content: ""; transform: rotate(-7deg); }
+.premium-old-price {
+  color: color-mix(in srgb, var(--muted) 82%, transparent);
+  font: 750 1.02rem/1.2 ui-monospace, monospace;
+  text-decoration-color: color-mix(in srgb, var(--accent) 82%, var(--ink));
+  text-decoration-line: line-through;
+  text-decoration-skip-ink: none;
+  text-decoration-thickness: 2px;
+}
 
 @keyframes money-shower {
   0% { opacity: 0; transform: translateY(-32px) rotate(-12deg); }

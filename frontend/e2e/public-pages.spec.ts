@@ -219,7 +219,7 @@ test("catalog direction immediately leaves only matching professions", async ({ 
 test("premium tariff shows the previous price", async ({ page }) => {
   await page.goto("/pricing");
   await expect(page.getByLabel("Прежняя цена 1 349 рублей")).toHaveText("1 349 ₽");
-  await expect(page.locator(".premium-old-price")).toHaveCSS("text-decoration-line", "none");
+  await expect(page.locator(".premium-old-price")).toHaveCSS("text-decoration-line", "line-through");
   await expect(page.locator(".premium-old-price")).toBeVisible();
 });
 
