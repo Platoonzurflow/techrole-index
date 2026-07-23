@@ -515,7 +515,7 @@ describe("analytics components", () => {
         status: "pending",
         amount: "290.00",
         currency: "RUB",
-        confirmation_url: "https://auth.robokassa.ru/Merchant/Payment/Index?MerchantLogin=techrole&OutSum=290.00&InvId=42&Receipt=%257B%2522items%2522%253A%255B%255D%257D&SignatureValue=signed",
+        confirmation_url: "https://auth.robokassa.ru/Merchant/Index.aspx?MerchantLogin=techrole&OutSum=290.00&InvId=42&Receipt=%257B%2522items%2522%253A%255B%255D%257D&SignatureValue=signed",
         is_test: false,
       }),
     });
@@ -539,7 +539,7 @@ describe("analytics components", () => {
     fireEvent.click(screen.getByRole("button", { name: /Оплатить/ }));
     await vi.waitFor(() => expect(submit).toHaveBeenCalledOnce());
 
-    const form = document.querySelector<HTMLFormElement>("form[action='https://auth.robokassa.ru/Merchant/Payment/Index']");
+    const form = document.querySelector<HTMLFormElement>("form[action='https://auth.robokassa.ru/Merchant/Index.aspx']");
     expect(form).not.toBeNull();
     expect(form?.method).toBe("post");
     expect(form?.querySelector<HTMLInputElement>("input[name='OutSum']")?.value).toBe("290.00");

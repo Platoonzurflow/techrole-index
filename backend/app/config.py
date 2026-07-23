@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     robokassa_password2: str = ""
     robokassa_password3: str = ""
     robokassa_hash_algorithm: str = "sha256"
-    robokassa_payment_url: str = "https://auth.robokassa.ru/Merchant/Payment/Index"
+    robokassa_payment_url: str = "https://auth.robokassa.ru/Merchant/Index.aspx"
     robokassa_op_state_url: str = (
         "https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt"
     )
@@ -220,7 +220,7 @@ class Settings(BaseSettings):
                 official_urls = {
                     "ROBOKASSA_PAYMENT_URL": (
                         self.robokassa_payment_url,
-                        "https://auth.robokassa.ru/Merchant/Payment/Index",
+                        "https://auth.robokassa.ru/Merchant/Index.aspx",
                     ),
                     "ROBOKASSA_OP_STATE_URL": (
                         self.robokassa_op_state_url,

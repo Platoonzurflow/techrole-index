@@ -4,7 +4,7 @@ from app.config import Settings
 from app.schemas import PaymentReadinessCheck, PaymentReadinessOut
 
 ROBOKASSA_OFFICIAL_URLS = {
-    "payment": "https://auth.robokassa.ru/Merchant/Payment/Index",
+    "payment": "https://auth.robokassa.ru/Merchant/Index.aspx",
     "operation_state": (
         "https://auth.robokassa.ru/Merchant/WebService/Service.asmx/OpStateExt"
     ),
