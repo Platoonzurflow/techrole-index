@@ -178,6 +178,30 @@ test("catalog search controls use the dark palette", async ({ page }) => {
   expect(palette.select).toBe("rgb(237, 237, 240)");
 });
 
+test("homepage search and candidate stay aligned in the dark theme", async ({ page }) => {
+  await page.setViewportSize({ width: 1703, height: 779 });
+  await page.addInitScript(() => localStorage.setItem("theme", "dark"));
+  await page.goto("/");
+
+  const search = page.locator(".cinematic-hero .career-search");
+  const palette = await search.evaluate((node) => ({
+    background: getComputedStyle(node).backgroundColor,
+    input: getComputedStyle(node.querySelector("input")!).color,
+  }));
+  expect(palette.background).toBe("rgb(21, 21, 23)");
+  expect(palette.input).toBe("rgb(247, 247, 248)");
+
+  const sceneBox = await page.locator(".career-scene").boundingBox();
+  const candidateBox = await page.locator(".candidate").boundingBox();
+  expect(sceneBox).not.toBeNull();
+  expect(candidateBox).not.toBeNull();
+  expect(Math.abs(
+    candidateBox!.x + candidateBox!.width / 2 - (sceneBox!.x + sceneBox!.width / 2),
+  )).toBeLessThan(2);
+  expect(candidateBox!.y).toBeGreaterThan(sceneBox!.y + 80);
+  expect(candidateBox!.y + candidateBox!.height).toBeLessThan(sceneBox!.y + sceneBox!.height - 60);
+});
+
 test("mobile navigation keeps account reachable without horizontal page overflow", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
