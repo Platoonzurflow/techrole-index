@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { BarChart3 } from "lucide-react";
+import { PremiumHeaderStatus } from "@/components/PremiumHeaderStatus";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 const links = [
@@ -26,6 +27,7 @@ export function Header() {
           {links.map(([label, href]) => <Link key={href} href={href} className="nav-link whitespace-nowrap">{label}</Link>)}
         </nav>
         <div className="ml-auto flex items-center gap-2">
+          <PremiumHeaderStatus />
           <span className="status-line mr-1 hidden 2xl:inline-flex"><span className="live-dot" /> Обновлено сегодня</span>
           <ThemeToggle />
           <Link href="/account" className="header-account hidden sm:inline-flex">Кабинет</Link>

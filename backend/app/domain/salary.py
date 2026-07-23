@@ -41,7 +41,7 @@ def calculate_salary_statistics(
     observations: Iterable[SalaryInput],
     *,
     total_vacancies: int | None = None,
-    min_sample: int = 20,
+    min_sample: int = 3,
     gross: bool | None = True,
 ) -> SalaryStatistics:
     all_items = list(observations)

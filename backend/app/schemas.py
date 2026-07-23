@@ -313,6 +313,12 @@ class AlertCreate(BaseModel):
     threshold_percent: float = Field(ge=3, le=100)
 
 
+class AlertUpdate(BaseModel):
+    enabled: bool | None = None
+    direction: str | None = Field(default=None, pattern=r"^(up|down)$")
+    threshold_percent: float | None = Field(default=None, ge=3, le=100)
+
+
 class SupportRequestCreate(BaseModel):
     name: str = Field(min_length=2, max_length=120)
     email: EmailStr

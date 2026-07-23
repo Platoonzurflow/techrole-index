@@ -27,7 +27,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 const levelLabels = { junior: "Junior", middle: "Middle", senior: "Senior" };
 const breakdownLabels: Record<string, string> = { demand: "Спрос", salary: "Зарплата", demand_growth: "Рост спроса", junior_access: "Доступность Junior", remote_share: "Удалённая работа", data_quality: "Качество данных" };
-const confidenceLabels: Record<string, string> = { insufficient: "недостаточно данных", low: "ограниченная выборка", medium: "средняя выборка", high: "устойчивая выборка" };
+const confidenceLabels: Record<string, string> = { insufficient: "недостаточно данных", low: "базовая выборка", medium: "расширенная выборка", high: "крупная выборка" };
 
 function confidenceBadge(level?: string) {
   const normalized = level && ["insufficient", "low", "medium", "high"].includes(level) ? level : "insufficient";
@@ -229,7 +229,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           </div>
           <p className="mt-3 text-xs leading-5 text-muted">Первое число — только вакансии, уверенно отнесённые к этой профессии. Второе и синяя линия на графике — все классифицированные публикации профессий того же направления; это контекст рынка, который не прибавляется к точному числу.</p>
           <div className="mt-5"><PublicationChart data={profession.official_open_data} /></div>
-          <p className="mt-3 text-xs text-muted">Период: {profession.official_open_data.date_from} - {profession.official_open_data.date_to}. Достоверность классифицированной выборки: {profession.official_open_data.confidence_level}.</p>
+          <p className="mt-3 text-xs text-muted">Период: {profession.official_open_data.date_from} - {profession.official_open_data.date_to}. Статус выборки: {confidenceBadge(profession.official_open_data.confidence_level).label}.</p>
           {hasOfficialSalaryHistory ? (
             <div className="mt-8 border-t border-line pt-8">
               <p className="eyebrow">Динамика зарплатных вилок</p>

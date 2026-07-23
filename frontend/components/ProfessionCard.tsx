@@ -4,10 +4,10 @@ import { ArrowRight, LockKeyhole } from "lucide-react";
 import type { ProfessionSummary } from "@/lib/types";
 
 const confidenceLabels: Record<string, string> = {
-  high: "Высокая",
-  medium: "Средняя",
-  low: "Низкая",
-  insufficient: "Мало данных",
+  high: "Крупная выборка",
+  medium: "Расширенная выборка",
+  low: "Базовая выборка",
+  insufficient: "Данные собираются",
 };
 
 export function ProfessionCard({ profession }: { profession: ProfessionSummary }) {

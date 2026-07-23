@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 import { insightCanonicalUrl, insightCitationUrls } from "@/lib/insight-citation";
 import { getInsight, insights } from "@/lib/insights";
 
-export const dynamicParams = false;
+export const dynamicParams = true;
 
 export function generateStaticParams() {
   return insights.map((article) => ({ slug: article.slug }));

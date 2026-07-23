@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Crown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { browserCsrf } from "@/lib/browser";
@@ -71,6 +72,12 @@ export function AccountActions({ premium, payments }: { premium: boolean; paymen
 
   return (
     <div className="mt-6 flex flex-wrap gap-3">
+      {premium ? (
+        <div className="flex w-full items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-400/10 p-4 text-sm">
+          <Crown className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" size={18} aria-hidden="true" />
+          <span><strong className="block">Premium уже подключён</strong><span className="mt-1 block text-muted">Повторная покупка не требуется.</span></span>
+        </div>
+      ) : null}
       {!premium && payments.enabled && product ? <>
         <label className="flex w-full items-start gap-3 text-sm text-muted">
           <input type="checkbox" className="mt-1" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
@@ -81,7 +88,7 @@ export function AccountActions({ premium, payments }: { premium: boolean; paymen
         </button>
       </> : null}
       {!premium && !payments.enabled ? <p className="w-full text-sm text-muted">Приём платежей пока выключен. Деньги и платёжные данные не запрашиваются.</p> : null}
-      <button type="button" className="button-secondary" disabled={busy} onClick={logout}>Выйти</button>
+      <button type="button" className="button-secondary w-full" disabled={busy} onClick={logout}>Выйти из аккаунта</button>
       {payments.enabled && payments.mode === "test" ? <p className="w-full text-xs text-muted">Тестовый режим: реальные деньги не списываются.</p> : null}
       {message ? <p className="w-full text-sm text-muted" role="status">{message}</p> : null}
     </div>

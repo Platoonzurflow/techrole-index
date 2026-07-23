@@ -14,7 +14,7 @@ from app.models import (
     SeniorityLevel,
     User,
 )
-from app.schemas import AlertCreate
+from app.schemas import AlertCreate, AlertUpdate
 from app.security import require_csrf, require_premium
 
 router = APIRouter(tags=["premium"])
@@ -97,6 +97,7 @@ def list_alerts(db: Session = Depends(get_db), user: User = Depends(require_prem
         {
             "id": rule.id,
             "profession_id": profession.id,
+            "profession_slug": profession.slug,
             "profession_name": profession.name_ru,
             "metric": rule.metric,
             "direction": rule.direction,
@@ -119,6 +120,29 @@ def create_alert(
     db.add(rule)
     db.commit()
     return {"id": rule.id, "status": "created"}
+
+
+@router.patch("/alerts/{alert_id}", dependencies=[Depends(require_csrf)])
+def update_alert(
+    alert_id: int,
+    payload: AlertUpdate,
+    db: Session = Depends(get_db),
+    user: User = Depends(require_premium),
+):
+    rule = db.scalar(
+        select(NotificationRule).where(
+            NotificationRule.id == alert_id, NotificationRule.user_id == user.id
+        )
+    )
+    if rule is None:
+        raise HTTPException(status_code=404, detail="Правило не найдено")
+    changes = payload.model_dump(exclude_none=True)
+    if not changes:
+        raise HTTPException(status_code=422, detail="Не указаны изменения")
+    for field, value in changes.items():
+        setattr(rule, field, value)
+    db.commit()
+    return {"id": rule.id, "status": "updated", "enabled": rule.enabled}
 
 
 @router.delete("/alerts/{alert_id}", status_code=204, dependencies=[Depends(require_csrf)])

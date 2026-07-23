@@ -9,7 +9,7 @@ test("a new user can complete the sandbox payment without a real charge", async 
   await page.getByRole("button", { name: "Создать аккаунт" }).click();
 
   await expect(page).toHaveURL(/\/account$/);
-  await expect(page.getByText("Уровень доступа").locator("..")).toContainText("free");
+  await expect(page.locator(".account-access")).toContainText("Базовый доступ");
   await page.getByRole("checkbox").check();
   await page.getByRole("button", { name: /Тестовая оплата/ }).click();
 
@@ -21,5 +21,5 @@ test("a new user can complete the sandbox payment without a real charge", async 
   await expect(page.getByRole("heading", { name: "Оплата прошла успешно" })).toBeVisible();
   await expect(page.getByText("Это тестовый платёж: реальные деньги не списывались.")).toBeVisible();
   await page.getByRole("link", { name: "Личный кабинет" }).click();
-  await expect(page.getByText("Уровень доступа").locator("..")).toContainText("premium");
+  await expect(page.locator(".account-access")).toContainText("Premium активен");
 });

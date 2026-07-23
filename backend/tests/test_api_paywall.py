@@ -290,7 +290,17 @@ def test_premium_receives_full_history_and_compare():
         },
     )
     assert created.status_code == 201
-    assert len(client.get("/api/v1/alerts").json()) == 1
+    alerts = client.get("/api/v1/alerts").json()
+    assert len(alerts) == 1
+    assert alerts[0]["profession_slug"] == "role-0"
+    updated = client.patch(
+        f"/api/v1/alerts/{created.json()['id']}",
+        headers={"X-CSRF-Token": csrf},
+        json={"enabled": False},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["enabled"] is False
+    assert client.get("/api/v1/alerts").json()[0]["enabled"] is False
     client.close()
     session.close()
     app.dependency_overrides.clear()

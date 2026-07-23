@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     public_base_url: str = "http://localhost:3000"
     demo_mode: bool = True
     demo_seed: int = 20260717
-    min_salary_sample: int = Field(default=20, ge=3, le=1000)
+    min_salary_sample: int = Field(default=3, ge=3, le=1000)
     indexnow_enabled: bool = False
     indexnow_key: str = ""
     indexnow_timeout_seconds: float = Field(default=20, ge=3, le=60)

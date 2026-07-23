@@ -35,3 +35,18 @@ def test_insufficient_sample_hides_midpoint_statistics():
     assert result.confidence_level == "insufficient"
     assert result.median is None
     assert result.average is None
+
+
+def test_three_complete_ranges_are_published_by_default():
+    rows = [
+        SalaryInput(Decimal("100000"), Decimal("140000"), True),
+        SalaryInput(Decimal("120000"), Decimal("160000"), True),
+        SalaryInput(Decimal("140000"), Decimal("180000"), True),
+    ]
+
+    result = calculate_salary_statistics(rows)
+
+    assert result.midpoint_sample_size == 3
+    assert result.median == 140000
+    assert result.average == 140000
+    assert result.confidence_level == "low"

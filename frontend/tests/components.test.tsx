@@ -9,10 +9,12 @@ import { SupportButton } from "@/components/SupportButton";
 import { SupportForm } from "@/components/SupportForm";
 import { CareerTransformationHero } from "@/components/CareerTransformationHero";
 import { AccountActions } from "@/components/AccountActions";
-import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
+import { officialSalaryLevelsAreCoherent, SalaryBenchmarks } from "@/components/SalaryBenchmarks";
 import { AdminPanel } from "@/components/AdminPanel";
 import { ProfessionSearch } from "@/components/ProfessionSearch";
 import { ShareActions } from "@/components/ShareActions";
+import { AlertsPanel } from "@/components/AlertsPanel";
+import { PremiumHeaderStatus } from "@/components/PremiumHeaderStatus";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -175,7 +177,7 @@ describe("analytics components", () => {
       category_daily_publications: [],
       salary_currency: "RUB" as const,
       salary_gross_status: "unknown" as const,
-      salary_min_sample: 20,
+      salary_min_sample: 3,
       salary_by_seniority: (["junior", "middle", "senior"] as const).map((seniority) => ({
         seniority,
         vacancy_count: 1,
@@ -197,6 +199,123 @@ describe("analytics components", () => {
     expect(screen.getByText("200 000 ₽")).toBeInTheDocument();
     expect(screen.getByText("310 000 ₽")).toBeInTheDocument();
     expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();
+  });
+
+  it("uses one coherent source when official level medians are inverted", () => {
+    const official = {
+      source_name: "Работа России",
+      source_url: "https://trudvsem.ru/opendata/api",
+      period_days: 180,
+      date_from: "2026-01-25",
+      date_to: "2026-07-23",
+      total_publications: 300,
+      salary_disclosed_count: 129,
+      remote_count: 4,
+      confidence_level: "high" as const,
+      daily_publications: [],
+      category_total_publications: 300,
+      category_daily_publications: [],
+      salary_currency: "RUB" as const,
+      salary_gross_status: "unknown" as const,
+      salary_min_sample: 3,
+      salary_by_seniority: [
+        { seniority: "junior" as const, vacancy_count: 9, salary_count: 9, salary_coverage: 1, sample_size: 9, median: 115000, confidence_level: "medium" as const },
+        { seniority: "middle" as const, vacancy_count: 97, salary_count: 97, salary_coverage: 1, sample_size: 97, median: 100000, confidence_level: "high" as const },
+        { seniority: "senior" as const, vacancy_count: 23, salary_count: 23, salary_coverage: 1, sample_size: 23, median: 89300, confidence_level: "high" as const },
+      ],
+      salary_history: [],
+      salary_methodology_note: "Только полные вилки.",
+      methodology_note: "Публикации.",
+    };
+    const benchmark = {
+      coverage: "direct" as const,
+      methodology_note: "Сопоставимый уровневый срез.",
+      points: [
+        { source_id: "grades", scope: "market_level" as const, label: "Разработчики", geography: "russia" as const, metric: "range" as const, lower: 100000, upper: 130000, seniority: "junior" as const, sample_size: 55, is_fallback: true },
+        { source_id: "grades", scope: "market_level" as const, label: "Разработчики", geography: "russia" as const, metric: "range" as const, lower: 230000, upper: 270000, seniority: "middle" as const, sample_size: 288, is_fallback: true },
+        { source_id: "grades", scope: "market_level" as const, label: "Разработчики", geography: "russia" as const, metric: "range" as const, lower: 370000, upper: 380000, seniority: "senior" as const, sample_size: 209, is_fallback: true },
+      ],
+      sources: [{
+        id: "grades",
+        name: "Grades",
+        url: "https://example.org/grades",
+        methodology_url: "https://example.org/grades",
+        period: "2025",
+        published_at: "2026-01-01",
+        total_sample_size: 552,
+        currency: "RUB" as const,
+        tax_status: "unknown" as const,
+        income_type: "salary" as const,
+        methodology_note: "Открытое исследование.",
+      }],
+    };
+
+    expect(officialSalaryLevelsAreCoherent(official)).toBe(false);
+    render(<SalaryBenchmarks data={benchmark} official={official} />);
+
+    expect(screen.getByText(/перевёрнутую зарплатную градацию/)).toBeInTheDocument();
+    expect(screen.getByText("100 000 ₽ — 130 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("230 000 ₽ — 270 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("370 000 ₽ — 380 000 ₽")).toBeInTheDocument();
+    expect(screen.queryByText("89 300 ₽")).not.toBeInTheDocument();
+  });
+
+  it("shows the Premium header status only after authenticated confirmation", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        id: 7,
+        email: "premium@example.com",
+        display_name: "Premium",
+        role: "user",
+        access_level: "premium",
+      }),
+    }));
+
+    render(<PremiumHeaderStatus />);
+
+    expect(await screen.findByRole("link", { name: "Premium активен" })).toHaveAttribute("href", "/account");
+  });
+
+  it("pauses and resumes a saved alert without deleting it", async () => {
+    document.cookie = "techrole_csrf=csrf-alert";
+    const request = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([{
+          id: 5,
+          profession_id: 1,
+          profession_slug: "one-c-developer",
+          profession_name: "1С-разработчик",
+          metric: "salary",
+          direction: "up",
+          threshold_percent: 5,
+          enabled: true,
+        }]),
+      })
+      .mockResolvedValueOnce({ ok: true });
+    vi.stubGlobal("fetch", request);
+
+    render(<AlertsPanel professions={[{
+      id: 1,
+      slug: "one-c-developer",
+      name_ru: "1С-разработчик",
+      name_en: "1C Developer",
+      description: "Описание",
+      category_slug: "development",
+      category_name: "Разработка",
+      is_premium: false,
+      teaser_only: false,
+    }]} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Поставить правило на паузу" }));
+
+    expect(await screen.findByText("На паузе")).toBeInTheDocument();
+    expect(request).toHaveBeenNthCalledWith(2, "/api/v1/alerts/5", expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ enabled: false }),
+    }));
+    expect(screen.getByRole("link", { name: "1С-разработчик" })).toHaveAttribute("href", "/professions/one-c-developer");
   });
 
   it("renders a server-safe premium teaser", () => {
