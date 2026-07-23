@@ -1,4 +1,5 @@
-import { safeApi } from "@/lib/api";
+import { api } from "@/lib/api";
+import { conditionalResponse } from "@/lib/conditional-response";
 import type { OfficialSalarySlice } from "@/lib/types";
 
 interface OpenDataItem {
@@ -15,9 +16,17 @@ interface OpenDataItem {
   salary_by_seniority: OfficialSalarySlice[];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const items = await safeApi<OpenDataItem[]>("/open-data/publications", []);
+  let items: OpenDataItem[];
+  try {
+    items = await api<OpenDataItem[]>("/open-data/publications");
+  } catch {
+    return Response.json(
+      { error: "open_data_unavailable", data_available: false },
+      { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "60" } },
+    );
+  }
   const lastModified = items
     .map((item) => item.last_ingested_at)
     .filter((value): value is string => Boolean(value))
@@ -34,7 +43,7 @@ export async function GET() {
     url: "https://trudvsem.ru/opendata",
     sameAs: "https://trudvsem.ru/opendata/api",
   };
-  return Response.json({
+  const body = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "DataCatalog",
     "@id": `${siteUrl}/open-data.json`,
@@ -63,7 +72,11 @@ export async function GET() {
       dateModified: item.last_ingested_at ?? undefined,
       creator: publisher,
       isBasedOn: source,
-      citation: `TechRole Index. ${item.name_ru}: публикации и зарплатные вилки за ${item.period_days} дней. ${siteUrl}/professions/${item.slug}`,
+      subjectOf: [
+        { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },
+        { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
+        { "@type": "CreativeWork", name: "Источники TechRole Index", url: `${siteUrl}/sources` },
+      ],
       measurementTechnique: `${siteUrl}/methodology`,
       distribution: [
         {
@@ -103,7 +116,8 @@ export async function GET() {
         })),
       ],
     })),
-  }, {
+  });
+  return conditionalResponse(request, body, {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "public, max-age=1800, stale-while-revalidate=86400",
@@ -112,5 +126,5 @@ export async function GET() {
       "Link": `<${siteUrl}/citation>; rel="cite-as", <${siteUrl}/citation.json>; rel="describedby"; type="application/vnd.citationstyles.csl+json"`,
       "X-Robots-Tag": "index, follow, max-snippet:-1",
     },
-  });
+  }, lastModified);
 }

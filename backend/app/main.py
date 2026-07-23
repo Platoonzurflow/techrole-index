@@ -10,6 +10,7 @@ from pythonjsonlogger.json import JsonFormatter
 
 from app.api import (
     admin,
+    analytics,
     auth,
     mentorship,
     open_data,
@@ -146,5 +147,7 @@ for api_router in (
     status.router,
     support.router,
     mentorship.router,
+    analytics.router,
+    analytics.admin_router,
 ):
     app.include_router(api_router, prefix="/api/v1")

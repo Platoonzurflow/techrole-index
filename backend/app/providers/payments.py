@@ -43,6 +43,14 @@ class ProviderRefund:
 
 
 @dataclass(frozen=True)
+class ReceiptItem:
+    name: str
+    payment_method: str
+    payment_object: str
+    tax: str
+
+
+@dataclass(frozen=True)
 class VerifiedWebhook:
     event_id: str
     event_type: str
@@ -62,6 +70,7 @@ class PaymentProvider(Protocol):
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         customer_email: str,
         return_url: str,
         idempotency_key: str,
@@ -75,6 +84,7 @@ class PaymentProvider(Protocol):
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         idempotency_key: str,
     ) -> ProviderRefund: ...
 
@@ -163,12 +173,20 @@ class DemoPaymentProvider:
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         customer_email: str,
         return_url: str,
         idempotency_key: str,
         provider_reference: str | None = None,
     ) -> ProviderPayment:
-        del description, customer_email, return_url, idempotency_key, provider_reference
+        del (
+            description,
+            receipt_item,
+            customer_email,
+            return_url,
+            idempotency_key,
+            provider_reference,
+        )
         return ProviderPayment(
             external_id=f"demo-pay-{order_public_id}",
             status="pending",
@@ -186,9 +204,10 @@ class DemoPaymentProvider:
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         idempotency_key: str,
     ) -> ProviderRefund:
-        del description
+        del description, receipt_item
         return ProviderRefund(
             external_id=f"demo-refund-{idempotency_key}",
             payment_external_id=payment_external_id,
@@ -307,6 +326,7 @@ class YooKassaPaymentProvider:
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         customer_email: str,
         return_url: str,
         idempotency_key: str,
@@ -327,12 +347,12 @@ class YooKassaPaymentProvider:
                 "customer": {"email": customer_email},
                 "items": [
                     {
-                        "description": description,
+                        "description": receipt_item.name,
                         "quantity": "1.000",
                         "amount": {"value": f"{amount:.2f}", "currency": currency},
                         "vat_code": self.vat_code,
-                        "payment_mode": "full_payment",
-                        "payment_subject": "service",
+                        "payment_mode": receipt_item.payment_method,
+                        "payment_subject": receipt_item.payment_object,
                     }
                 ],
             }
@@ -352,8 +372,10 @@ class YooKassaPaymentProvider:
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         idempotency_key: str,
     ) -> ProviderRefund:
+        del receipt_item
         payload = {
             "payment_id": payment_external_id,
             "amount": {"value": f"{amount:.2f}", "currency": currency},
@@ -478,18 +500,18 @@ class RobokassaPaymentProvider:
         except httpx.HTTPError as exc:
             raise PaymentProviderError("Robokassa API request failed") from exc
 
-    def _receipt(self, *, description: str, amount: Decimal) -> str | None:
+    def _receipt(self, *, receipt_item: ReceiptItem, amount: Decimal) -> str | None:
         if self.fiscalization_mode != "robokassa":
             return None
         receipt = {
             "items": [
                 {
-                    "name": description[:128],
+                    "name": receipt_item.name[:128],
                     "quantity": 1,
                     "sum": float(amount),
-                    "payment_method": "full_payment",
-                    "payment_object": "service",
-                    "tax": "none",
+                    "payment_method": receipt_item.payment_method,
+                    "payment_object": receipt_item.payment_object,
+                    "tax": receipt_item.tax,
                 }
             ]
         }
@@ -503,6 +525,7 @@ class RobokassaPaymentProvider:
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         customer_email: str,
         return_url: str,
         idempotency_key: str,
@@ -522,7 +545,7 @@ class RobokassaPaymentProvider:
             (parsed_return.scheme, parsed_return.netloc, "/payments/error", parsed_return.query, "")
         )
         out_sum = f"{amount:.2f}"
-        receipt = self._receipt(description=description, amount=amount)
+        receipt = self._receipt(receipt_item=receipt_item, amount=amount)
         modifiers: list[str] = []
         if receipt is not None:
             modifiers.append(receipt)
@@ -689,6 +712,7 @@ class RobokassaPaymentProvider:
         amount: Decimal,
         currency: str,
         description: str,
+        receipt_item: ReceiptItem,
         idempotency_key: str,
     ) -> ProviderRefund:
         del idempotency_key
@@ -699,12 +723,12 @@ class RobokassaPaymentProvider:
         if self.fiscalization_mode == "robokassa":
             payload["InvoiceItems"] = [
                 {
-                    "Name": description[:128],
+                    "Name": receipt_item.name[:128],
                     "Quantity": 1,
                     "Cost": float(amount),
-                    "Tax": "none",
-                    "PaymentMethod": "full_payment",
-                    "PaymentObject": "service",
+                    "Tax": receipt_item.tax,
+                    "PaymentMethod": receipt_item.payment_method,
+                    "PaymentObject": receipt_item.payment_object,
                 }
             ]
         token = _jwt_hs256(payload, self.password3)

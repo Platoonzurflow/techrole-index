@@ -1,4 +1,5 @@
-import { safeApi } from "@/lib/api";
+import { api } from "@/lib/api";
+import { conditionalResponse } from "@/lib/conditional-response";
 import { insights } from "@/lib/insights";
 import type { OfficialSalarySlice, ProfessionSummary } from "@/lib/types";
 
@@ -22,13 +23,23 @@ interface OpenDataItem {
   salary_by_seniority: OfficialSalarySlice[];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const [professions, sources, openData] = await Promise.all([
-    safeApi<ProfessionSummary[]>("/professions", []),
-    safeApi<Source[]>("/sources", []),
-    safeApi<OpenDataItem[]>("/open-data/publications", []),
-  ]);
+  let professions: ProfessionSummary[];
+  let sources: Source[];
+  let openData: OpenDataItem[];
+  try {
+    [professions, sources, openData] = await Promise.all([
+      api<ProfessionSummary[]>("/professions"),
+      api<Source[]>("/sources"),
+      api<OpenDataItem[]>("/open-data/publications"),
+    ]);
+  } catch {
+    return new Response("TechRole Index: публичные данные временно недоступны. Повторите запрос позже.\n", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "60" },
+    });
+  }
   const openDataBySlug = new Map(openData.map((item) => [item.slug, item]));
   const professionLines = professions.map((item) => {
     const observed = openDataBySlug.get(item.slug);
@@ -61,6 +72,8 @@ export async function GET() {
 Язык: ru-RU
 Краткий AI-файл: ${siteUrl}/llms.txt
 Машиночитаемый индекс: ${siteUrl}/ai-index.json
+Короткие проверяемые ответы: ${siteUrl}/answers
+JSON коротких ответов: ${siteUrl}/answers.json
 Каталог официальных открытых данных: ${siteUrl}/open-data.json
 CSV официальных открытых данных: ${siteUrl}/open-data.csv
 Описание ежедневного датасета публикаций: ${siteUrl}/open-data-daily
@@ -116,10 +129,14 @@ ${professionLines}
 Сообщить об ошибке: ${siteUrl}/support
 Контакт: sqldevelopermoscow@yandex.com
 `;
-  return new Response(content, {
+  const lastModified = openData.map((item) => item.last_ingested_at).filter((value): value is string => Boolean(value)).sort().at(-1);
+  return conditionalResponse(request, content, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",
+      "Content-Language": "ru-RU",
       "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
+      "Link": `<${siteUrl}/>; rel="canonical", <${siteUrl}/citation>; rel="cite-as"`,
+      "X-Robots-Tag": "index, follow, max-snippet:-1",
     },
-  });
+  }, lastModified);
 }

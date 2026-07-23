@@ -1,4 +1,5 @@
-import { safeApi } from "@/lib/api";
+import { api } from "@/lib/api";
+import { conditionalResponse } from "@/lib/conditional-response";
 import { insightCitationUrls } from "@/lib/insight-citation";
 import { insights } from "@/lib/insights";
 import type { DataProvenance, OfficialSalarySlice, ProfessionSummary } from "@/lib/types";
@@ -23,16 +24,27 @@ interface OpenDataItem {
   salary_by_seniority: OfficialSalarySlice[];
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const [professions, sources, openData, provenance] = await Promise.all([
-    safeApi<ProfessionSummary[]>("/professions", []),
-    safeApi<Source[]>("/sources", []),
-    safeApi<OpenDataItem[]>("/open-data/publications", []),
-    safeApi<DataProvenance | null>("/data-provenance", null),
-  ]);
+  let professions: ProfessionSummary[];
+  let sources: Source[];
+  let openData: OpenDataItem[];
+  let provenance: DataProvenance;
+  try {
+    [professions, sources, openData, provenance] = await Promise.all([
+      api<ProfessionSummary[]>("/professions"),
+      api<Source[]>("/sources"),
+      api<OpenDataItem[]>("/open-data/publications"),
+      api<DataProvenance>("/data-provenance"),
+    ]);
+  } catch {
+    return Response.json(
+      { error: "ai_index_data_unavailable", data_available: false },
+      { status: 503, headers: { "Cache-Control": "no-store", "Retry-After": "60" } },
+    );
+  }
   const openDataBySlug = new Map(openData.map((item) => [item.slug, item]));
-  return Response.json({
+  const body = JSON.stringify({
     schema_version: "1.1",
     name: "TechRole Index",
     canonical_url: siteUrl,
@@ -43,6 +55,8 @@ export async function GET() {
     sources_url: `${siteUrl}/sources`,
     editorial_policy_url: `${siteUrl}/about`,
     citation_guidance_url: `${siteUrl}/citation`,
+    answer_first_page_url: `${siteUrl}/answers`,
+    answer_first_data_url: `${siteUrl}/answers.json`,
     citation_formats: {
       csl_json: `${siteUrl}/citation.json`,
       bibtex: `${siteUrl}/citation.bib`,
@@ -137,12 +151,19 @@ export async function GET() {
       enabled: source.enabled,
       terms_url: source.terms_url ?? null,
     })),
-  }, {
+  });
+  const lastModified = [provenance.generated_at, ...openData.map((item) => item.last_ingested_at)]
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  return conditionalResponse(request, body, {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "public, max-age=3600, stale-while-revalidate=86400",
       "Content-Language": "ru-RU",
+      "Content-Type": "application/json; charset=utf-8",
+      "Link": `<${siteUrl}/>; rel="canonical", <${siteUrl}/methodology>; rel="describedby", <${siteUrl}/citation>; rel="cite-as"`,
       "X-Robots-Tag": "index, follow, max-snippet:-1",
     },
-  });
+  }, lastModified);
 }

@@ -1,4 +1,5 @@
-import { safeApi } from "@/lib/api";
+import { api } from "@/lib/api";
+import { conditionalResponse } from "@/lib/conditional-response";
 import { insights } from "@/lib/insights";
 import type { ProfessionSummary } from "@/lib/types";
 
@@ -14,12 +15,21 @@ function xml(value: string) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&apos;");
 }
 
-export async function GET() {
+export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const [professions, openData] = await Promise.all([
-    safeApi<ProfessionSummary[]>("/professions", []),
-    safeApi<OpenDataItem[]>("/open-data/publications", []),
-  ]);
+  let professions: ProfessionSummary[];
+  let openData: OpenDataItem[];
+  try {
+    [professions, openData] = await Promise.all([
+      api<ProfessionSummary[]>("/professions"),
+      api<OpenDataItem[]>("/open-data/publications"),
+    ]);
+  } catch {
+    return new Response("RSS data is temporarily unavailable.\n", {
+      status: 503,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "60" },
+    });
+  }
   const counts = new Map(openData.map((item) => [item.slug, item]));
   const professionItems = professions.map((profession) => {
     const observed = counts.get(profession.slug);
@@ -28,10 +38,15 @@ export async function GET() {
   }).join("");
   const insightItems = insights.map((article) => `<item><title>${xml(article.title)}</title><link>${siteUrl}/insights/${article.slug}</link><guid isPermaLink="true">${siteUrl}/insights/${article.slug}</guid><description>${xml(article.description)}</description><pubDate>${new Date(`${article.publishedAt}T00:00:00Z`).toUTCString()}</pubDate></item>`).join("");
   const body = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>TechRole Index - IT-профессии и открытые данные</title><link>${siteUrl}</link><description>Публичные обновления каталога аналитики IT-профессий</description><language>ru-RU</language>${insightItems}${professionItems}</channel></rss>`;
-  return new Response(body, {
+  const lastModified = [...openData.map((item) => item.last_ingested_at), ...insights.map((item) => item.updatedAt)]
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  return conditionalResponse(request, body, {
     headers: {
       "Content-Type": "application/rss+xml; charset=utf-8",
       "Cache-Control": "public, max-age=1800, stale-while-revalidate=86400",
+      "Link": `<${siteUrl}/>; rel="canonical"`,
     },
-  });
+  }, lastModified);
 }

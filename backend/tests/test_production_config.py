@@ -46,6 +46,26 @@ def test_secure_production_settings_are_accepted() -> None:
     assert settings.demo_mode is False
 
 
+def test_production_analytics_fail_closed_until_distinct_keys_are_configured() -> None:
+    with pytest.raises(ValidationError, match="ANALYTICS_INGEST_KEY"):
+        production_settings(analytics_enabled=True)
+
+    repeated = "test-key-" + ("a" * 40)
+    with pytest.raises(ValidationError, match="must differ"):
+        production_settings(
+            analytics_enabled=True,
+            analytics_ingest_key=repeated,
+            analytics_hash_key=repeated,
+        )
+
+    configured = production_settings(
+        analytics_enabled=True,
+        analytics_ingest_key="test-ingest-" + ("a" * 40),
+        analytics_hash_key="test-hash-" + ("b" * 40),
+    )
+    assert configured.analytics_enabled is True
+
+
 def test_live_payments_fail_closed_until_legal_and_fiscal_details_are_final() -> None:
     base = {
         "payments_enabled": True,
@@ -104,8 +124,8 @@ def test_live_self_employed_robokassa_requires_automatic_receipts_and_refund_key
         "payments_mode": "live",
         "payments_provider": "robokassa",
         "robokassa_merchant_login": "merchant",
-        "robokassa_password1": "test-password-one",
-        "robokassa_password2": "test-password-two",
+        "robokassa_live_password1": "test-password-one",
+        "robokassa_live_password2": "test-password-two",
         "robokassa_payment_url": "https://auth.robokassa.ru/Merchant/Index.aspx",
         "payments_live_confirmed": True,
         "payments_legal_approved": True,
@@ -118,19 +138,28 @@ def test_live_self_employed_robokassa_requires_automatic_receipts_and_refund_key
             _env_file=None,
             **base,
             payments_fiscalization_mode="self_employed_manual",
-            robokassa_password3="test-password-three",
+            robokassa_live_password3="test-password-three",
         )
-    with pytest.raises(ValidationError, match="ROBOKASSA_PASSWORD3"):
+    with pytest.raises(ValidationError, match="ROBOKASSA_LIVE_PASSWORD3"):
         Settings(
             _env_file=None,
             **base,
             payments_fiscalization_mode="robokassa",
+            payments_robocheki_smz_confirmed=True,
+        )
+    with pytest.raises(ValidationError, match="PAYMENTS_ROBOCHEKI_SMZ_CONFIRMED"):
+        Settings(
+            _env_file=None,
+            **base,
+            payments_fiscalization_mode="robokassa",
+            robokassa_live_password3="test-password-three",
         )
     configured = Settings(
         _env_file=None,
         **base,
         payments_fiscalization_mode="robokassa",
-        robokassa_password3="test-password-three",
+        payments_robocheki_smz_confirmed=True,
+        robokassa_live_password3="test-password-three",
     )
     assert configured.payments_provider == "robokassa"
 
@@ -141,9 +170,9 @@ def test_live_payment_providers_reject_non_official_api_endpoints() -> None:
         "payments_mode": "live",
         "payments_provider": "robokassa",
         "robokassa_merchant_login": "merchant",
-        "robokassa_password1": "test-password-one",
-        "robokassa_password2": "test-password-two",
-        "robokassa_password3": "test-password-three",
+        "robokassa_live_password1": "test-password-one",
+        "robokassa_live_password2": "test-password-two",
+        "robokassa_live_password3": "test-password-three",
         "robokassa_payment_url": "https://auth.robokassa.ru/Merchant/Index.aspx",
         "payments_live_confirmed": True,
         "payments_legal_approved": True,
@@ -151,6 +180,7 @@ def test_live_payment_providers_reject_non_official_api_endpoints() -> None:
         "payments_terms_version": "offer-2026-07-22",
         "payments_seller_status": "self_employed",
         "payments_fiscalization_mode": "robokassa",
+        "payments_robocheki_smz_confirmed": True,
     }
     with pytest.raises(ValidationError, match="official ROBOKASSA_REFUND_URL"):
         Settings(
@@ -185,9 +215,9 @@ def test_robokassa_company_receipts_fail_closed_until_vat_contract_exists() -> N
             payments_mode="live",
             payments_provider="robokassa",
             robokassa_merchant_login="merchant",
-            robokassa_password1="test-password-one",
-            robokassa_password2="test-password-two",
-            robokassa_password3="test-password-three",
+            robokassa_live_password1="test-password-one",
+            robokassa_live_password2="test-password-two",
+            robokassa_live_password3="test-password-three",
             robokassa_payment_url="https://auth.robokassa.ru/Merchant/Index.aspx",
             payments_live_confirmed=True,
             payments_legal_approved=True,

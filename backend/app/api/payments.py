@@ -7,11 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import get_db
-from app.models import PaymentOrder, User
+from app.models import Entitlement, PaymentOrder, PaymentRefund, User
 from app.providers.payments import PaymentProviderError, WebhookAuthenticationError
 from app.schemas import (
     DemoPaymentCompleteRequest,
+    PaymentCatalogOut,
     PaymentCreateRequest,
+    PaymentHistoryOut,
+    PaymentRefundHistoryOut,
     PaymentRefundRequest,
     PaymentRefundResponse,
     PaymentResponse,
@@ -24,7 +27,7 @@ from app.services.payments import (
     create_full_refund,
     create_payment_order,
     get_payment_provider,
-    get_product,
+    order_product,
     payment_catalog,
     process_webhook,
 )
@@ -34,7 +37,7 @@ idempotency_key_pattern = re.compile(r"^[A-Za-z0-9._:-]{8,64}$")
 
 
 def _order_response(order: PaymentOrder) -> PaymentResponse:
-    product = get_product(order.product_code)
+    product = order_product(order)
     return PaymentResponse(
         order_id=order.public_id,
         product_code=order.product_code,
@@ -60,9 +63,71 @@ def _validate_idempotency_key(value: str) -> str:
     return value
 
 
-@router.get("/products")
+@router.get("/products", response_model=PaymentCatalogOut)
 def products():
     return payment_catalog()
+
+
+@router.get("", response_model=list[PaymentHistoryOut])
+def payment_history(
+    db: Session = Depends(get_db),
+    user: User = Depends(require_user),
+):
+    orders = db.scalars(
+        select(PaymentOrder)
+        .where(PaymentOrder.user_id == user.id)
+        .order_by(PaymentOrder.created_at.desc())
+        .limit(50)
+    ).all()
+    if not orders:
+        return []
+    order_ids = [order.id for order in orders]
+    refunds_by_order: dict[int, list[PaymentRefund]] = {order_id: [] for order_id in order_ids}
+    for refund in db.scalars(
+        select(PaymentRefund)
+        .where(PaymentRefund.payment_order_id.in_(order_ids))
+        .order_by(PaymentRefund.created_at.desc())
+    ).all():
+        refunds_by_order[refund.payment_order_id].append(refund)
+    entitlement_by_source = {
+        entitlement.source: entitlement
+        for entitlement in db.scalars(
+            select(Entitlement).where(
+                Entitlement.user_id == user.id,
+                Entitlement.source.in_([f"payment:{order.public_id}" for order in orders]),
+            )
+        ).all()
+    }
+    return [
+        PaymentHistoryOut(
+            order_id=order.public_id,
+            product_code=order.product_code,
+            product_name=order_product(order).name,
+            status=order.status,
+            amount=order.amount,
+            currency=order.currency,
+            is_test=order.is_test,
+            created_at=order.created_at,
+            paid_at=order.paid_at,
+            access_ends_at=(
+                entitlement_by_source[f"payment:{order.public_id}"].ends_at
+                if f"payment:{order.public_id}" in entitlement_by_source
+                else None
+            ),
+            refunds=[
+                PaymentRefundHistoryOut(
+                    refund_id=refund.public_id,
+                    status=refund.status,
+                    amount=refund.amount,
+                    currency=refund.currency,
+                    created_at=refund.created_at,
+                    succeeded_at=refund.succeeded_at,
+                )
+                for refund in refunds_by_order[order.id]
+            ],
+        )
+        for order in orders
+    ]
 
 
 @router.post(

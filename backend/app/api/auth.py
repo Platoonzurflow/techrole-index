@@ -17,6 +17,7 @@ from app.security import (
     has_premium,
     hash_password,
     new_csrf_token,
+    premium_expires_at,
     require_csrf,
     require_user,
     verify_password,
@@ -77,6 +78,7 @@ def _user_out(db: Session, user: User) -> UserOut:
         display_name=user.display_name,
         role=user.role,
         access_level="premium" if has_premium(db, user) else "free",
+        premium_expires_at=premium_expires_at(db, user),
     )
 
 

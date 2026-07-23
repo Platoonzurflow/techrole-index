@@ -14,6 +14,7 @@ from app.database import get_db
 from app.domain.scoring import DEFAULT_WEIGHTS
 from app.main import app
 from app.models import (
+    AnalyticsEvent,
     Base,
     Entitlement,
     PaymentEvent,
@@ -412,12 +413,12 @@ def enable_robokassa_test_payments(monkeypatch):
     monkeypatch.setattr(settings, "payments_fiscalization_mode", "disabled")
 
 
-def create_demo_order(client):
+def create_demo_order(client, idempotency_key="checkout-key-0001"):
     return client.post(
         "/api/v1/payments",
         headers={
             "X-CSRF-Token": client.cookies.get("techrole_csrf"),
-            "Idempotency-Key": "checkout-key-0001",
+            "Idempotency-Key": idempotency_key,
         },
         json={
             "product_code": "premium_30_days",
@@ -441,6 +442,32 @@ def signed_payment_webhook(provider, order, *, event_id, status, amount="1.00"):
             },
         }
     )
+
+
+def test_payment_catalog_is_public_server_priced_and_describes_receipt(monkeypatch):
+    enable_demo_payments(monkeypatch)
+    client, session = build_client()
+    response = client.get("/api/v1/payments/products")
+    assert response.status_code == 200
+    catalog = response.json()
+    assert catalog["enabled"] is True
+    assert catalog["mode"] == "test"
+    assert [product["code"] for product in catalog["products"]] == ["premium_30_days"]
+    product = catalog["products"][0]
+    assert product["amount"] == "1.00"
+    assert product["access_days"] == 30
+    assert product["fulfillment_code"] == "premium_entitlement"
+    assert product["receipt"] == {
+        "name": "Доступ к сервису TechRole Index Premium на 30 дней",
+        "payment_method": "full_payment",
+        "payment_object": "service",
+        "tax": "none",
+    }
+    assert product["refund_policy_url"].endswith("/legal/refunds")
+    assert client.get("/api/v1/payments").status_code == 401
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
 
 
 def test_demo_checkout_is_server_priced_and_idempotent(monkeypatch):
@@ -469,6 +496,23 @@ def test_demo_checkout_is_server_priced_and_idempotent(monkeypatch):
     assert purchase.json()["status"] == "pending"
     assert purchase.json()["is_test"] is True
     assert client.get("/api/v1/auth/me").json()["access_level"] == "free"
+    pending_history = client.get("/api/v1/payments")
+    assert pending_history.status_code == 200
+    assert pending_history.json()[0] == {
+        "order_id": purchase.json()["order_id"],
+        "product_code": "premium_30_days",
+        "product_name": "Premium на 30 дней",
+        "status": "pending",
+        "amount": "1.00",
+        "currency": "RUB",
+        "is_test": True,
+        "created_at": pending_history.json()[0]["created_at"],
+        "paid_at": None,
+        "access_ends_at": None,
+        "refunds": [],
+    }
+    assert "external_payment_id" not in pending_history.text
+    assert "confirmation_url" not in pending_history.text
 
     duplicate = create_demo_order(client)
     assert duplicate.status_code == 200
@@ -497,7 +541,52 @@ def test_demo_checkout_is_server_priced_and_idempotent(monkeypatch):
     )
     assert completed.status_code == 200
     assert completed.json()["status"] == "succeeded"
-    assert client.get("/api/v1/auth/me").json()["access_level"] == "premium"
+    me = client.get("/api/v1/auth/me").json()
+    assert me["access_level"] == "premium"
+    assert me["premium_expires_at"] is not None
+    succeeded_history = client.get("/api/v1/payments").json()
+    assert succeeded_history[0]["status"] == "succeeded"
+    assert succeeded_history[0]["paid_at"] is not None
+    assert succeeded_history[0]["access_ends_at"] is not None
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "premium@example.com", "password": "PremiumPassword1!"},
+    )
+    assert client.get("/api/v1/payments").json() == []
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_order_keeps_immutable_product_and_receipt_snapshot(monkeypatch):
+    enable_demo_payments(monkeypatch)
+    client, session = build_client()
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    purchase = create_demo_order(client)
+    order = session.scalar(
+        select(PaymentOrder).where(PaymentOrder.public_id == purchase.json()["order_id"])
+    )
+    assert order is not None
+    assert order.product_snapshot["amount"] == "1.00"
+    assert order.product_snapshot["receipt"]["name"] == (
+        "Доступ к сервису TechRole Index Premium на 30 дней"
+    )
+
+    monkeypatch.setattr(settings, "premium_30_days_price_rub", Decimal("999.00"))
+    status = client.get(f"/api/v1/payments/{order.public_id}")
+    assert status.status_code == 200
+    assert status.json()["amount"] == "1.00"
+    completed = client.post(
+        f"/api/v1/payments/{order.public_id}/demo/complete",
+        headers={"X-CSRF-Token": client.cookies.get("techrole_csrf")},
+        json={"outcome": "succeeded"},
+    )
+    assert completed.status_code == 200
+    assert completed.json()["amount"] == "1.00"
     client.close()
     session.close()
     app.dependency_overrides.clear()
@@ -756,6 +845,67 @@ def test_admin_full_refund_is_idempotent_and_revokes_payment_access(monkeypatch)
     app.dependency_overrides.clear()
 
 
+def test_refund_of_an_earlier_extension_removes_exactly_its_access_days(monkeypatch):
+    enable_demo_payments(monkeypatch)
+    client, session = build_client()
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    first = create_demo_order(client, "checkout-extension-0001")
+    second = create_demo_order(client, "checkout-extension-0002")
+    for purchase in (first, second):
+        completed = client.post(
+            f"/api/v1/payments/{purchase.json()['order_id']}/demo/complete",
+            headers={"X-CSRF-Token": client.cookies.get("techrole_csrf")},
+            json={"outcome": "succeeded"},
+        )
+        assert completed.status_code == 200
+
+    entitlements = session.scalars(
+        select(Entitlement)
+        .where(Entitlement.source.like("payment:%"))
+        .order_by(Entitlement.ends_at)
+    ).all()
+    assert len(entitlements) == 2
+    assert entitlements[0].ends_at is not None
+    assert entitlements[1].starts_at == entitlements[0].ends_at
+    assert entitlements[1].ends_at is not None
+    expiry_before = entitlements[1].ends_at
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPassword1!"},
+    )
+    refunded = client.post(
+        f"/api/v1/payments/{first.json()['order_id']}/refund",
+        headers={
+            "X-CSRF-Token": client.cookies.get("techrole_csrf"),
+            "Idempotency-Key": "refund-extension-0001",
+        },
+        json={"reason": "customer_request"},
+    )
+    assert refunded.status_code == 200
+    assert refunded.json()["status"] == "succeeded"
+
+    session.refresh(entitlements[0])
+    session.refresh(entitlements[1])
+    assert entitlements[0].revoked_at is not None
+    assert entitlements[1].ends_at == expiry_before - timedelta(days=30)
+    assert entitlements[1].starts_at == entitlements[0].starts_at
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    me = client.get("/api/v1/auth/me").json()
+    assert me["access_level"] == "premium"
+    assert datetime.fromisoformat(me["premium_expires_at"]) == entitlements[1].ends_at
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
 def test_payment_readiness_is_admin_only_and_contains_no_secrets(monkeypatch):
     client, session = build_client()
     assert client.get("/api/v1/admin/payment-readiness").status_code == 401
@@ -786,6 +936,94 @@ def test_payment_readiness_is_admin_only_and_contains_no_secrets(monkeypatch):
     assert response.status_code == 200
     assert response.json()["provider"] == "robokassa"
     assert not any(value in serialized for value in secret_values.values())
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_privacy_first_analytics_counts_humans_and_declared_crawlers(monkeypatch):
+    monkeypatch.setattr(settings, "analytics_enabled", True)
+    monkeypatch.setattr(settings, "analytics_ingest_key", "ingest-key-with-at-least-thirty-two-chars")
+    monkeypatch.setattr(settings, "analytics_hash_key", "hash-key-with-at-least-thirty-two-characters")
+    client, session = build_client()
+    headers = {
+        "Origin": settings.frontend_origin,
+        "User-Agent": "Mozilla/5.0 Test Browser",
+    }
+    visitor = "visitor_identifier_000000000001"
+
+    for path in ("/", "/professions"):
+        response = client.post(
+            "/api/v1/analytics/events",
+            headers=headers,
+            json={"visitor_id": visitor, "event_type": "pageview", "path": path},
+        )
+        assert response.status_code == 202
+    assert client.post(
+        "/api/v1/analytics/events",
+        headers=headers,
+        json={
+            "visitor_id": visitor,
+            "event_type": "click",
+            "path": "/",
+            "target_path": "/professions#catalog",
+        },
+    ).status_code == 202
+    assert client.post(
+        "/api/v1/analytics/events",
+        headers=headers,
+        json={
+            "visitor_id": visitor,
+            "event_type": "citation_copy",
+            "path": "/professions/role-0",
+            "referrer_host": "chatgpt.com",
+        },
+    ).status_code == 202
+    private = client.post(
+        "/api/v1/analytics/events",
+        headers=headers,
+        json={"visitor_id": visitor, "event_type": "pageview", "path": "/account"},
+    )
+    assert private.json()["status"] == "ignored_private_or_invalid"
+
+    assert client.post(
+        "/api/v1/analytics/crawler",
+        headers={"X-Analytics-Ingest-Key": "wrong-key"},
+        json={"crawler_name": "OAI-SearchBot", "category": "ai_crawler", "path": "/answers"},
+    ).status_code == 401
+    crawler = client.post(
+        "/api/v1/analytics/crawler",
+        headers={"X-Analytics-Ingest-Key": settings.analytics_ingest_key},
+        json={"crawler_name": "OAI-SearchBot", "category": "ai_crawler", "path": "/answers"},
+    )
+    assert crawler.status_code == 202
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPassword1!"},
+    )
+    excluded = client.post(
+        "/api/v1/analytics/events",
+        headers=headers,
+        json={
+            "visitor_id": "owner_identifier_0000000000001",
+            "event_type": "pageview",
+            "path": "/",
+        },
+    )
+    assert excluded.json()["status"] == "excluded_owner"
+    report = client.get("/api/v1/admin/analytics?days=7")
+    assert report.status_code == 200
+    payload = report.json()
+    assert payload["totals"]["unique_humans"] == 1
+    assert payload["totals"]["pageviews"] == 2
+    assert payload["totals"]["clicks"] == 1
+    assert payload["totals"]["citation_copies"] == 1
+    assert payload["totals"]["ai_crawler_requests"] == 1
+    assert payload["click_targets"][0] == {"label": "/professions#catalog", "count": 1}
+    assert payload["crawlers"][0] == {"label": "OAI-SearchBot", "count": 1}
+    assert "visitor_identifier" not in report.text
+    assert all(event.visitor_hash != visitor for event in session.scalars(select(AnalyticsEvent)))
     client.close()
     session.close()
     app.dependency_overrides.clear()

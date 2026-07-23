@@ -56,6 +56,14 @@ describe("Croissant metadata", () => {
     expect(metadata.isLiveDataset).toBe(true);
     expect(metadata.temporalCoverage).toBe("2026-07-20/2026-07-20");
     expect(metadata.description).toContain("not the number of simultaneously active vacancies");
+    expect(metadata).not.toHaveProperty("sameAs");
+    expect(metadata.subjectOf.map((item) => item.url)).toEqual(expect.arrayContaining([
+      "https://techrole.example/open-data-daily.json",
+      "https://techrole.example/open-data-daily.csv-metadata.json",
+      "https://techrole.example/open-data-daily.schema.json",
+      "https://techrole.example/datapackage.json",
+    ]));
+    expect(metadata.distribution[0]).not.toHaveProperty("sameAs");
     expect(metadata.distribution[0]).not.toHaveProperty("sha256");
     expect(metadata.distribution[0].contentSize).toBe(
       `${new TextEncoder().encode(csvBody).byteLength} B`,

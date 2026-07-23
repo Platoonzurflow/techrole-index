@@ -1,10 +1,24 @@
-import { safeApi } from "@/lib/api";
+import { api } from "@/lib/api";
+import { conditionalResponse } from "@/lib/conditional-response";
 import { buildOpenDataCsv, type OpenDataCsvItem } from "@/lib/open-data-csv";
 
-export async function GET() {
+export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
-  const items = await safeApi<OpenDataCsvItem[]>("/open-data/publications", []);
-  return new Response(buildOpenDataCsv(items, siteUrl), {
+  let items: OpenDataCsvItem[];
+  try {
+    items = await api<OpenDataCsvItem[]>("/open-data/publications");
+  } catch {
+    return new Response("open data unavailable\n", {
+      status: 503,
+      headers: { "Cache-Control": "no-store", "Retry-After": "60" },
+    });
+  }
+  const lastModified = items
+    .map((item) => item.last_ingested_at)
+    .filter((value): value is string => Boolean(value))
+    .sort()
+    .at(-1);
+  return conditionalResponse(request, buildOpenDataCsv(items, siteUrl), {
     headers: {
       "Access-Control-Allow-Origin": "*",
       "Cache-Control": "public, max-age=1800, stale-while-revalidate=86400",
@@ -15,5 +29,5 @@ export async function GET() {
       "X-Content-Type-Options": "nosniff",
       "X-Robots-Tag": "index, follow",
     },
-  });
+  }, lastModified);
 }

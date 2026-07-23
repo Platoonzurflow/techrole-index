@@ -95,6 +95,22 @@ def has_premium(db: Session, user: User | None) -> bool:
     return entitlement is not None
 
 
+def premium_expires_at(db: Session, user: User | None) -> datetime | None:
+    """Return the effective end of active Premium access without exposing entitlement rows."""
+    if user is None or user.role == "admin" or not has_premium(db, user):
+        return None
+    ends_at = db.scalars(
+        select(Entitlement.ends_at).where(
+            Entitlement.user_id == user.id,
+            Entitlement.code == "premium",
+            Entitlement.revoked_at.is_(None),
+        )
+    ).all()
+    if not ends_at or any(value is None for value in ends_at):
+        return None
+    return max(value for value in ends_at if value is not None)
+
+
 def require_premium(db: Session = Depends(get_db), user: User = Depends(require_user)) -> User:
     if not has_premium(db, user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Доступно в Premium")

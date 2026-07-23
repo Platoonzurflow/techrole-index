@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Footer } from "@/components/Footer";
 import { Header } from "@/components/Header";
 import { SupportButton } from "@/components/SupportButton";
+import { AnalyticsConsent } from "@/components/AnalyticsConsent";
 import "./globals.css";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="alternate" type="text/plain" href="/llms-full.txt" title="LLM full public context" />
         <link rel="alternate" type="application/json" href="/ai-index.json" title="AI entity index" />
         <link rel="alternate" type="application/json" href="/insights.json" title="Editorial insights index" />
+        <link rel="alternate" type="application/json" href="/answers.json" title="Answer-first market slices" />
         <link rel="alternate" type="application/ld+json" href="/open-data.json" title="Official open-data catalog" />
         <link rel="alternate" type="application/json" href="/open-data-daily.json" title="Observed publication daily data" />
         <link rel="alternate" type="text/csv" href="/open-data-daily.csv" title="Observed publication daily CSV" />
@@ -95,6 +97,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <main id="main">{children}</main>
         <Footer />
         <SupportButton />
+        <AnalyticsConsent />
       </body>
     </html>
   );

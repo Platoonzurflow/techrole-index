@@ -9,6 +9,11 @@ const representativeRoutes = [
   "/open-data-daily",
   "/citation",
   "/support",
+  "/answers",
+  "/pricing",
+  "/account",
+  "/dashboard",
+  "/alerts",
 ];
 
 async function openPublicPage(page: Page, route: string) {

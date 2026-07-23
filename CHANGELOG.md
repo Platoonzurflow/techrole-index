@@ -4,6 +4,12 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 
 ## [Unreleased]
 
+- Added answer-first `/answers` and `/answers.json` resources with stable citation fragments, visible provenance, period, sample, scope and tax caveats, plus strict `503` behavior when current data cannot be loaded.
+- Added conditional `ETag`/`Last-Modified` support across the public AI/data corpus and aligned robots, sitemap, RSS, JSON-LD, Croissant, DCAT, CSVW and citation links with visible content.
+- Added a consent-based, privacy-first analytics pipeline and admin dashboard for unique consenting browsers, page views, internal clicks, citation actions, AI referrals and declared crawler traffic; administrators and automation are excluded.
+- Added a server-owned product catalog, immutable per-order snapshots, safe payment history, stacked Premium entitlements and refund-aware entitlement correction.
+- Split Robokassa test/live credentials, added a fail-closed owner confirmation gate for «Робочеки СМЗ», and retained test mode until the fiscal setup and owner-operated live control payment are verified.
+- Refined guest, free and Premium states on account, dashboard, alerts and pricing pages, including mobile, dark-mode, accessibility and payment-flow regression coverage.
 - Added a third, provenance-rich salary benchmark layer for all 50 professions using Habr Career H1 2026 (`n=45,226`) plus explicitly labeled grade references; exact, related, technology and category scopes never overwrite vacancy metrics.
 - Expanded exact salary coverage from 29 to 36 professions with dated public SEO medians from filtered Habr Career calculator pages; account-gated values are not extracted and unknown sample/tax fields remain explicit.
 - Added the exact public manual-testing median and an opt-in Dagster audit that detects metadata drift without auto-updating snapshots or reading account-gated data; coverage is now 37 exact, 11 related and 2 category-only roles.

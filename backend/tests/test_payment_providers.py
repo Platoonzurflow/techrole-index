@@ -11,9 +11,17 @@ import pytest
 
 from app.providers.payments import (
     PaymentProviderError,
+    ReceiptItem,
     RobokassaPaymentProvider,
     WebhookAuthenticationError,
     YooKassaPaymentProvider,
+)
+
+SERVICE_RECEIPT = ReceiptItem(
+    name="Premium на 30 дней",
+    payment_method="full_payment",
+    payment_object="service",
+    tax="none",
 )
 
 
@@ -63,6 +71,7 @@ def test_yookassa_create_payment_uses_server_values_and_idempotency():
                 amount=Decimal("1.00"),
                 currency="RUB",
                 description="Premium на 30 дней",
+                receipt_item=SERVICE_RECEIPT,
                 customer_email="buyer@example.test",
                 return_url="https://example.test/payments/return?order_id=order-1",
                 idempotency_key="server-order-1",
@@ -107,6 +116,7 @@ def test_yookassa_receipt_is_built_from_server_product_and_user_email():
                 amount=Decimal("990.00"),
                 currency="RUB",
                 description="Premium на 30 дней",
+                receipt_item=SERVICE_RECEIPT,
                 customer_email="buyer@example.test",
                 return_url="https://example.test/payments/return?order_id=order-receipt",
                 idempotency_key="server-order-receipt",
@@ -229,6 +239,7 @@ def test_robokassa_create_payment_signs_only_server_values():
             amount=Decimal("990.00"),
             currency="RUB",
             description="Premium на 30 дней",
+            receipt_item=SERVICE_RECEIPT,
             customer_email="buyer@example.test",
             return_url="https://example.test/payments/return?order_id=order-42",
             idempotency_key="server-order-42",
@@ -269,6 +280,7 @@ def test_robokassa_receipt_is_server_built_and_included_in_signature():
             amount=Decimal("1200.00"),
             currency="RUB",
             description="Premium на 30 дней",
+            receipt_item=SERVICE_RECEIPT,
             customer_email="buyer@example.test",
             return_url="https://example.test/payments/return?order_id=order-receipt",
             idempotency_key="server-order-receipt",
@@ -361,6 +373,7 @@ def test_robokassa_live_refund_uses_op_state_and_signed_jwt():
                 amount=Decimal("990.00"),
                 currency="RUB",
                 description="Возврат Premium",
+                receipt_item=SERVICE_RECEIPT,
                 idempotency_key="refund-local-id",
             )
         finally:
@@ -380,7 +393,7 @@ def test_robokassa_live_refund_uses_op_state_and_signed_jwt():
     padded = payload_segment + "=" * (-len(payload_segment) % 4)
     payload = json.loads(base64.urlsafe_b64decode(padded))
     assert payload["OpKey"] == "operation-key"
-    assert payload["InvoiceItems"][0]["Name"] == "Возврат Premium"
+    assert payload["InvoiceItems"][0]["Name"] == SERVICE_RECEIPT.name
     assert payload["InvoiceItems"][0]["Tax"] == "none"
     assert refund.external_id == "refund-request-1"
     assert refund.status == "pending"
@@ -394,6 +407,7 @@ def test_robokassa_test_refund_fails_closed_because_op_state_is_live_only():
             amount=Decimal("990.00"),
             currency="RUB",
             description="Возврат",
+            receipt_item=SERVICE_RECEIPT,
             idempotency_key="refund-local-id",
         )
 

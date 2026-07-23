@@ -707,3 +707,31 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .candidate-chair, .candidate-hood { opacity: 0 !important; }
   .candidate-shirt { opacity: 1 !important; transform: none !important; }
 }
+
+.analytics-consent {
+  position: fixed;
+  z-index: 70;
+  right: max(1rem, env(safe-area-inset-right));
+  bottom: max(1rem, env(safe-area-inset-bottom));
+  left: max(1rem, env(safe-area-inset-left));
+  display: flex;
+  max-width: 64rem;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  background: rgb(var(--panel-rgb) / .97);
+  padding: 1rem;
+  box-shadow: 0 18px 60px rgb(var(--shadow-rgb) / .24);
+  backdrop-filter: blur(16px);
+}
+.analytics-consent strong { display: block; }
+.analytics-consent p { margin-top: .35rem; color: var(--muted); font-size: .82rem; line-height: 1.45; }
+.analytics-consent a { text-decoration: underline; }
+
+@media (max-width: 767px) {
+  .analytics-consent { align-items: stretch; flex-direction: column; }
+  .analytics-consent .button-primary, .analytics-consent .button-secondary { flex: 1; }
+}

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { Crown } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { browserCsrf } from "@/lib/browser";
@@ -44,7 +43,6 @@ export function AccountActions({ premium, payments }: { premium: boolean; paymen
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [accepted, setAccepted] = useState(false);
-  const product = payments.products[0];
 
   const logout = async () => {
     setBusy(true);
@@ -58,11 +56,11 @@ export function AccountActions({ premium, payments }: { premium: boolean; paymen
       setBusy(false);
       return;
     }
-    router.push("/");
-    router.refresh();
+    window.location.assign("/");
   };
 
-  const startPayment = async () => {
+  const startPayment = async (productCode: string) => {
+    const product = payments.products.find((item) => item.code === productCode);
     if (!product) return;
     setBusy(true);
     setMessage("Создаём защищённый платёж…");
@@ -103,22 +101,29 @@ export function AccountActions({ premium, payments }: { premium: boolean; paymen
 
   return (
     <div className="mt-6 flex flex-wrap gap-3">
-      {premium ? (
-        <div className="flex w-full items-start gap-3 rounded-xl border border-amber-500/30 bg-amber-400/10 p-4 text-sm">
-          <Crown className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-300" size={18} aria-hidden="true" />
-          <span><strong className="block">Premium уже подключён</strong><span className="mt-1 block text-muted">Повторная покупка не требуется.</span></span>
-        </div>
-      ) : null}
-      {!premium && payments.enabled && product ? <>
+      {payments.enabled && payments.products.length > 0 ? <>
         <label className="flex w-full items-start gap-3 text-sm text-muted">
-          <input type="checkbox" className="mt-1" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
+          <input type="checkbox" className="mt-1 size-4 shrink-0" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
           <span>{payments.mode === "test" ? "Я понимаю, что это тест без списания, и ознакомился(лась) с " : "Я принимаю "}<Link className="underline" href="/legal/offer">офертой</Link>, <Link className="underline" href="/legal/refunds">правилами возврата</Link> и <Link className="underline" href="/legal/privacy">политикой обработки данных</Link>.</span>
         </label>
-        <button type="button" className="button-primary" disabled={busy || !accepted} onClick={startPayment}>
-          {payments.mode === "test" ? `Тестовая оплата ${formatPrice(product.amount, product.currency)}` : `Оплатить ${formatPrice(product.amount, product.currency)}`}
-        </button>
+        <div className="grid w-full gap-3">
+          {payments.products.map((product) => (
+            <div key={product.code} className="rounded-xl border border-line bg-muted/5 p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <strong className="block">{product.name}</strong>
+                  <span className="mt-1 block text-sm leading-6 text-muted">{product.service_result}</span>
+                </div>
+                <button type="button" className="button-primary shrink-0" disabled={busy || !accepted} onClick={() => startPayment(product.code)}>
+                  {payments.mode === "test" ? `Тестовая оплата ${formatPrice(product.amount, product.currency)}` : `${premium ? "Продлить" : "Оплатить"} ${formatPrice(product.amount, product.currency)}`}
+                </button>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-muted">В чеке: {product.receipt.name}. <Link className="underline" href={product.refund_policy_url}>Условия возврата</Link>.</p>
+            </div>
+          ))}
+        </div>
       </> : null}
-      {!premium && !payments.enabled ? <p className="w-full text-sm text-muted">Приём платежей пока выключен. Деньги и платёжные данные не запрашиваются.</p> : null}
+      {!payments.enabled ? <p className="w-full text-sm text-muted">Приём платежей пока выключен. Деньги и платёжные данные не запрашиваются.</p> : null}
       <button type="button" className="button-secondary w-full" disabled={busy} onClick={logout}>Выйти из аккаунта</button>
       {payments.enabled && payments.mode === "test" ? <p className="w-full text-xs text-muted">Тестовый режим: реальные деньги не списываются.</p> : null}
       {message ? <p className="w-full text-sm text-muted" role="status">{message}</p> : null}

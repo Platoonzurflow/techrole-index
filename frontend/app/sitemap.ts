@@ -17,7 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     : status.last_metric_date
       ? new Date(`${status.last_metric_date}T00:00:00Z`)
       : undefined;
-  const staticRoutes = ["", "/professions", "/top", "/research", "/insights", "/reports/weekly", "/data-status", "/salary-benchmarks", "/open-data-daily", "/pricing", "/mentorship", "/support", "/methodology", "/glossary", "/sources", "/citation", "/about"];
+  const staticRoutes = ["", "/professions", "/top", "/answers", "/research", "/insights", "/reports/weekly", "/data-status", "/salary-benchmarks", "/open-data-daily", "/pricing", "/mentorship", "/support", "/methodology", "/glossary", "/sources", "/citation", "/about"];
 
   return [
     ...staticRoutes.map((path) => ({

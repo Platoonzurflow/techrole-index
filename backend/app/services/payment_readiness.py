@@ -31,10 +31,15 @@ def _is_public_https_origin(value: str) -> bool:
 
 def payment_readiness(config: Settings) -> PaymentReadinessOut:
     provider_selected = config.payments_provider == "robokassa"
-    provider_credentials = bool(
+    test_credentials = bool(
         config.robokassa_merchant_login
-        and config.robokassa_password1
-        and config.robokassa_password2
+        and (config.robokassa_test_password1 or config.robokassa_password1)
+        and (config.robokassa_test_password2 or config.robokassa_password2)
+    )
+    live_credentials = bool(
+        config.robokassa_merchant_login
+        and config.robokassa_live_password1
+        and config.robokassa_live_password2
     )
     public_https = _is_public_https_origin(config.public_base_url)
     origins_match = (
@@ -63,7 +68,7 @@ def payment_readiness(config: Settings) -> PaymentReadinessOut:
         _check(
             "provider_credentials",
             "Заданы MerchantLogin и тестовые Пароли №1/№2",
-            provider_credentials,
+            test_credentials,
         ),
         _check(
             "seller_status",
@@ -81,12 +86,12 @@ def payment_readiness(config: Settings) -> PaymentReadinessOut:
         _check(
             "provider_credentials",
             "Заданы боевые Пароли №1/№2",
-            provider_credentials,
+            live_credentials,
         ),
         _check(
             "refund_credentials",
             "Задан Пароль №3 для возвратов",
-            bool(config.robokassa_password3),
+            bool(config.robokassa_live_password3),
         ),
         _check(
             "seller_status",
@@ -95,8 +100,13 @@ def payment_readiness(config: Settings) -> PaymentReadinessOut:
         ),
         _check(
             "fiscalization",
-            "Подключены «Робочеки СМЗ»",
+            "Выбран режим «Робочеки СМЗ»",
             config.payments_fiscalization_mode == "robokassa",
+        ),
+        _check(
+            "robocheki_smz_confirmed",
+            "Владелец повторно проверил активный статус «Робочеки СМЗ»",
+            config.payments_robocheki_smz_confirmed,
         ),
         _check("legal_approved", "Оферта и правила проверены", config.payments_legal_approved),
         _check(

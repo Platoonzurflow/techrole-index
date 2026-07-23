@@ -240,15 +240,25 @@ export interface User {
   display_name: string;
   role: "user" | "admin";
   access_level: "free" | "premium";
+  premium_expires_at?: string;
 }
 
 export interface PaymentProduct {
-  code: "premium_30_days";
+  code: string;
   name: string;
   description: string;
   amount: string;
   currency: "RUB";
   access_days: number;
+  service_result: string;
+  fulfillment_code: string;
+  receipt: {
+    name: string;
+    payment_method: string;
+    payment_object: string;
+    tax: string;
+  };
+  refund_policy_url: string;
 }
 
 export interface PaymentCatalog {
@@ -261,11 +271,67 @@ export interface PaymentCatalog {
 
 export interface PaymentOrder {
   order_id: string;
-  product_code: "premium_30_days";
+  product_code: string;
   product_name: string;
   status: "creating" | "pending" | "waiting_for_capture" | "succeeded" | "canceled" | "failed" | "refunded";
   amount: string;
   currency: "RUB";
   confirmation_url?: string;
   is_test: boolean;
+}
+
+export interface PaymentRefundHistory {
+  refund_id: string;
+  status: string;
+  amount: string;
+  currency: "RUB";
+  created_at: string;
+  succeeded_at?: string;
+}
+
+export interface PaymentHistoryItem {
+  order_id: string;
+  product_code: string;
+  product_name: string;
+  status: string;
+  amount: string;
+  currency: "RUB";
+  is_test: boolean;
+  created_at: string;
+  paid_at?: string;
+  access_ends_at?: string;
+  refunds: PaymentRefundHistory[];
+}
+
+export interface AnalyticsOverview {
+  date_from: string;
+  date_to: string;
+  days: number;
+  totals: {
+    unique_humans: number;
+    pageviews: number;
+    clicks: number;
+    citation_copies: number;
+    ai_referrals: number;
+    ai_crawler_requests: number;
+    search_crawler_requests: number;
+  };
+  daily: Array<{
+    date: string;
+    unique_humans: number;
+    pageviews: number;
+    clicks: number;
+    citation_copies: number;
+    ai_crawler_requests: number;
+    search_crawler_requests: number;
+  }>;
+  top_pages: Array<{ label: string; count: number }>;
+  click_targets: Array<{ label: string; count: number }>;
+  referrers: Array<{ label: string; count: number }>;
+  crawlers: Array<{ label: string; count: number }>;
+  measurement_notes: {
+    unique_humans: string;
+    citations: string;
+    crawlers: string;
+  };
 }

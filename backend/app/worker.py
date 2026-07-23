@@ -29,6 +29,10 @@ celery_app.conf.update(
             "task": "app.worker.reconcile_payment_refunds",
             "schedule": 60 * 5,
         },
+        "purge-expired-analytics": {
+            "task": "app.worker.purge_expired_analytics",
+            "schedule": 60 * 60 * 24,
+        },
     },
 )
 
@@ -231,3 +235,20 @@ def reconcile_payment_refunds() -> dict:
 
     with SessionLocal() as db:
         return asyncio.run(reconcile_pending_refunds(db))
+
+
+@celery_app.task(name="app.worker.purge_expired_analytics")
+def purge_expired_analytics() -> dict:
+    from datetime import datetime, timedelta, timezone
+
+    from sqlalchemy import delete
+
+    from app.database import SessionLocal
+    from app.models import AnalyticsEvent
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=settings.analytics_retention_days)
+    with SessionLocal() as db:
+        result = db.execute(delete(AnalyticsEvent).where(AnalyticsEvent.occurred_at < cutoff))
+        db.commit()
+        removed = getattr(result, "rowcount", 0) or 0
+    return {"status": "ok", "removed": removed, "retention_days": settings.analytics_retention_days}

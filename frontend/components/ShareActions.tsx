@@ -19,7 +19,7 @@ export function ShareActions({ url, title, citation }: { url: string; title: str
     await copy(url, "url");
   };
   return <div className="flex flex-wrap gap-2" aria-label="Поделиться страницей">
-    <button type="button" className="button-secondary" onClick={share}><Share2 size={16} /> <span className="ml-2">{copied === "url" ? "Ссылка скопирована" : "Поделиться"}</span></button>
-    <button type="button" className="button-secondary" onClick={() => copy(citation, "citation")}><span>{copied === "citation" ? <Check size={16} /> : <Copy size={16} />}</span><span className="ml-2">{copied === "citation" ? "Цитата скопирована" : "Скопировать цитату"}</span></button>
+    <button type="button" className="button-secondary" data-analytics-event="share" onClick={share}><Share2 size={16} /> <span className="ml-2">{copied === "url" ? "Ссылка скопирована" : "Поделиться"}</span></button>
+    <button type="button" className="button-secondary" data-analytics-event="citation_copy" onClick={() => copy(citation, "citation")}><span>{copied === "citation" ? <Check size={16} /> : <Copy size={16} />}</span><span className="ml-2">{copied === "citation" ? "Цитата скопирована" : "Скопировать цитату"}</span></button>
   </div>;
 }

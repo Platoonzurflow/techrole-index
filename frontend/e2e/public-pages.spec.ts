@@ -223,6 +223,31 @@ test("premium tariff shows the previous price", async ({ page }) => {
   await expect(page.locator(".premium-old-price")).toBeVisible();
 });
 
+test("answer-first page exposes stable, sourced citation fragments and JSON", async ({ page, request }) => {
+  const response = await request.get("/answers.json");
+  expect(response.status()).toBe(200);
+  expect(response.headers().etag).toMatch(/^"sha256-[a-f0-9]{64}"$/);
+  expect(response.headers()["last-modified"]).toBeTruthy();
+  const answers = await response.json();
+  expect(answers.current_market_claim).toBe(false);
+  expect(answers.top_professions.length).toBeGreaterThan(0);
+  expect(answers.salary_by_level.length).toBeGreaterThan(0);
+  expect(answers.methodology_url).toContain("/methodology");
+
+  const notModified = await request.get("/answers.json", {
+    headers: { "If-None-Match": response.headers().etag },
+  });
+  expect(notModified.status()).toBe(304);
+
+  await page.goto("/answers#salary-by-level");
+  await expect(page.getByRole("heading", { level: 1, name: /Короткие ответы/ })).toBeVisible();
+  await expect(page.locator("#salary-by-level")).toBeVisible();
+  await expect(page.locator("#top-professions")).toBeVisible();
+  await expect(page.locator("#regions")).toBeVisible();
+  await expect(page.locator("#dynamics")).toBeVisible();
+  await expect(page.locator("#limitations")).toContainText("не равны одновременно активным вакансиям");
+});
+
 test("homepage search and candidate stay aligned in the dark theme", async ({ page }) => {
   await page.setViewportSize({ width: 1462, height: 822 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
@@ -373,7 +398,7 @@ test("salary benchmark dataset is complete, downloadable, and limitation-labeled
 test("public navigation and machine-readable endpoints have no broken links", async ({ page, request }) => {
   test.setTimeout(300_000);
   const publicRoutes = [
-    "/", "/professions", "/top", "/pricing", "/mentorship", "/support",
+    "/", "/professions", "/top", "/pricing", "/mentorship", "/support", "/answers", "/answers.json",
     "/methodology", "/glossary", "/sources", "/about", "/status", "/compare", "/reports/weekly",
     "/login", "/register", "/legal/offer", "/legal/refunds", "/legal/privacy", "/legal/consent", "/payments/error", "/payments/pending", "/llms.txt", "/.well-known/llms.txt", "/.well-known/linkset.json", "/.well-known/security.txt", "/llms-full.txt",
     "/ai-index.json", "/open-data.json", "/feed.xml", "/sitemap.xml", "/robots.txt",
@@ -404,6 +429,15 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(aiIndex.salary_benchmarks_page_url).toContain("/salary-benchmarks");
   expect(aiIndex.salary_benchmarks_json_url).toContain("/salary-benchmarks.json");
   expect(aiIndex.salary_benchmarks_csv_url).toContain("/salary-benchmarks.csv");
+  expect(aiIndex.answer_first_page_url).toContain("/answers");
+  expect(aiIndex.answer_first_data_url).toContain("/answers.json");
+
+  const aiIndexResponse = await request.get("/ai-index.json");
+  expect(aiIndexResponse.headers().etag).toMatch(/^"sha256-[a-f0-9]{64}"$/);
+  const aiIndexNotModified = await request.get("/ai-index.json", {
+    headers: { "If-None-Match": aiIndexResponse.headers().etag },
+  });
+  expect(aiIndexNotModified.status()).toBe(304);
 
   const openData = await (await request.get("/open-data.json")).json();
   expect(openData.dataset).toHaveLength(50);

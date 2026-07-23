@@ -359,6 +359,7 @@ class PaymentOrder(Base, TimestampMixin):
     amount: Mapped[Decimal] = mapped_column(Numeric(14, 2))
     currency: Mapped[str] = mapped_column(String(3))
     description: Mapped[str] = mapped_column(String(180))
+    product_snapshot: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict)
     terms_version: Mapped[str] = mapped_column(String(80))
     terms_accepted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     confirmation_url: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -420,6 +421,29 @@ class PaymentEvent(Base, TimestampMixin):
         UniqueConstraint(
             "provider", "external_event_id", name="uq_payment_event_provider_external"
         ),
+    )
+
+
+class AnalyticsEvent(Base):
+    __tablename__ = "analytics_events"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    event_date: Mapped[date] = mapped_column(Date, index=True)
+    occurred_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utcnow, index=True
+    )
+    visitor_hash: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    user_id: Mapped[int | None] = mapped_column(
+        ForeignKey("users.id"), nullable=True, index=True
+    )
+    category: Mapped[str] = mapped_column(String(24), index=True)
+    event_type: Mapped[str] = mapped_column(String(32), index=True)
+    path: Mapped[str] = mapped_column(String(512), index=True)
+    target_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    referrer_host: Mapped[str | None] = mapped_column(String(255), nullable=True, index=True)
+    crawler_name: Mapped[str | None] = mapped_column(String(64), nullable=True, index=True)
+    __table_args__ = (
+        Index("ix_analytics_event_date_category", "event_date", "category"),
+        Index("ix_analytics_event_date_type", "event_date", "event_type"),
     )
 
 

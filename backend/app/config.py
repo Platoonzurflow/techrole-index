@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     payments_terms_version: str = "draft-2026-07-21"
     payments_seller_status: str = "unconfirmed"
     payments_fiscalization_mode: str = "disabled"
+    payments_robocheki_smz_confirmed: bool = False
     premium_30_days_price_rub: Decimal = Field(default=Decimal("290.00"), gt=0)
     yookassa_shop_id: str = ""
     yookassa_secret_key: str = ""
@@ -44,6 +45,13 @@ class Settings(BaseSettings):
     yookassa_timeout_seconds: float = Field(default=15, ge=3, le=60)
     yookassa_vat_code: int = Field(default=0, ge=0, le=12)
     robokassa_merchant_login: str = ""
+    robokassa_test_password1: str = ""
+    robokassa_test_password2: str = ""
+    robokassa_live_password1: str = ""
+    robokassa_live_password2: str = ""
+    robokassa_live_password3: str = ""
+    # Legacy test aliases retained for local environments created before credentials
+    # were split. Live mode never falls back to these ambiguous values.
     robokassa_password1: str = ""
     robokassa_password2: str = ""
     robokassa_password3: str = ""
@@ -65,6 +73,11 @@ class Settings(BaseSettings):
     cbr_currency_timeout_seconds: float = Field(default=15, ge=3, le=60)
     salary_source_audit_enabled: bool = False
     salary_source_audit_timeout_seconds: float = Field(default=15, ge=3, le=60)
+
+    analytics_enabled: bool = False
+    analytics_ingest_key: str = ""
+    analytics_hash_key: str = ""
+    analytics_retention_days: int = Field(default=400, ge=30, le=1825)
 
     demo_free_password: str = "FreeDemo-ChangeMe1!"
     demo_premium_password: str = "PremiumDemo-ChangeMe1!"
@@ -164,15 +177,24 @@ class Settings(BaseSettings):
             raise ValueError(
                 "ROBOKASSA_HASH_ALGORITHM must match a supported shop algorithm"
             )
-        if self.payments_enabled and self.payments_provider == "robokassa" and not (
-            self.robokassa_merchant_login
-            and self.robokassa_password1
-            and self.robokassa_password2
-        ):
-            raise ValueError(
-                "Robokassa payments require ROBOKASSA_MERCHANT_LOGIN, "
-                "ROBOKASSA_PASSWORD1 and ROBOKASSA_PASSWORD2"
-            )
+        if self.payments_enabled and self.payments_provider == "robokassa":
+            if self.payments_mode == "test":
+                test_password1 = self.robokassa_test_password1 or self.robokassa_password1
+                test_password2 = self.robokassa_test_password2 or self.robokassa_password2
+                if not (self.robokassa_merchant_login and test_password1 and test_password2):
+                    raise ValueError(
+                        "Robokassa test payments require ROBOKASSA_MERCHANT_LOGIN, "
+                        "ROBOKASSA_TEST_PASSWORD1 and ROBOKASSA_TEST_PASSWORD2"
+                    )
+            elif not (
+                self.robokassa_merchant_login
+                and self.robokassa_live_password1
+                and self.robokassa_live_password2
+            ):
+                raise ValueError(
+                    "Robokassa live payments require ROBOKASSA_MERCHANT_LOGIN, "
+                    "ROBOKASSA_LIVE_PASSWORD1 and ROBOKASSA_LIVE_PASSWORD2"
+                )
         if self.payments_mode == "live":
             if not self.payments_live_confirmed:
                 raise ValueError("Live payments require PAYMENTS_LIVE_CONFIRMED=true")
@@ -202,6 +224,14 @@ class Settings(BaseSettings):
                     raise ValueError(
                         f"Self-employed live payments require {required_mode} fiscalization"
                     )
+                if (
+                    self.payments_provider == "robokassa"
+                    and not self.payments_robocheki_smz_confirmed
+                ):
+                    raise ValueError(
+                        "Self-employed Robokassa live payments require "
+                        "PAYMENTS_ROBOCHEKI_SMZ_CONFIRMED=true after an owner dashboard check"
+                    )
             if self.payments_seller_status in {"sole_proprietor", "company"} and (
                 self.payments_fiscalization_mode
                 not in {"yookassa", "robokassa", "third_party"}
@@ -215,8 +245,10 @@ class Settings(BaseSettings):
             ):
                 raise ValueError("Live receipt fiscalization requires YOOKASSA_VAT_CODE")
             if self.payments_provider == "robokassa":
-                if not self.robokassa_password3:
-                    raise ValueError("Robokassa live refunds require ROBOKASSA_PASSWORD3")
+                if not self.robokassa_live_password3:
+                    raise ValueError(
+                        "Robokassa live refunds require ROBOKASSA_LIVE_PASSWORD3"
+                    )
                 official_urls = {
                     "ROBOKASSA_PAYMENT_URL": (
                         self.robokassa_payment_url,
@@ -255,6 +287,18 @@ class Settings(BaseSettings):
             errors: list[str] = []
             if self.demo_mode:
                 errors.append("DEMO_MODE must be false")
+            if self.analytics_enabled and (
+                len(self.analytics_ingest_key) < 32 or len(self.analytics_hash_key) < 32
+            ):
+                errors.append(
+                    "ANALYTICS_ENABLED requires independent ANALYTICS_INGEST_KEY and "
+                    "ANALYTICS_HASH_KEY values of at least 32 characters"
+                )
+            if (
+                self.analytics_enabled
+                and self.analytics_ingest_key == self.analytics_hash_key
+            ):
+                errors.append("ANALYTICS_INGEST_KEY and ANALYTICS_HASH_KEY must differ")
             if len(self.app_secret_key) < 32 or self.app_secret_key in {
                 "development-only-change-me",
                 "change-me-to-a-long-random-value",

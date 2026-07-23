@@ -111,7 +111,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             unitText: "RUB в месяц, gross/net не определён",
           }))],
         measurementTechnique: "Классификация заголовков вакансий по словарю алиасов, регулярным и исключающим правилам",
-        citation: [
+        subjectOf: [
           { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },
           { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
           { "@type": "CreativeWork", name: "Источники TechRole Index", url: `${siteUrl}/sources` },
@@ -138,7 +138,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           { "@type": "PropertyValue", name: "Доля удалённой работы", unitText: "%" },
           { "@type": "PropertyValue", name: "Изменение спроса", unitText: "%" },
         ],
-        citation: [
+        subjectOf: [
           { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
           { "@type": "CreativeWork", name: "Источники TechRole Index", url: `${siteUrl}/sources` },
           { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },

@@ -19,10 +19,11 @@ def configured_robokassa(**overrides: object) -> Settings:
         "payments_terms_version": "offer-2026-07-22",
         "payments_seller_status": "self_employed",
         "payments_fiscalization_mode": "robokassa",
+        "payments_robocheki_smz_confirmed": True,
         "robokassa_merchant_login": "merchant-placeholder",
-        "robokassa_password1": "password-one-placeholder",
-        "robokassa_password2": "password-two-placeholder",
-        "robokassa_password3": "password-three-placeholder",
+        "robokassa_live_password1": "password-one-placeholder",
+        "robokassa_live_password2": "password-two-placeholder",
+        "robokassa_live_password3": "password-three-placeholder",
         "robokassa_payment_url": "https://auth.robokassa.ru/Merchant/Index.aspx",
         "public_base_url": "https://techrole.example",
         "frontend_origin": "https://techrole.example",
@@ -58,6 +59,24 @@ def test_test_readiness_accepts_test_shop_without_live_confirmation() -> None:
     )
 
     assert report.test_ready is True
+    assert report.live_ready is False
+
+
+def test_live_readiness_fails_closed_without_fresh_robocheki_confirmation() -> None:
+    report = payment_readiness(
+        configured_robokassa(
+            payments_mode="test",
+            payments_live_confirmed=False,
+            payments_robocheki_smz_confirmed=False,
+            robokassa_test_password1="test-password-one-placeholder",
+            robokassa_test_password2="test-password-two-placeholder",
+        )
+    )
+
+    check = next(
+        item for item in report.live_checks if item.code == "robocheki_smz_confirmed"
+    )
+    assert check.ready is False
     assert report.live_ready is False
 
 

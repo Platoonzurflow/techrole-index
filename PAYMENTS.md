@@ -8,7 +8,7 @@
 
 Robokassa стала основной после подтверждения НПД: её официальная страница прямо поддерживает самозанятых без ИП и бесплатную автоматическую отправку чеков через «Робочеки СМЗ». ЮKassa технически зрелее и на публичном тарифе дешевле для части карточных платежей, но с 29 декабря 2025 года не автоматизирует чеки самозанятых; их пришлось бы вручную создавать в «Мой налог».
 
-Текущий сайт использует только локальный `demo` sandbox. Реализованы два внешних адаптера: ЮKassa и Robokassa. Robokassa формирует подписанный server-side redirect, подписывает номенклатуру чека, проверяет ResultURL по Паролю №2, отвечает обязательным `OK<InvId>`, дедуплицирует повторы, поддерживает live refund API по Password3 и сверяет его состояние. Официальный test shop владельца ещё не вызывался: нет выданных владельцем тестовых параметров. Production-списания заблокированы конфигурационными guard-проверками.
+Production работает с `PAYMENTS_PROVIDER=robokassa` и `PAYMENTS_MODE=test`: официальный sandbox уже прошёл checkout, ResultURL, повтор уведомления и выдачу Premium без списания денег. Реализованы также локальный demo и резервный адаптер ЮKassa. Robokassa формирует подписанный server-side checkout, подписывает номенклатуру чека, проверяет ResultURL по Паролю №2, отвечает `OK<InvId>`, дедуплицирует повторы, поддерживает live refund API по Password3 и сверяет pending-состояние. Production-списания остаются заблокированы fail-closed guard до повторного owner-only подтверждения активного «Робочеки СМЗ» и контрольного платежа владельца.
 
 ## Сравнение официальных вариантов
 
@@ -38,7 +38,8 @@ Robokassa стала основной после подтверждения НП
 
 ## Что уже реализовано
 
-- серверный каталог одного продукта `premium_30_days`; браузер не передаёт цену;
+- расширяемый серверный registry разрешённых SKU; сейчас реально продаётся только `premium_30_days`, а браузер передаёт только product code;
+- неизменяемый snapshot названия, цены, результата услуги, entitlement, номенклатуры чека и refund policy в каждом заказе;
 - `payment_orders`, `payment_refunds`, версии принятой оферты и аудит sanitized payment events;
 - client/provider idempotency и защита от повторных webhook;
 - строгая сверка order id, payment id, суммы, валюты и test/live режима;
@@ -49,7 +50,8 @@ Robokassa стала основной после подтверждения НП
 - переход в Robokassa выполняется HTML-формой `POST`, как требует документация для платежей с `Receipt`; action ограничен официальным HTTPS-доменом провайдера;
 - канонический action формы — `https://auth.robokassa.ru/Merchant/Index.aspx`; он закреплён в runtime guard и не может быть переопределён произвольным внешним адресом в live;
 - live refund API Robokassa подписывается HS256/Password3, получает OpKey только через подписанный OpStateExt и сверяется фоновой задачей каждые пять минут; официальный OpStateExt не поддерживает тестовые операции, поэтому refund-сценарий без денег проверяется в demo и mock-контракте;
-- только серверное предоставление Premium после `succeeded`, терминальные отмены и отзыв конкретного entitlement после полного возврата;
+- только серверное предоставление Premium после `succeeded`, терминальные отмены и отзыв/пересчёт цепочки продлений после полного возврата;
+- owner-scoped история заказов/возвратов без provider id, credentials и платёжных реквизитов;
 - server-side receipt item для ЮKassa из продукта и email пользователя, когда выбран режим кассы; ставка НДС задаётся только после юридического подтверждения;
 - страницы sandbox checkout, ожидания, успеха и ошибки; статус успеха читается с сервера;
 - шаблоны оферты, возвратов, политики данных и согласий с явными незаполненными полями;
@@ -85,7 +87,7 @@ docker compose up -d backend frontend
 
 ## Тестовый магазин Robokassa — основной путь
 
-Владелец создаёт test shop и локально добавляет:
+Test shop использует отдельные тестовые credentials:
 
 ```dotenv
 PAYMENTS_ENABLED=true
@@ -96,8 +98,8 @@ PAYMENTS_LEGAL_APPROVED=false
 PAYMENTS_SELLER_STATUS=self_employed
 PAYMENTS_FISCALIZATION_MODE=disabled
 ROBOKASSA_MERCHANT_LOGIN=<test MerchantLogin>
-ROBOKASSA_PASSWORD1=<test Password #1>
-ROBOKASSA_PASSWORD2=<test Password #2>
+ROBOKASSA_TEST_PASSWORD1=<test Password #1>
+ROBOKASSA_TEST_PASSWORD2=<test Password #2>
 ROBOKASSA_HASH_ALGORITHM=sha256
 ```
 
@@ -125,18 +127,18 @@ Live-конфигурация намеренно не стартует, пока
 
 - `PAYMENTS_ENABLED=true`, `PAYMENTS_PROVIDER=robokassa`, `PAYMENTS_MODE=live`;
 - `PAYMENTS_STABLE_HTTPS_CONFIRMED=true` только после проверки постоянного домена, TLS и круглосуточного host;
-- production `ROBOKASSA_MERCHANT_LOGIN`, Password №1/№2 и Password3 только в secret store;
+- production `ROBOKASSA_MERCHANT_LOGIN`, `ROBOKASSA_LIVE_PASSWORD1`, `ROBOKASSA_LIVE_PASSWORD2` и `ROBOKASSA_LIVE_PASSWORD3` только в secret store; live никогда не использует legacy/test aliases;
 - `PAYMENTS_LIVE_CONFIRMED=true` после явного решения владельца;
 - `PAYMENTS_LEGAL_APPROVED=true` и версия оферты без префикса `draft-`;
 - подтверждён `PAYMENTS_SELLER_STATUS`;
-- для НПД выбран `PAYMENTS_FISCALIZATION_MODE=robokassa` и в кабинете активированы «Робочеки СМЗ»;
+- для НПД выбран `PAYMENTS_FISCALIZATION_MODE=robokassa`, в Robokassa и связанном приложении «Мой налог» виден активный «Робочеки СМЗ», после чего вручную установлен `PAYMENTS_ROBOCHEKI_SMZ_CONFIRMED=true`;
 - `ROBOKASSA_HASH_ALGORITHM` совпадает с техническими настройками магазина;
 - все Robokassa payment/refund URL остаются официальными значениями из `.env.example`;
 - `PUBLIC_BASE_URL` и `FRONTEND_ORIGIN` указывают на один постоянный HTTPS origin.
 
-После переключения выполнить тест минимальной суммы разрешённой провайдером, проверить платёж, чек, повтор webhook, отмену и полный возврат в кабинете провайдера и локальной БД. Только затем разрешать обычную цену.
+Перед переключением автоматически повторить sandbox, неверную подпись, подмену суммы/SKU, повтор webhook, pending, cancel, success, refund, reconciliation и entitlement. После включения live владелец самостоятельно оплачивает контрольные 290 ₽ своей картой/СБП; агент не вводит платёжные данные. Затем проверить заказ, webhook, чек «Мой налог»/Robokassa, срок Premium и поступление. До этой проверки обычный пользовательский live-трафик не открывается.
 
-Текущий реализованный продукт — разовый доступ Premium на 30 дней в рублях, без автопродления. Перед test shop владелец должен подтвердить конечную цену и что не требуется подписка; изменить это решение можно отдельно, не доверяя параметрам браузера.
+Текущий реализованный продукт — разовый доступ Premium на 30 дней за 290 ₽, без автопродления. «Личное ведение» остаётся заявкой с отдельно согласуемыми объёмом и ценой и не создаёт автоматический payment order. Добавление нового SKU требует полной server-side карточки, fulfillment и legal/receipt contract; пользовательская сумма из браузера запрещена.
 
 ## Проверка готовности без раскрытия секретов
 

@@ -25,6 +25,7 @@ from app.providers.payments import (
     PaymentProviderError,
     ProviderPayment,
     ProviderRefund,
+    ReceiptItem,
     RobokassaPaymentProvider,
     VerifiedWebhook,
     YooKassaPaymentProvider,
@@ -47,6 +48,25 @@ class Product:
     amount: Decimal
     currency: str
     access_days: int
+    service_result: str
+    fulfillment_code: str
+    entitlement_code: str
+    receipt_item: ReceiptItem
+    refund_policy_path: str
+
+
+@dataclass(frozen=True)
+class ProductDefinition:
+    name: str
+    description: str
+    amount_setting: str
+    currency: str
+    access_days: int
+    service_result: str
+    fulfillment_code: str
+    entitlement_code: str
+    receipt_item: ReceiptItem
+    refund_policy_path: str
 
 
 @dataclass(frozen=True)
@@ -55,17 +75,109 @@ class WebhookProcessResult:
     acknowledgement: str | None = None
 
 
+PRODUCT_CATALOG = {
+    "premium_30_days": ProductDefinition(
+        name="Premium на 30 дней",
+        description="Полный доступ к аналитике TechRole Index на 30 календарных дней",
+        amount_setting="premium_30_days_price_rub",
+        currency="RUB",
+        access_days=30,
+        service_result=(
+            "Premium-доступ включается после подтверждения оплаты и действует "
+            "30 календарных дней; при продлении срок прибавляется к активному доступу."
+        ),
+        fulfillment_code="premium_entitlement",
+        entitlement_code="premium",
+        receipt_item=ReceiptItem(
+            name="Доступ к сервису TechRole Index Premium на 30 дней",
+            payment_method="full_payment",
+            payment_object="service",
+            tax="none",
+        ),
+        refund_policy_path="/legal/refunds",
+    ),
+}
+PRODUCT_CODES = tuple(PRODUCT_CATALOG)
+
+
 def get_product(code: str) -> Product:
-    if code != "premium_30_days":
+    definition = PRODUCT_CATALOG.get(code)
+    if definition is None:
         raise PaymentValidationError("Unknown product")
     return Product(
         code=code,
-        name="Premium на 30 дней",
-        description="Доступ TechRole Index Premium на 30 дней",
-        amount=settings.premium_30_days_price_rub.quantize(Decimal("0.01")),
-        currency="RUB",
-        access_days=30,
+        name=definition.name,
+        description=definition.description,
+        amount=Decimal(str(getattr(settings, definition.amount_setting))).quantize(Decimal("0.01")),
+        currency=definition.currency,
+        access_days=definition.access_days,
+        service_result=definition.service_result,
+        fulfillment_code=definition.fulfillment_code,
+        entitlement_code=definition.entitlement_code,
+        receipt_item=definition.receipt_item,
+        refund_policy_path=definition.refund_policy_path,
     )
+
+
+def _product_snapshot(product: Product) -> dict[str, object]:
+    return {
+        "schema_version": "1.0",
+        "code": product.code,
+        "name": product.name,
+        "description": product.description,
+        "amount": f"{product.amount:.2f}",
+        "currency": product.currency,
+        "access_days": product.access_days,
+        "service_result": product.service_result,
+        "fulfillment_code": product.fulfillment_code,
+        "entitlement_code": product.entitlement_code,
+        "receipt": {
+            "name": product.receipt_item.name,
+            "payment_method": product.receipt_item.payment_method,
+            "payment_object": product.receipt_item.payment_object,
+            "tax": product.receipt_item.tax,
+        },
+        "refund_policy_path": product.refund_policy_path,
+    }
+
+
+def order_product(order: PaymentOrder) -> Product:
+    """Return the immutable product definition captured when the order was created."""
+    snapshot = order.product_snapshot or {}
+    if not snapshot:
+        return get_product(order.product_code)
+    try:
+        receipt = snapshot["receipt"]
+        if not isinstance(receipt, dict):
+            raise TypeError
+        product = Product(
+            code=str(snapshot["code"]),
+            name=str(snapshot["name"]),
+            description=str(snapshot["description"]),
+            amount=Decimal(str(snapshot["amount"])).quantize(Decimal("0.01")),
+            currency=str(snapshot["currency"]),
+            access_days=int(snapshot["access_days"]),
+            service_result=str(snapshot["service_result"]),
+            fulfillment_code=str(snapshot["fulfillment_code"]),
+            entitlement_code=str(snapshot["entitlement_code"]),
+            receipt_item=ReceiptItem(
+                name=str(receipt["name"]),
+                payment_method=str(receipt["payment_method"]),
+                payment_object=str(receipt["payment_object"]),
+                tax=str(receipt["tax"]),
+            ),
+            refund_policy_path=str(snapshot["refund_policy_path"]),
+        )
+    except (KeyError, TypeError, ValueError) as exc:
+        raise PaymentConfigurationError("Stored product definition is invalid") from exc
+    if (
+        product.code != order.product_code
+        or product.amount != order.amount
+        or product.currency != order.currency
+        or product.access_days <= 0
+    ):
+        raise PaymentConfigurationError("Stored product definition does not match the order")
+    return product
 
 
 def get_payment_provider() -> PaymentProvider:
@@ -82,11 +194,19 @@ def get_payment_provider() -> PaymentProvider:
             vat_code=settings.yookassa_vat_code,
         )
     if settings.payments_provider == "robokassa":
+        if settings.payments_mode == "test":
+            password1 = settings.robokassa_test_password1 or settings.robokassa_password1
+            password2 = settings.robokassa_test_password2 or settings.robokassa_password2
+            password3 = ""
+        else:
+            password1 = settings.robokassa_live_password1
+            password2 = settings.robokassa_live_password2
+            password3 = settings.robokassa_live_password3
         return RobokassaPaymentProvider(
             merchant_login=settings.robokassa_merchant_login,
-            password1=settings.robokassa_password1,
-            password2=settings.robokassa_password2,
-            password3=settings.robokassa_password3,
+            password1=password1,
+            password2=password2,
+            password3=password3,
             hash_algorithm=settings.robokassa_hash_algorithm,
             payment_url=settings.robokassa_payment_url,
             op_state_url=settings.robokassa_op_state_url,
@@ -100,7 +220,7 @@ def get_payment_provider() -> PaymentProvider:
 
 
 def payment_catalog() -> dict:
-    product = get_product("premium_30_days")
+    products = [get_product(code) for code in PRODUCT_CODES]
     return {
         "enabled": settings.payments_enabled,
         "provider": settings.payments_provider if settings.payments_enabled else None,
@@ -114,7 +234,19 @@ def payment_catalog() -> dict:
                 "amount": product.amount,
                 "currency": product.currency,
                 "access_days": product.access_days,
+                "service_result": product.service_result,
+                "fulfillment_code": product.fulfillment_code,
+                "receipt": {
+                    "name": product.receipt_item.name,
+                    "payment_method": product.receipt_item.payment_method,
+                    "payment_object": product.receipt_item.payment_object,
+                    "tax": product.receipt_item.tax,
+                },
+                "refund_policy_url": (
+                    f"{settings.public_base_url.rstrip('/')}{product.refund_policy_path}"
+                ),
             }
+            for product in products
         ],
     }
 
@@ -191,6 +323,8 @@ def _validate_payment(order: PaymentOrder, payment: ProviderPayment) -> None:
 
 
 def _grant_product_access(db: Session, order: PaymentOrder, product: Product) -> None:
+    if product.fulfillment_code != "premium_entitlement":
+        raise PaymentConfigurationError("Unsupported product fulfillment")
     source = f"payment:{order.public_id}"
     if db.scalar(select(Entitlement).where(Entitlement.source == source)) is not None:
         return
@@ -199,7 +333,7 @@ def _grant_product_access(db: Session, order: PaymentOrder, product: Product) ->
     current = db.scalars(
         select(Entitlement).where(
             Entitlement.user_id == order.user_id,
-            Entitlement.code == "premium",
+            Entitlement.code == product.entitlement_code,
             Entitlement.revoked_at.is_(None),
         )
     ).all()
@@ -210,9 +344,9 @@ def _grant_product_access(db: Session, order: PaymentOrder, product: Product) ->
     db.add(
         Entitlement(
             user_id=order.user_id,
-            code="premium",
+            code=product.entitlement_code,
             source=source,
-            starts_at=now,
+            starts_at=end_base,
             ends_at=end_base + timedelta(days=product.access_days),
         )
     )
@@ -228,6 +362,34 @@ def _revoke_product_access(db: Session, order: PaymentOrder) -> None:
     )
     if entitlement is not None:
         entitlement.revoked_at = datetime.now(timezone.utc)
+        if entitlement.ends_at is None:
+            raise PaymentConfigurationError("Payment entitlement must have a finite end")
+        duration = timedelta(days=order_product(order).access_days)
+        shifted_sources: list[str] = []
+        later_entitlements = db.scalars(
+            select(Entitlement).where(
+                Entitlement.user_id == order.user_id,
+                Entitlement.code == entitlement.code,
+                Entitlement.id != entitlement.id,
+                Entitlement.source.like("payment:%"),
+                Entitlement.revoked_at.is_(None),
+                Entitlement.ends_at.is_not(None),
+                Entitlement.ends_at > entitlement.ends_at,
+            )
+        ).all()
+        for later in later_entitlements:
+            later_end = later.ends_at
+            if later_end is None:
+                continue
+            later.starts_at -= duration
+            later.ends_at = later_end - duration
+            shifted_sources.append(later.source)
+        for source in shifted_sources:
+            shifted_order = db.scalar(
+                select(PaymentOrder).where(PaymentOrder.public_id == source.removeprefix("payment:"))
+            )
+            if shifted_order is not None:
+                _sync_subscription(db, shifted_order, order_product(shifted_order))
 
 
 def _sync_subscription(db: Session, order: PaymentOrder, product: Product) -> None:
@@ -309,10 +471,10 @@ def process_payment_update(
         order.confirmation_url = payment.confirmation_url
     if payment.status == "succeeded":
         order.paid_at = order.paid_at or datetime.now(timezone.utc)
-        _grant_product_access(db, order, get_product(order.product_code))
+        _grant_product_access(db, order, order_product(order))
     elif payment.status == "canceled":
         order.canceled_at = order.canceled_at or datetime.now(timezone.utc)
-    _sync_subscription(db, order, get_product(order.product_code))
+    _sync_subscription(db, order, order_product(order))
     event.status = "processed"
     event.processed_at = datetime.now(timezone.utc)
     db.commit()
@@ -375,7 +537,7 @@ def process_refund_update(
         local_refund.succeeded_at = local_refund.succeeded_at or datetime.now(timezone.utc)
         order.status = "refunded"
         _revoke_product_access(db, order)
-        _sync_subscription(db, order, get_product(order.product_code))
+        _sync_subscription(db, order, order_product(order))
     event.status = "processed"
     event.processed_at = datetime.now(timezone.utc)
     db.commit()
@@ -413,6 +575,7 @@ async def create_payment_order(
             amount=product.amount,
             currency=product.currency,
             description=product.description,
+            product_snapshot=_product_snapshot(product),
             terms_version=terms_version,
             terms_accepted_at=datetime.now(timezone.utc),
             is_test=settings.payments_mode == "test",
@@ -442,7 +605,8 @@ async def create_payment_order(
             order_public_id=order.public_id,
             amount=product.amount,
             currency=product.currency,
-            description=product.description,
+            description=product.receipt_item.name,
+            receipt_item=product.receipt_item,
             customer_email=user.email,
             return_url=return_url,
             idempotency_key=order.public_id,
@@ -587,6 +751,7 @@ async def create_full_refund(
             amount=order.amount,
             currency=order.currency,
             description=order.description,
+            receipt_item=order_product(order).receipt_item,
             idempotency_key=local_refund.public_id,
         )
         _validate_refund(order, refund)

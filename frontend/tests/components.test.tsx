@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProfessionCard } from "@/components/ProfessionCard";
 import { TrendBadge } from "@/components/TrendBadge";
@@ -15,6 +15,8 @@ import { ProfessionSearch } from "@/components/ProfessionSearch";
 import { ShareActions } from "@/components/ShareActions";
 import { AlertsPanel } from "@/components/AlertsPanel";
 import { PremiumHeaderStatus } from "@/components/PremiumHeaderStatus";
+import { AnalyticsConsent } from "@/components/AnalyticsConsent";
+import { AnalyticsPreferences } from "@/components/AnalyticsPreferences";
 
 const { routerPush, routerRefresh } = vi.hoisted(() => ({
   routerPush: vi.fn(),
@@ -22,6 +24,7 @@ const { routerPush, routerRefresh } = vi.hoisted(() => ({
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: routerPush, refresh: routerRefresh }),
+  usePathname: () => "/professions/data-engineer",
 }));
 
 afterEach(() => {
@@ -35,6 +38,50 @@ afterEach(() => {
 });
 
 describe("analytics components", () => {
+  it("records consented pageviews and internal clicks without sensitive fields", async () => {
+    const request = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal("fetch", request);
+    render(<><AnalyticsConsent /><a href="/answers#salary-by-level" onClick={(event) => event.preventDefault()}>Срез зарплат</a></>);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Разрешить аналитику" }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(1));
+    const pageview = JSON.parse(String(request.mock.calls[0][1]?.body));
+    expect(pageview).toMatchObject({ event_type: "pageview", path: "/professions/data-engineer" });
+    expect(pageview.visitor_id).toMatch(/^[A-Za-z0-9_-]{20,80}$/);
+    expect(pageview).not.toHaveProperty("email");
+    expect(pageview).not.toHaveProperty("ip");
+
+    fireEvent.click(screen.getByRole("link", { name: "Срез зарплат" }));
+    await waitFor(() => expect(request).toHaveBeenCalledTimes(2));
+    expect(JSON.parse(String(request.mock.calls[1][1]?.body))).toMatchObject({
+      event_type: "click",
+      path: "/",
+      target_path: "/answers#salary-by-level",
+    });
+  });
+
+  it("does not create a visitor id or send events after analytics is declined", async () => {
+    const request = vi.fn();
+    vi.stubGlobal("fetch", request);
+    render(<AnalyticsConsent />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Не разрешать" }));
+    await act(async () => undefined);
+    expect(request).not.toHaveBeenCalled();
+    expect(localStorage.getItem("techrole_analytics_visitor")).toBeNull();
+  });
+
+  it("allows analytics consent to be withdrawn from privacy preferences", async () => {
+    localStorage.setItem("techrole_analytics_consent", "accepted");
+    localStorage.setItem("techrole_analytics_visitor", "visitor_identifier_000000000001");
+    render(<AnalyticsPreferences />);
+    expect(await screen.findByText(/аналитика разрешена/)).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Отозвать согласие" }));
+    expect(localStorage.getItem("techrole_analytics_consent")).toBe("declined");
+    expect(localStorage.getItem("techrole_analytics_visitor")).toBeNull();
+    expect(screen.getByText(/аналитика запрещена/)).toBeVisible();
+  });
+
   it("keeps search suggestions and category filter in one GET form", () => {
     const requestSubmit = vi.spyOn(HTMLFormElement.prototype, "requestSubmit").mockImplementation(() => undefined);
     render(<ProfessionSearch compact initialQuery="Data" initialCategory="data-ai" suggestions={[{ slug: "data-engineer", name_ru: "Инженер по данным", name_en: "Data Engineer" }]} categories={[{ slug: "data-ai", name: "Data & AI" }]} />);
@@ -596,6 +643,10 @@ describe("analytics components", () => {
         amount: "1.00",
         currency: "RUB",
         access_days: 30,
+        service_result: "30 дней Premium-доступа",
+        fulfillment_code: "premium_entitlement",
+        receipt: { name: "Доступ к сервису TechRole Index Premium на 30 дней", payment_method: "full_payment", payment_object: "service", tax: "none" },
+        refund_policy_url: "/legal/refunds",
       }],
     }} />);
 
@@ -648,6 +699,10 @@ describe("analytics components", () => {
         amount: "290.00",
         currency: "RUB",
         access_days: 30,
+        service_result: "30 дней Premium-доступа",
+        fulfillment_code: "premium_entitlement",
+        receipt: { name: "Доступ к сервису TechRole Index Premium на 30 дней", payment_method: "full_payment", payment_object: "service", tax: "none" },
+        refund_policy_url: "/legal/refunds",
       }],
     }} />);
 

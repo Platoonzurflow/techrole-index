@@ -20,6 +20,7 @@ class UserOut(BaseModel):
     display_name: str
     role: str
     access_level: str
+    premium_expires_at: datetime | None = None
 
 
 class ProfessionSummary(BaseModel):
@@ -258,9 +259,37 @@ class ScoreVersionCreate(BaseModel):
 class PaymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    product_code: Literal["premium_30_days"]
+    product_code: str = Field(pattern=r"^[a-z0-9][a-z0-9_-]{2,79}$")
     accepted_terms: Literal[True]
     terms_version: str = Field(pattern=r"^[a-zA-Z0-9._-]{3,80}$")
+
+
+class PaymentReceiptItemOut(BaseModel):
+    name: str
+    payment_method: str
+    payment_object: str
+    tax: str
+
+
+class PaymentProductOut(BaseModel):
+    code: str
+    name: str
+    description: str
+    amount: Decimal
+    currency: str
+    access_days: int
+    service_result: str
+    fulfillment_code: str
+    receipt: PaymentReceiptItemOut
+    refund_policy_url: str
+
+
+class PaymentCatalogOut(BaseModel):
+    enabled: bool
+    provider: Literal["demo", "yookassa", "robokassa"] | None
+    mode: Literal["test", "live"]
+    terms_version: str
+    products: list[PaymentProductOut]
 
 
 class PaymentResponse(BaseModel):
@@ -294,6 +323,29 @@ class PaymentRefundResponse(BaseModel):
     currency: str
 
 
+class PaymentRefundHistoryOut(BaseModel):
+    refund_id: str
+    status: str
+    amount: Decimal
+    currency: str
+    created_at: datetime
+    succeeded_at: datetime | None
+
+
+class PaymentHistoryOut(BaseModel):
+    order_id: str
+    product_code: str
+    product_name: str
+    status: str
+    amount: Decimal
+    currency: str
+    is_test: bool
+    created_at: datetime
+    paid_at: datetime | None
+    access_ends_at: datetime | None
+    refunds: list[PaymentRefundHistoryOut]
+
+
 class PaymentReadinessCheck(BaseModel):
     code: str
     label: str
@@ -309,6 +361,36 @@ class PaymentReadinessOut(BaseModel):
     test_checks: list[PaymentReadinessCheck]
     live_checks: list[PaymentReadinessCheck]
     result_url: str | None
+
+
+class AnalyticsEventIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    visitor_id: str = Field(pattern=r"^[A-Za-z0-9_-]{20,80}$")
+    event_type: Literal["pageview", "click", "citation_copy", "share"]
+    path: str = Field(min_length=1, max_length=512)
+    target_path: str | None = Field(default=None, max_length=512)
+    referrer_host: str | None = Field(default=None, max_length=255)
+
+
+class AnalyticsCrawlerEventIn(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    crawler_name: Literal[
+        "OAI-SearchBot",
+        "GPTBot",
+        "ChatGPT-User",
+        "ClaudeBot",
+        "Claude-SearchBot",
+        "Claude-User",
+        "PerplexityBot",
+        "Perplexity-User",
+        "Googlebot",
+        "bingbot",
+        "YandexBot",
+    ]
+    category: Literal["ai_crawler", "search_crawler"]
+    path: str = Field(min_length=1, max_length=512)
 
 
 class AlertCreate(BaseModel):

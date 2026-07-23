@@ -123,11 +123,11 @@ export function buildObservedPublicationCroissant({
       "open data",
       "historical publication flow",
     ],
-    sameAs: [
-      `${base}/open-data-daily.json`,
-      `${base}/open-data-daily.csv-metadata.json`,
-      `${base}/open-data-daily.schema.json`,
-      `${base}/datapackage.json`,
+    subjectOf: [
+      { "@type": "sc:CreativeWork", name: "JSON representation", url: `${base}/open-data-daily.json` },
+      { "@type": "sc:CreativeWork", name: "CSVW metadata", url: `${base}/open-data-daily.csv-metadata.json` },
+      { "@type": "sc:CreativeWork", name: "JSON Schema", url: `${base}/open-data-daily.schema.json` },
+      { "@type": "sc:CreativeWork", name: "Frictionless Data Package", url: `${base}/datapackage.json` },
     ],
     citeAs: `TechRole Index (${observedPublicationDatasetPublishedDate.slice(0, 4)}). Daily observed IT vacancy publications. ${base}/open-data-daily`,
     isLiveDataset: true,
@@ -151,7 +151,6 @@ export function buildObservedPublicationCroissant({
           ? {}
           : { contentSize: `${new TextEncoder().encode(csvBody).byteLength} B` }),
         encodingFormat: "text/csv",
-        sameAs: `${base}/open-data-daily.json`,
       },
     ],
     recordSet: [
