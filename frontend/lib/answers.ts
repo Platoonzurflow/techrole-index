@@ -47,10 +47,14 @@ export function buildAnswerSummary(
 ): AnswerSummary {
   const dateFrom = items.map((item) => item.date_from).filter(Boolean).sort().at(0) ?? null;
   const dateTo = items.map((item) => item.date_to).filter(Boolean).sort().at(-1) ?? null;
-  const dateModified = [
+  const explicitDateModified = [
     ...items.map((item) => item.last_ingested_at),
     ...records.flatMap((record) => [record.materialized_at, record.last_ingested_at]),
   ].filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+  // A freshly seeded publication layer may legitimately have no ingestion
+  // timestamp yet. The covered period is still a stable, conservative HTTP
+  // validator and avoids publishing a dynamic corpus without Last-Modified.
+  const dateModified = explicitDateModified ?? (dateTo ? `${dateTo}T23:59:59Z` : null);
 
   const topProfessions = [...items]
     .filter((item) => item.total_publications > 0)

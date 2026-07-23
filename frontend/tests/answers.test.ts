@@ -84,4 +84,12 @@ describe("answer-first summary", () => {
       change_percent: 100,
     });
   });
+
+  it("falls back to the covered period when a fresh seed has no ingestion timestamp", () => {
+    const fresh = item("backend", "Backend-разработчик", 12, 9);
+    delete fresh.last_ingested_at;
+    const summary = buildAnswerSummary([fresh], []);
+
+    expect(summary.date_modified).toBe("2026-07-14T23:59:59Z");
+  });
 });
