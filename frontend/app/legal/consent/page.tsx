@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { LegalTemplateNotice } from "@/components/LegalTemplateNotice";
 import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Согласия и тексты для форм", robots: { index: false, follow: false } };
@@ -9,7 +8,6 @@ export default function ConsentPage() {
   return (
     <article className="shell py-14">
       <p className="eyebrow">Согласия</p><h1 className="mt-3 text-4xl font-bold">Согласия и тексты для форм</h1>
-      <div className="mt-7"><LegalTemplateNotice /></div>
       <div className="legal-copy mt-9 max-w-4xl text-muted">
         <h2>Регистрация и формы</h2><p>«Я ознакомился(лась) с Политикой обработки персональных данных и даю согласие {legal.sellerName} на обработку указанных в форме данных для регистрации, входа, предоставления доступа и ответа на обращение, включая сбор, запись, систематизацию, хранение, уточнение, использование и удаление, до достижения цели или отзыва согласия, если иное хранение не требуется законом».</p>
         <h2>Оплата</h2><p>«Нажимая кнопку оплаты, я принимаю публичную оферту, подтверждаю выбранный продукт, цену и срок доступа, ознакомлен(а) с правилами возврата и соглашаюсь на передачу необходимых платёжных данных выбранному провайдеру».</p>

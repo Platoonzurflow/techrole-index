@@ -163,20 +163,10 @@ export function SalaryBySeniority({
   const officialByLevel = new Map(
     official.salary_by_seniority.map((item) => [item.seniority, item]),
   );
-  const officialComplete = salaryLevelOrder.every(
-    (seniority) => officialByLevel.get(seniority)?.median != null,
-  );
   const officialCoherent = officialSalaryLevelsAreCoherent(official);
 
   return (
     <>
-      {!officialCoherent ? (
-        <p className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm leading-6 text-amber-800 dark:text-amber-200">
-          {officialComplete
-            ? "В вакансиях уровни дали перевёрнутую зарплатную градацию. Чтобы не показывать, что Junior зарабатывает больше Senior, три карточки ниже взяты из одного сопоставимого исследования."
-            : "Для части уровней пока нет сопоставимой зарплатной медианы. Чтобы карточки не смешивали разные источники, три значения ниже взяты из одного исследования."} Вилки вакансий и их n сохранены для проверки.
-        </p>
-      ) : null}
       <div className="mt-5 grid gap-4 lg:grid-cols-3">
       {salaryLevelOrder.map((seniority) => {
         const observed = officialByLevel.get(seniority);

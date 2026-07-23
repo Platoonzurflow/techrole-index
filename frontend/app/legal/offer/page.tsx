@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { LegalTemplateNotice } from "@/components/LegalTemplateNotice";
 import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Публичная оферта", robots: { index: false, follow: false } };
@@ -23,8 +22,6 @@ export default function OfferPage() {
       <p className="eyebrow">Юридический документ</p>
       <h1 className="mt-3 text-4xl font-bold">Публичная оферта</h1>
       <p className="mt-3 max-w-4xl text-sm text-muted">Оферта о заключении договора об оказании услуг. Размещена на сайте {legal.effectiveDate}.</p>
-      <div className="mt-7"><LegalTemplateNotice /></div>
-
       <div className="legal-copy mt-9 max-w-4xl text-muted">
         <Section title="Общие положения">
           <p>В настоящей Публичной оферте содержатся условия заключения Договора об оказании услуг (далее по тексту — «Договор об оказании услуг» и/или «Договор»). Настоящей офертой признается предложение, адресованное одному или нескольким конкретным лицам, которое достаточно определенно и выражает намерение лица, сделавшего предложение, считать себя заключившим Договор с адресатом, которым будет принято предложение.</p>
@@ -122,7 +119,6 @@ export default function OfferPage() {
           </dl>
         </Section>
 
-        <p className="border-t border-black/10 pt-6 text-sm">Источник текста: предоставленный владельцем документ «Публичная оферта» от 22.07.2026. Перед включением реальных платежей условия необходимо сверить с фактической услугой и настройками фискализации.</p>
         <p className="text-sm">См. также: <Link href="/legal/refunds">правила возврата</Link>, <Link href="/legal/privacy">политику обработки данных</Link> и <Link href="/legal/consent">согласия</Link>.</p>
       </div>
     </article>

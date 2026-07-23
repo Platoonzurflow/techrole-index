@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { LegalTemplateNotice } from "@/components/LegalTemplateNotice";
 import { legal } from "@/lib/legal";
 
 export const metadata: Metadata = { title: "Оплата, отмена и возвраты", robots: { index: false, follow: false } };
@@ -9,7 +8,6 @@ export default function RefundsPage() {
   return (
     <article className="shell py-14">
       <p className="eyebrow">Правила оплаты</p><h1 className="mt-3 text-4xl font-bold">Оплата, отмена и возвраты</h1>
-      <div className="mt-7"><LegalTemplateNotice /></div>
       <div className="legal-copy mt-9 max-w-4xl text-muted">
         <h2>Тестовый режим</h2><p>Сейчас сайт показывает тестовую оплату: реальные деньги не списываются, а тестовые заказы не создают обязательств по возврату.</p>
         <h2>Как запросить возврат</h2><p>Напишите на <a href={`mailto:${legal.sellerEmail}`}>{legal.sellerEmail}</a> с email аккаунта и укажите номер заказа, дату, причину и желаемый результат. Не отправляйте полный номер карты, CVC, пароль или SMS-код.</p>

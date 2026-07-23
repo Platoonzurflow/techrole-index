@@ -253,7 +253,7 @@ describe("analytics components", () => {
     expect(officialSalaryLevelsAreCoherent(official)).toBe(false);
     render(<SalaryBenchmarks data={benchmark} official={official} />);
 
-    expect(screen.getByText(/перевёрнутую зарплатную градацию/)).toBeInTheDocument();
+    expect(screen.queryByText(/перевёрнутую зарплатную градацию/)).not.toBeInTheDocument();
     expect(screen.getByText("100 000 ₽ — 130 000 ₽")).toBeInTheDocument();
     expect(screen.getByText("230 000 ₽ — 270 000 ₽")).toBeInTheDocument();
     expect(screen.getByText("370 000 ₽ — 380 000 ₽")).toBeInTheDocument();

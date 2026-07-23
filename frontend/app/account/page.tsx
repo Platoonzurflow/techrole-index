@@ -9,7 +9,8 @@ export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Личный кабинет", robots: { index: false, follow: false } };
 
 function displayName(user: User) {
-  if (!user.display_name.toLocaleLowerCase("ru-RU").startsWith("демо")) return user.display_name;
+  const cleaned = user.display_name.trim().replace(/^[+?\s]+/, "");
+  if (cleaned && !cleaned.toLocaleLowerCase("ru-RU").startsWith("демо")) return cleaned;
   if (user.role === "admin") return "Администратор";
   return user.access_level === "premium" ? "Premium пользователь" : "Базовый пользователь";
 }

@@ -44,6 +44,7 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 4, name: "Middle" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 4, name: "Senior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toHaveCount(0);
+  await expect(page.getByText("сохранены для проверки", { exact: false })).toHaveCount(0);
   await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Поделиться" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
@@ -56,6 +57,7 @@ test("weekly report and legal pages are publication-ready", async ({ page }) => 
   await page.goto("/legal/privacy");
   await expect(page.locator("main")).not.toContainText("ЗАПОЛНИТЬ");
   await expect(page.locator("main")).not.toContainText("ОПЕРАТОРУ");
+  await expect(page.locator("main")).not.toContainText("проверяется владельцем");
 });
 
 test("public calculator median is exact, sourced, and limitation-labeled", async ({ page }) => {
@@ -69,12 +71,14 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
     .toContainText("gross/net не указан");
 });
 
-test("status page exposes the salary source audit runtime state", async ({ page }) => {
+test("status page shows public freshness without internal runtime details", async ({ page }) => {
   await page.goto("/status");
   await expect(page.getByRole("heading", { level: 1, name: "Статус обновления данных" }))
     .toBeVisible();
-  await expect(page.getByText(/Аудит зарплатных источников: (enabled|disabled)/))
-    .toBeVisible();
+  await expect(page.getByText("Последняя дата метрик")).toBeVisible();
+  await expect(page.getByText("Последняя загрузка")).toBeVisible();
+  await expect(page.locator("main")).not.toContainText("Redis");
+  await expect(page.locator("main")).not.toContainText("Dagster");
 });
 
 test("support topics stay readable and keyboard selectable", async ({ page }) => {
