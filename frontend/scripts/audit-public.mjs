@@ -63,7 +63,14 @@ async function worker() {
     const target = new URL(`${sourceUrl.pathname}${sourceUrl.search}`, fetchBase);
     const errors = [];
     try {
-      const { body, response } = await getText(target);
+      let { body, response } = await getText(target);
+      const hasNoindex = [...body.matchAll(/<meta\b[^>]*>/gi)]
+        .map((match) => attributes(match[0]))
+        .some((tag) => tag.name?.toLowerCase() === "robots" && tag.content?.toLowerCase().includes("noindex"));
+      if (response.ok && hasNoindex) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+        ({ body, response } = await getText(target));
+      }
       const contentType = response.headers.get("content-type") ?? "";
       if (!response.ok) errors.push(`HTTP ${response.status}`);
       if (!contentType.toLowerCase().includes("text/html")) errors.push(`content-type ${contentType || "missing"}`);
