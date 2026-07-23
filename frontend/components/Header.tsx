@@ -9,7 +9,6 @@ const links = [
   ["Сравнение", "/compare"],
   ["Методология", "/methodology"],
   ["Личное ведение", "/mentorship"],
-  ["Premium", "/pricing"],
 ];
 
 export function Header() {

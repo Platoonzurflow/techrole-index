@@ -673,6 +673,8 @@ The comparison table now resolves each salary level through a transparent exact-
 
 The public-link crawl also exposed 404 responses from nested insight citation handlers. Canonical exports now use `/insight-citations/<slug>.csl.json`, `.bib` and `.ris`; redirects preserve the earlier `/insights/<slug>/cite/*` addresses.
 
+Official salary history now uses weekly cumulative medians from the beginning of the 180-day period and always includes the period end. Each grade keeps the exact profession when it forms a usable time series; otherwise the complete line switches to the denser category series and exposes `scope=category`. This replaces sparse 30-day rolling points without inventing observations. The header now has one Premium control: it links to pricing for guests and becomes the active-account status after `/auth/me` confirms entitlement.
+
 Public pages no longer expose owner-only editorial or infrastructure notes. The salary correction warning, legal pre-live notice, public admin link, runtime/cache/Dagster diagnostics and unfinished alert-delivery copy were removed; `/status` now shows only service health, metric freshness and the latest data load. The production Premium owner display name was normalized to `Premium`, and the account view defensively strips accidental leading `+` or `?` characters.
 
 ## Distribution and legal handoff (2026-07-23)

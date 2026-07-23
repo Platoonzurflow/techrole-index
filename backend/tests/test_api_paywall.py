@@ -224,6 +224,22 @@ def test_free_response_does_not_contain_premium_fields():
     official_junior = payload["official_open_data"]["salary_by_seniority"][0]
     assert official_junior["median"] == 150000
     assert official_junior["sample_size"] == 20
+    junior_history = [
+        point
+        for point in payload["official_open_data"]["salary_history"]
+        if point["seniority"] == "junior" and point.get("median") is not None
+    ]
+    assert junior_history[-1]["sample_size"] == 20
+    assert junior_history[-1]["scope"] == "profession"
+
+    category_fallback = client.get("/api/v1/professions/role-1?days=180").json()
+    fallback_history = [
+        point
+        for point in category_fallback["official_open_data"]["salary_history"]
+        if point["seniority"] == "junior" and point.get("median") is not None
+    ]
+    assert fallback_history[-1]["median"] == 150000
+    assert fallback_history[-1]["scope"] == "category"
     catalog = client.get("/api/v1/open-data/publications").json()
     assert catalog[0]["category_slug"] == "development"
     assert catalog[0]["salary_by_seniority"][0]["median"] == 150000

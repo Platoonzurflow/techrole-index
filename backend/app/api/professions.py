@@ -1,7 +1,7 @@
 from collections import defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from statistics import fmean
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import ValidationError
@@ -305,34 +305,62 @@ def _official_open_data_summary(
         else "insufficient"
     )
 
-    salary_history: list[OfficialSalaryHistoryPoint] = []
-    history_date = date_from + timedelta(days=29)
+    history_dates: list[date] = []
+    history_date = date_from + timedelta(days=6)
     while history_date <= date_to:
-        window_start = history_date - timedelta(days=29)
-        for seniority_code in ("junior", "middle", "senior"):
-            window_rows = [
-                (salary_from, salary_to)
-                for published_at, salary_from, salary_to in salary_rows[seniority_code]
-                if window_start <= published_at.date() <= history_date
-            ]
-            window_stats = calculate_salary_statistics(
-                [
-                    SalaryInput(lower=salary_from, upper=salary_to, gross=None)
-                    for salary_from, salary_to in window_rows
-                ],
-                total_vacancies=len(window_rows),
-                min_sample=settings.min_salary_sample,
-                gross=None,
-            )
-            salary_history.append(
-                OfficialSalaryHistoryPoint(
-                    date=history_date,
-                    seniority=seniority_code,
-                    median=window_stats.median,
-                    sample_size=window_stats.midpoint_sample_size,
-                )
-            )
+        history_dates.append(history_date)
         history_date += timedelta(days=7)
+    if not history_dates or history_dates[-1] != date_to:
+        history_dates.append(date_to)
+
+    def build_history_candidates(
+        grouped_rows: dict[str, list[tuple[Any, ...]]],
+        scope: Literal["profession", "category"],
+    ) -> dict[str, list[OfficialSalaryHistoryPoint]]:
+        candidates: dict[str, list[OfficialSalaryHistoryPoint]] = {}
+        for seniority_code in ("junior", "middle", "senior"):
+            points: list[OfficialSalaryHistoryPoint] = []
+            for point_date in history_dates:
+                cumulative_rows = [
+                    (salary_from, salary_to)
+                    for published_at, salary_from, salary_to in grouped_rows[seniority_code]
+                    if date_from <= published_at.date() <= point_date
+                ]
+                point_stats = calculate_salary_statistics(
+                    [
+                        SalaryInput(lower=salary_from, upper=salary_to, gross=None)
+                        for salary_from, salary_to in cumulative_rows
+                    ],
+                    total_vacancies=len(cumulative_rows),
+                    min_sample=settings.min_salary_sample,
+                    gross=None,
+                )
+                points.append(
+                    OfficialSalaryHistoryPoint(
+                        date=point_date,
+                        seniority=seniority_code,
+                        median=point_stats.median,
+                        sample_size=point_stats.midpoint_sample_size,
+                        scope=scope,
+                    )
+                )
+            candidates[seniority_code] = points
+        return candidates
+
+    exact_history = build_history_candidates(salary_rows, "profession")
+    category_history = build_history_candidates(category_salary_rows, "category")
+    salary_history: list[OfficialSalaryHistoryPoint] = []
+    for seniority_code in ("junior", "middle", "senior"):
+        exact_points = exact_history[seniority_code]
+        category_points = category_history[seniority_code]
+        exact_visible = sum(point.median is not None for point in exact_points)
+        category_visible = sum(point.median is not None for point in category_points)
+        # A time series needs several visible dates. Keep the exact profession whenever
+        # it can form one; otherwise use the denser, explicitly labelled category series.
+        if exact_visible >= 3 or category_visible <= exact_visible:
+            salary_history.extend(exact_points)
+        else:
+            salary_history.extend(category_points)
 
     return OfficialOpenDataSummary(
         source_name="Работа России - официальный открытый API",
@@ -364,9 +392,10 @@ def _official_open_data_summary(
         salary_history=salary_history,
         salary_methodology_note=(
             "Статистика рассчитана только по RUB-записям с двумя границами вилки. "
-            "Каждая точка истории использует предшествующее 30-дневное окно; "
-            "gross/net источником не определён. Значения публикуются только при "
-            f"выборке не менее {settings.min_salary_sample}."
+            "Каждая недельная точка показывает накопительную медиану от начала 180-дневного периода. "
+            "Для уровня используется точная профессия, а если она не образует временной ряд — явно "
+            "помеченный срез направления. gross/net источником не определён. Значения публикуются "
+            f"только при выборке не менее {settings.min_salary_sample}."
         ),
         methodology_note=(
             "Количество найденных публикаций по дате создания записи. Это не историческое "

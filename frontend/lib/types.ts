@@ -81,6 +81,7 @@ export interface OfficialOpenDataSummary {
     seniority: "junior" | "middle" | "senior";
     median?: number;
     sample_size: number;
+    scope?: "profession" | "category";
   }>;
   salary_methodology_note: string;
   methodology_note: string;

@@ -130,21 +130,27 @@ export function OfficialSalaryChart({ data }: { data: OfficialOpenDataSummary })
   if (!data.salary_history.some((item) => item.median != null)) {
     return (
       <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed border-line p-6 text-center" role="status">
-        <div><p className="font-semibold">Недостаточно данных для графика</p><p className="mt-2 text-sm text-muted">Для каждой точки нужно не менее {data.salary_min_sample} полных вилок за 30 дней.</p></div>
+        <div><p className="font-semibold">Недостаточно данных для графика</p><p className="mt-2 text-sm text-muted">Нужно не менее {data.salary_min_sample} полных RUB-вилок одного уровня по профессии или её направлению.</p></div>
       </div>
     );
   }
   const dates = [...new Set(data.salary_history.map((item) => item.date))];
-  const salarySeries = (["junior", "middle", "senior"] as const).map((level) => ({
-    name: level[0].toUpperCase() + level.slice(1),
-    type: "line" as const,
-    smooth: true,
-    showSymbol: false,
-    connectNulls: true,
-    lineStyle: { width: 2.5 },
-    itemStyle: { color: colors[level] },
-    data: dates.map((date) => data.salary_history.find((item) => item.date === date && item.seniority === level)?.median ?? null),
-  }));
+  const salarySeries = (["junior", "middle", "senior"] as const).map((level) => {
+    const points = data.salary_history.filter((item) => item.seniority === level);
+    const scope = points.find((item) => item.median != null)?.scope ?? points[0]?.scope ?? "profession";
+    const visiblePoints = points.filter((item) => item.median != null).length;
+    return {
+      name: `${level[0].toUpperCase() + level.slice(1)} · ${scope === "category" ? "направление" : "профессия"}`,
+      type: "line" as const,
+      smooth: true,
+      showSymbol: visiblePoints < 4,
+      symbolSize: 7,
+      connectNulls: true,
+      lineStyle: { width: 2.5 },
+      itemStyle: { color: colors[level] },
+      data: dates.map((date) => points.find((item) => item.date === date)?.median ?? null),
+    };
+  }).filter((item) => item.data.some((value) => value != null));
   const option: echarts.EChartsOption = {
     tooltip: { trigger: "axis", valueFormatter: (value) => value == null ? "Недостаточно данных" : `${new Intl.NumberFormat("ru-RU").format(Number(value))} ₽` },
     legend: { top: 4, textStyle: { color: "#64748b" } },
@@ -153,5 +159,5 @@ export function OfficialSalaryChart({ data }: { data: OfficialOpenDataSummary })
     yAxis: { type: "value", axisLabel: { color: "#64748b", formatter: (value: number) => `${Math.round(value / 1000)}k` }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
     series: salarySeries,
   };
-  return <Chart option={option} label="Реальная 30-дневная скользящая медиана зарплаты по уровням за 180 дней" />;
+  return <Chart option={option} label="Накопительная медиана зарплаты по уровням за 180 дней" />;
 }

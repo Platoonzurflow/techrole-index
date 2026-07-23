@@ -86,6 +86,7 @@ class OfficialSalaryHistoryPoint(BaseModel):
     seniority: Literal["junior", "middle", "senior"]
     median: float | None = None
     sample_size: int
+    scope: Literal["profession", "category"] = "profession"
 
 
 class OfficialOpenDataSummary(BaseModel):

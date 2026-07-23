@@ -267,7 +267,7 @@ describe("analytics components", () => {
     expect(screen.queryByText("89 300 ₽")).not.toBeInTheDocument();
   });
 
-  it("shows the Premium header status only after authenticated confirmation", async () => {
+  it("turns the single Premium header link into active account status", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
       ok: true,
       json: vi.fn().mockResolvedValue({
@@ -281,7 +281,16 @@ describe("analytics components", () => {
 
     render(<PremiumHeaderStatus />);
 
+    expect(screen.getByRole("link", { name: "Premium" })).toHaveAttribute("href", "/pricing");
     expect(await screen.findByRole("link", { name: "Premium активен" })).toHaveAttribute("href", "/account");
+  });
+
+  it("keeps the single Premium header link on pricing for a free visitor", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: false }));
+
+    render(<PremiumHeaderStatus />);
+
+    expect(screen.getByRole("link", { name: "Premium" })).toHaveAttribute("href", "/pricing");
   });
 
   it("pauses and resumes a saved alert without deleting it", async () => {

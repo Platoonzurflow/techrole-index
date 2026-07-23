@@ -21,12 +21,15 @@ export function PremiumHeaderStatus() {
     };
   }, []);
 
-  if (!premium) return null;
-
   return (
-    <Link href="/account" className="header-premium-status hidden lg:inline-flex" aria-label="Premium активен">
+    <Link
+      href={premium ? "/account" : "/pricing"}
+      className={`header-premium-status inline-flex${premium ? " is-active" : ""}`}
+      aria-label={premium ? "Premium активен" : "Premium"}
+    >
       <Crown size={15} aria-hidden="true" />
-      Premium активен
+      <span className="hidden sm:inline">{premium ? "Premium активен" : "Premium"}</span>
+      <span className="sm:hidden">Premium</span>
     </Link>
   );
 }

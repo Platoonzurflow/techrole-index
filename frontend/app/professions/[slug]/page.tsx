@@ -59,6 +59,9 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const hasOfficialSalaryHistory = profession.official_open_data?.salary_history.some(
     (item) => item.median != null,
   ) ?? false;
+  const salaryHistoryUsesCategory = profession.official_open_data?.salary_history.some(
+    (item) => item.median != null && item.scope === "category",
+  ) ?? false;
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -234,7 +237,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div className="mt-8 border-t border-line pt-8">
               <p className="eyebrow">Динамика зарплатных вилок</p>
               <h3 className="mt-2 text-2xl font-semibold">Медиана за 180 дней</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">График показывает только те 30-дневные точки, где для уровня найдено не менее {profession.official_open_data.salary_min_sample} полных вилок.</p>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Каждая точка показывает медиану всех полных RUB-вилок, опубликованных с начала периода до этой даты. Для линии нужно не менее {profession.official_open_data.salary_min_sample} вилок одного уровня.{salaryHistoryUsesCategory ? ` Если точных данных профессии мало для временного ряда, линия подписана как срез направления «${profession.category_name}».` : ""}</p>
               <div className="mt-6"><OfficialSalaryChart data={profession.official_open_data} /></div>
             </div>
           ) : null}
