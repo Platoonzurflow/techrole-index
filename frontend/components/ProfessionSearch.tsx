@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { AppSelect } from "@/components/AppSelect";
 
 interface Suggestion {
   slug: string;
@@ -48,10 +49,10 @@ export function ProfessionSearch({
         <label className="sr-only" htmlFor="profession-category">Направление</label>
       ) : null}
       {categories.length ? (
-        <select id="profession-category" name="category" defaultValue={initialCategory ?? ""} aria-label="Направление">
+        <AppSelect id="profession-category" name="category" defaultValue={initialCategory ?? ""} aria-label="Направление">
           <option value="">Все направления</option>
           {categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
-        </select>
+        </AppSelect>
       ) : null}
       <button type="submit">Найти профессию</button>
     </form>

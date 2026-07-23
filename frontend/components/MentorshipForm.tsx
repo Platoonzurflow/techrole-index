@@ -3,6 +3,7 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { CheckCircle2, Mail, Send } from "lucide-react";
+import { AppSelect } from "@/components/AppSelect";
 import { CONTACT_EMAIL } from "@/lib/contact";
 
 export const MENTORSHIP_EMAIL = CONTACT_EMAIL;
@@ -109,17 +110,17 @@ export function MentorshipForm() {
           <input className="field" name="contact" required maxLength={120} autoComplete="email" placeholder="Для обратной связи" />
         </label>
         <label className="grid gap-2 text-sm font-bold">Направление
-          <select className="field" name="direction" defaultValue="Не определился(ась)">
+          <AppSelect name="direction" defaultValue="Не определился(ась)">
             <option>Не определился(ась)</option>
             <option>Frontend</option><option>Backend</option><option>Data / Analytics</option>
             <option>QA / Automation</option><option>DevOps / Infrastructure</option><option>Другое</option>
-          </select>
+          </AppSelect>
         </label>
         <label className="grid gap-2 text-sm font-bold">Текущий уровень
-          <select className="field" name="level" defaultValue="Без коммерческого опыта">
+          <AppSelect name="level" defaultValue="Без коммерческого опыта">
             <option>Без коммерческого опыта</option><option>Стажёр / Intern</option>
             <option>Junior</option><option>Middle</option><option>Меняю направление</option>
-          </select>
+          </AppSelect>
         </label>
         <div className="grid gap-2 sm:col-span-2">
           <label className="text-sm font-bold" htmlFor="proposed_budget_rub">Предлагаемая стоимость, ₽</label>

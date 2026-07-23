@@ -40,6 +40,7 @@ describe("analytics components", () => {
     expect(form).toHaveAttribute("method", "get");
     expect(screen.getByDisplayValue("Data")).toHaveAttribute("name", "query");
     expect(screen.getByDisplayValue("Data & AI")).toHaveAttribute("name", "category");
+    expect(screen.getByDisplayValue("Data & AI").closest(".app-select-shell")).not.toBeNull();
     const suggestionValues = Array.from(document.querySelectorAll("datalist option")).map((option) => option.getAttribute("value"));
     expect(suggestionValues).toEqual(expect.arrayContaining(["Инженер по данным", "Data Engineer"]));
   });

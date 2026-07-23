@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowRight, ChevronDown, Scale } from "lucide-react";
+import { ArrowRight, Scale } from "lucide-react";
+import { AppSelect } from "@/components/AppSelect";
 import { browserCsrf } from "@/lib/browser";
 import { rub } from "@/lib/format";
 import type { ProfessionDetail, ProfessionSummary } from "@/lib/types";
@@ -47,18 +48,14 @@ export function CompareTool({ professions, initialSlugs = [] }: { professions: P
             <label className="compare-picker-card" key={position}>
               <span className="compare-picker-meta"><strong>0{position + 1}</strong><span>{position === 2 ? "необязательно" : "обязательно"}</span></span>
               <span className="compare-picker-label">{pickerLabels[position]}</span>
-              <span className="compare-select-shell">
-                <select
-                  className="field"
+              <AppSelect
                   aria-label={`Профессия ${position + 1}`}
                   value={selected[position] ?? ""}
                   onChange={(event) => changeSelection(position, event.target.value)}
                 >
                   <option value="">{position === 2 ? "Добавить профессию" : "Выберите профессию"}</option>
                   {professions.map((item) => <option key={item.slug} value={item.slug}>{item.name_ru}</option>)}
-                </select>
-                <ChevronDown size={18} aria-hidden="true" />
-              </span>
+              </AppSelect>
             </label>
           ))}
         </div>

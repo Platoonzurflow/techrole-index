@@ -169,15 +169,16 @@ test("catalog search controls use the dark palette", async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.goto("/professions");
   await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.waitForTimeout(250);
   const search = page.locator(".career-search.profession-search-compact");
   const palette = await search.evaluate((node) => ({
     background: getComputedStyle(node).backgroundColor,
     input: getComputedStyle(node.querySelector("input")!).color,
     select: getComputedStyle(node.querySelector("select")!).color,
-    selectTop: (node.querySelector("select") as HTMLElement).offsetTop,
-    selectHeight: (node.querySelector("select") as HTMLElement).offsetHeight,
-    buttonTop: (node.querySelector("button") as HTMLElement).offsetTop,
-    buttonHeight: (node.querySelector("button") as HTMLElement).offsetHeight,
+    selectTop: node.querySelector("select")!.getBoundingClientRect().top,
+    selectHeight: node.querySelector("select")!.getBoundingClientRect().height,
+    buttonTop: node.querySelector("button")!.getBoundingClientRect().top,
+    buttonHeight: node.querySelector("button")!.getBoundingClientRect().height,
   }));
   expect(palette.background).toBe("rgb(21, 21, 23)");
   expect(palette.input).toBe("rgb(247, 247, 248)");
@@ -189,7 +190,7 @@ test("catalog search controls use the dark palette", async ({ page }) => {
 });
 
 test("homepage search and candidate stay aligned in the dark theme", async ({ page }) => {
-  await page.setViewportSize({ width: 1703, height: 779 });
+  await page.setViewportSize({ width: 1462, height: 822 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.goto("/");
   await expect(page.locator("html")).toHaveClass(/dark/);
@@ -209,9 +210,14 @@ test("homepage search and candidate stay aligned in the dark theme", async ({ pa
   const heroAlignment = await page.locator(".cinematic-grid").evaluate(
     (node) => getComputedStyle(node).alignItems,
   );
+  const headingFit = await page.locator(".cinematic-copy h1").evaluate((node) => ({
+    clientWidth: node.clientWidth,
+    scrollWidth: node.scrollWidth,
+  }));
   expect(candidateLayout.left).not.toBe("auto");
   expect(candidateLayout.bottom).toBe("80px");
   expect(heroAlignment).toBe("start");
+  expect(headingFit.scrollWidth).toBeLessThanOrEqual(headingFit.clientWidth + 1);
 });
 
 test("mobile navigation keeps account reachable without horizontal page overflow", async ({ page }) => {
