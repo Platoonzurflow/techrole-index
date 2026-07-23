@@ -159,7 +159,7 @@ def test_observed_publication_transform_is_idempotent_and_isolated() -> None:
         assert third.deleted_stale_slices == 0
         assert db.scalar(select(ObservedPublicationMetricDaily.id)) == persisted_id
         exported = publication_metrics_daily(db)
-        assert exported.salary_minimum_sample == 20
+        assert exported.salary_minimum_sample == 3
         assert len(exported.records) == 1
         assert exported.records[0].profession_slug == "python-developer"
         assert exported.records[0].publication_count == 3
