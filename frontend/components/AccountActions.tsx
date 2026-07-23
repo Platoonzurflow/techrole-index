@@ -17,6 +17,28 @@ function paymentIdempotencyKey() {
   return `browser-${Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("")}`;
 }
 
+function submitRobokassaPayment(confirmationUrl: string) {
+  const target = new URL(confirmationUrl);
+  if (target.protocol !== "https:" || target.hostname !== "auth.robokassa.ru") {
+    throw new Error("Unexpected Robokassa payment address");
+  }
+
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = `${target.origin}${target.pathname}`;
+  form.acceptCharset = "UTF-8";
+  form.hidden = true;
+  for (const [name, value] of target.searchParams.entries()) {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = name;
+    input.value = value;
+    form.append(input);
+  }
+  document.body.append(form);
+  form.submit();
+}
+
 export function AccountActions({ premium, payments }: { premium: boolean; payments: PaymentCatalog }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -65,6 +87,15 @@ export function AccountActions({ premium, payments }: { premium: boolean; paymen
     const order = await response.json() as PaymentOrder;
     if (!order.confirmation_url) {
       router.push(`/payments/pending?order_id=${encodeURIComponent(order.order_id)}`);
+      return;
+    }
+    if (payments.provider === "robokassa") {
+      try {
+        submitRobokassaPayment(order.confirmation_url);
+      } catch {
+        setMessage("Не удалось открыть защищённую форму Robokassa. Деньги не списаны.");
+        setBusy(false);
+      }
       return;
     }
     window.location.assign(order.confirmation_url);

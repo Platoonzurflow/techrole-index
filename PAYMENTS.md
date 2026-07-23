@@ -46,6 +46,7 @@ Robokassa стала основной после подтверждения НП
 - для ЮKassa — Basic auth к официальному API, `Idempotence-Key` и повторный авторизованный GET для проверки webhook вместо доверия присланному JSON;
 - для Robokassa — уникальный числовой `InvId`, подписи Паролем №1/№2, allowlisted hash algorithm, server-side `Shp_order_id`, проверка суммы/режима, form-urlencoded ResultURL и обязательный plain-text ack;
 - server-side Robokassa Receipt для услуги НПД; карточные данные и произвольная номенклатура браузера не принимаются;
+- переход в Robokassa выполняется HTML-формой `POST`, как требует документация для платежей с `Receipt`; action ограничен официальным HTTPS-доменом провайдера;
 - live refund API Robokassa подписывается HS256/Password3, получает OpKey только через подписанный OpStateExt и сверяется фоновой задачей каждые пять минут; официальный OpStateExt не поддерживает тестовые операции, поэтому refund-сценарий без денег проверяется в demo и mock-контракте;
 - только серверное предоставление Premium после `succeeded`, терминальные отмены и отзыв конкретного entitlement после полного возврата;
 - server-side receipt item для ЮKassa из продукта и email пользователя, когда выбран режим кассы; ставка НДС задаётся только после юридического подтверждения;

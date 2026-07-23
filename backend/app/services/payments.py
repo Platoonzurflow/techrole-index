@@ -586,7 +586,7 @@ async def create_full_refund(
             payment_external_id=order.external_payment_id,
             amount=order.amount,
             currency=order.currency,
-            description=reason,
+            description=order.description,
             idempotency_key=local_refund.public_id,
         )
         _validate_refund(order, refund)

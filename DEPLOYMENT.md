@@ -141,4 +141,4 @@ docker compose up -d backend worker scheduler frontend
 Приложение разворачивается immutable images. Сначала откатить image tags; Alembic downgrade выполнять только если revision явно помечена обратимой и создан backup. `0001` downgrade удаляет всю схему и предназначен только для тестовой проверки миграций.
 ## Permanent public host
 
-Production is served from Selectel VDS `94.102.88.123` at `https://techrole.ru`. Selectel DNS records are `A @ -> 94.102.88.123` and `CNAME www -> techrole.ru.`. Caddy provisions HTTPS automatically and redirects the legacy `sslip.io` address to the apex. Keep `PAYMENTS_LIVE_ENABLED=false` until the owner completes the Robokassa legal and operational checks.
+Production is served from Selectel VDS `94.102.88.123` at `https://techrole.ru`. Selectel DNS records are `A @ -> 94.102.88.123` and `CNAME www -> techrole.ru.`. Caddy provisions HTTPS automatically and redirects the legacy `sslip.io` address to the apex. Keep `PAYMENTS_LIVE_CONFIRMED=false` until the owner completes the Robokassa legal and operational checks.

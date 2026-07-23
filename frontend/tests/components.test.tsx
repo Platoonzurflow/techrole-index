@@ -27,6 +27,7 @@ vi.mock("next/navigation", () => ({
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
   localStorage.clear();
   document.documentElement.className = "";
   routerPush.mockReset();
@@ -499,6 +500,51 @@ describe("analytics components", () => {
       }),
     }));
     expect(routerPush).toHaveBeenCalledWith("/payments/pending?order_id=order-1");
+  });
+
+  it("submits Robokassa receipt fields with POST to the official payment host", async () => {
+    document.cookie = "techrole_csrf=csrf-robokassa";
+    vi.stubGlobal("crypto", { randomUUID: () => "browser-idempotency-robo-0001" });
+    const submit = vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => undefined);
+    const request = vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue({
+        order_id: "order-robo-1",
+        product_code: "premium_30_days",
+        product_name: "Premium на 30 дней",
+        status: "pending",
+        amount: "290.00",
+        currency: "RUB",
+        confirmation_url: "https://auth.robokassa.ru/Merchant/Payment/Index?MerchantLogin=techrole&OutSum=290.00&InvId=42&Receipt=%257B%2522items%2522%253A%255B%255D%257D&SignatureValue=signed",
+        is_test: false,
+      }),
+    });
+    vi.stubGlobal("fetch", request);
+    render(<AccountActions premium={false} payments={{
+      enabled: true,
+      provider: "robokassa",
+      mode: "live",
+      terms_version: "offer-2026-07-23",
+      products: [{
+        code: "premium_30_days",
+        name: "Premium на 30 дней",
+        description: "Доступ",
+        amount: "290.00",
+        currency: "RUB",
+        access_days: 30,
+      }],
+    }} />);
+
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.click(screen.getByRole("button", { name: /Оплатить/ }));
+    await vi.waitFor(() => expect(submit).toHaveBeenCalledOnce());
+
+    const form = document.querySelector<HTMLFormElement>("form[action='https://auth.robokassa.ru/Merchant/Payment/Index']");
+    expect(form).not.toBeNull();
+    expect(form?.method).toBe("post");
+    expect(form?.querySelector<HTMLInputElement>("input[name='OutSum']")?.value).toBe("290.00");
+    expect(form?.querySelector<HTMLInputElement>("input[name='Receipt']")?.value).toBe("%7B%22items%22%3A%5B%5D%7D");
+    expect(form?.action).not.toContain("SignatureValue");
   });
 
   it("opens the on-site technical support page", () => {

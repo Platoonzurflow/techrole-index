@@ -380,6 +380,7 @@ def test_robokassa_live_refund_uses_op_state_and_signed_jwt():
     padded = payload_segment + "=" * (-len(payload_segment) % 4)
     payload = json.loads(base64.urlsafe_b64decode(padded))
     assert payload["OpKey"] == "operation-key"
+    assert payload["InvoiceItems"][0]["Name"] == "Возврат Premium"
     assert payload["InvoiceItems"][0]["Tax"] == "none"
     assert refund.external_id == "refund-request-1"
     assert refund.status == "pending"
