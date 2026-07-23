@@ -55,7 +55,7 @@
 .cinematic-glow { position: absolute; z-index: -2; border-radius: 50%; filter: blur(60px); opacity: .45; }
 .cinematic-glow-one { top: 8%; right: 4%; width: 30rem; height: 30rem; background: rgb(215 25 32 / .33); }
 .cinematic-glow-two { bottom: -15%; left: 24%; width: 26rem; height: 18rem; background: rgb(35 102 209 / .18); }
-.cinematic-grid { display: grid; align-items: center; gap: clamp(2.5rem, 6vw, 6rem); }
+.cinematic-grid { display: grid; align-items: start; gap: clamp(2.5rem, 6vw, 6rem); }
 .cinematic-copy { position: relative; z-index: 2; max-width: 48rem; }
 .cinematic-eyebrow, .cinematic-status { display: inline-flex; align-items: center; gap: .55rem; border: 1px solid rgb(255 255 255 / .14); border-radius: 999px; background: rgb(255 255 255 / .07); padding: .55rem .8rem; color: rgb(255 255 255 / .72); font-size: .74rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .cinematic-copy h1 { margin-top: 1.6rem; max-width: 13ch; font-size: clamp(3.2rem, 7vw, 6.8rem); font-weight: 900; line-height: .94; letter-spacing: -.065em; text-wrap: balance; }
@@ -66,6 +66,7 @@
 .career-search input { min-width: 0; border: 0; background: transparent; padding: .85rem .25rem; color: #151517; font-size: 1rem; outline: 0; }
 .career-search input::placeholder { color: #85858b; }
 .career-search select { min-width: 9rem; border: 0; border-left: 1px solid #e5e5e8; background: transparent; padding: .85rem .5rem; color: #333338; outline: 0; }
+.career-search:has(select) { grid-template-columns: auto minmax(0, 1fr) minmax(9rem, auto) auto; }
 .dark .cinematic-hero .career-search { border-color: rgb(255 255 255 / .14); background: #151517; color: #f7f7f8; }
 .dark .cinematic-hero .career-search > svg { color: #a8a8af; }
 .dark .cinematic-hero .career-search input { color: #f7f7f8; }
@@ -638,6 +639,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .cinematic-copy h1 { font-size: clamp(2.85rem, 14vw, 4.25rem); }
   .cinematic-copy > p { font-size: 1rem; }
   .career-search { grid-template-columns: auto minmax(0, 1fr); }
+  .career-search:has(select) { grid-template-columns: auto minmax(0, 1fr); }
   .career-search select { grid-column: 1 / -1; width: 100%; border-left: 0; border-top: 1px solid #e5e5e8; }
   .career-search button { grid-column: 1 / -1; width: 100%; }
   .cinematic-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }

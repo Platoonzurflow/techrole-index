@@ -165,6 +165,7 @@ test("light and dark career scenes have distinct intentional palettes", async ({
 });
 
 test("catalog search controls use the dark palette", async ({ page }) => {
+  await page.setViewportSize({ width: 943, height: 760 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
   await page.goto("/professions");
   const search = page.locator(".career-search.profession-search-compact");
@@ -172,10 +173,17 @@ test("catalog search controls use the dark palette", async ({ page }) => {
     background: getComputedStyle(node).backgroundColor,
     input: getComputedStyle(node.querySelector("input")!).color,
     select: getComputedStyle(node.querySelector("select")!).color,
+    selectTop: (node.querySelector("select") as HTMLElement).offsetTop,
+    selectHeight: (node.querySelector("select") as HTMLElement).offsetHeight,
+    buttonTop: (node.querySelector("button") as HTMLElement).offsetTop,
+    buttonHeight: (node.querySelector("button") as HTMLElement).offsetHeight,
   }));
   expect(palette.background).toBe("rgb(21, 21, 23)");
   expect(palette.input).toBe("rgb(247, 247, 248)");
   expect(palette.select).toBe("rgb(237, 237, 240)");
+  expect(palette.buttonTop + palette.buttonHeight / 2).toBe(
+    palette.selectTop + palette.selectHeight / 2,
+  );
 });
 
 test("homepage search and candidate stay aligned in the dark theme", async ({ page }) => {
@@ -195,8 +203,12 @@ test("homepage search and candidate stay aligned in the dark theme", async ({ pa
     left: getComputedStyle(node).left,
     bottom: getComputedStyle(node).bottom,
   }));
+  const heroAlignment = await page.locator(".cinematic-grid").evaluate(
+    (node) => getComputedStyle(node).alignItems,
+  );
   expect(candidateLayout.left).not.toBe("auto");
   expect(candidateLayout.bottom).toBe("80px");
+  expect(heroAlignment).toBe("start");
 });
 
 test("mobile navigation keeps account reachable without horizontal page overflow", async ({ page }) => {
