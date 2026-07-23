@@ -69,9 +69,12 @@ export default async function PricingPage() {
           <ul className="mt-7 grid gap-3">{free.map((item) => <li key={item} className="flex gap-2"><Check className="mt-1 shrink-0 text-positive" size={17} />{item}</li>)}</ul>
           <Link href={user ? "/account" : "/register"} className="button-secondary mt-8 w-full">{user ? "Открыть личный кабинет" : "Создать аккаунт"}</Link>
         </article>
-        <article className="panel border-amber-400/40 p-7">
+        <article className={`panel premium-plan-card border-amber-400/40 p-7 ${hasPremium ? "premium-plan-card-active" : ""}`}>
           <p className="eyebrow text-amber-600">Premium</p>
-          <h2 className="mt-3 text-3xl font-semibold">{product ? formatPrice(product.amount, product.currency) : "290 ₽"}</h2>
+          <div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="premium-old-price" aria-label="Прежняя цена 1 349 рублей">1 349 ₽</span>
+            <h2 className="text-3xl font-semibold">{product ? formatPrice(product.amount, product.currency) : "290 ₽"}</h2>
+          </div>
           <p className="mt-2 text-muted">{payments.enabled && payments.mode === "test" ? "Тестовый режим: сценарий можно проверить без реального списания" : payments.enabled ? "Доступ на 30 дней после подтверждения оплаты" : "Цена пакета — 290 ₽ за 30 дней. Приём платежей пока выключен, списаний нет."}</p>
           <ul className="mt-7 grid gap-3">{premium.map((item) => <li key={item} className="flex gap-2"><Check className="mt-1 shrink-0 text-positive" size={17} />{item}</li>)}</ul>
           <Link href={hasPremium ? "/dashboard" : "/account"} className="button-primary mt-8 w-full">{hasPremium ? "Premium активен — открыть" : "Открыть личный кабинет"}</Link>

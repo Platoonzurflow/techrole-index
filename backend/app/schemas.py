@@ -102,6 +102,10 @@ class OfficialOpenDataSummary(BaseModel):
     daily_publications: list[PublicationPoint]
     category_total_publications: int = 0
     category_daily_publications: list[PublicationPoint] = Field(default_factory=list)
+    category_salary_disclosed_count: int = 0
+    category_remote_count: int = 0
+    category_confidence_level: str = "insufficient"
+    category_salary_by_seniority: list[OfficialSalarySlice] = Field(default_factory=list)
     salary_currency: str
     salary_gross_status: Literal["unknown"]
     salary_min_sample: int

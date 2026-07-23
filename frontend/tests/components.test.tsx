@@ -36,6 +36,7 @@ afterEach(() => {
 
 describe("analytics components", () => {
   it("keeps search suggestions and category filter in one GET form", () => {
+    const requestSubmit = vi.spyOn(HTMLFormElement.prototype, "requestSubmit").mockImplementation(() => undefined);
     render(<ProfessionSearch compact initialQuery="Data" initialCategory="data-ai" suggestions={[{ slug: "data-engineer", name_ru: "Инженер по данным", name_en: "Data Engineer" }]} categories={[{ slug: "data-ai", name: "Data & AI" }]} />);
 
     const form = screen.getByRole("search");
@@ -46,6 +47,11 @@ describe("analytics components", () => {
     expect(screen.getByDisplayValue("Data & AI").closest(".app-select-shell")).not.toBeNull();
     const suggestionValues = Array.from(document.querySelectorAll("datalist option")).map((option) => option.getAttribute("value"));
     expect(suggestionValues).toEqual(expect.arrayContaining(["Инженер по данным", "Data Engineer"]));
+    const submit = screen.getByRole("button", { name: "Найти профессию" });
+    const direction = screen.getByDisplayValue("Data & AI");
+    expect(submit.compareDocumentPosition(direction) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    fireEvent.change(direction, { target: { value: "" } });
+    expect(requestSubmit).toHaveBeenCalledOnce();
   });
 
   it("shows admin-only payment readiness without rendering provider secrets", async () => {
@@ -441,6 +447,83 @@ describe("analytics components", () => {
       "/api/v1/compare?slugs=frontend%2Cbackend",
       expect.objectContaining({ headers: expect.any(Object) }),
     );
+  });
+
+  it("uses direction data when a profession has no complete salary sample", async () => {
+    const slices = (values: number[]) => (["junior", "middle", "senior"] as const).map((seniority, index) => ({
+      seniority,
+      vacancy_count: 10,
+      salary_count: 10,
+      salary_coverage: 1,
+      sample_size: 10,
+      median: values[index],
+      confidence_level: "medium" as const,
+    }));
+    const shared = {
+      description: "Описание",
+      is_premium: false,
+      teaser_only: false,
+      score: 60,
+      official_open_data: {
+        source_name: "Работа России",
+        source_url: "https://trudvsem.ru/opendata/api",
+        period_days: 180,
+        date_from: "2026-01-25",
+        date_to: "2026-07-23",
+        total_publications: 0,
+        salary_disclosed_count: 0,
+        remote_count: 0,
+        confidence_level: "insufficient",
+        daily_publications: [],
+        category_total_publications: 50,
+        category_daily_publications: [],
+        category_salary_disclosed_count: 30,
+        category_remote_count: 10,
+        category_confidence_level: "medium",
+        salary_currency: "RUB",
+        salary_gross_status: "unknown",
+        salary_min_sample: 3,
+        salary_by_seniority: slices([]),
+        category_salary_by_seniority: slices([120000, 200000, 300000]),
+        salary_history: [],
+        salary_methodology_note: "Методика",
+        methodology_note: "Методика",
+      },
+    };
+    const response = [
+      {
+        ...shared,
+        id: 1,
+        slug: "cpp-developer",
+        name_ru: "C++ разработчик",
+        name_en: "C++ Developer",
+        category_slug: "development",
+        category_name: "Разработка",
+      },
+      {
+        ...shared,
+        id: 2,
+        slug: "analytics-engineer",
+        name_ru: "Analytics Engineer",
+        name_en: "Analytics Engineer",
+        category_slug: "data-ai",
+        category_name: "Data & AI",
+      },
+    ];
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({
+      ok: true,
+      json: vi.fn().mockResolvedValue(response),
+    }));
+
+    render(<CompareTool professions={response} />);
+    fireEvent.click(screen.getByRole("button", { name: "Сравнить" }));
+
+    expect(await screen.findAllByText("120 000 ₽")).toHaveLength(2);
+    expect(screen.getAllByText("200 000 ₽")).toHaveLength(2);
+    expect(screen.getAllByText("300 000 ₽")).toHaveLength(2);
+    expect(screen.getAllByText("50")).toHaveLength(2);
+    expect(screen.getAllByText("20%")).toHaveLength(2);
+    expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();
   });
 
   it("copies a stable profession citation", async () => {

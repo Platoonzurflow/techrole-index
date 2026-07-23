@@ -158,6 +158,7 @@ def _official_open_data_summary(
     daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
     category_daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
     salary_disclosed_count = remote_count = 0
+    category_salary_disclosed_count = category_remote_count = 0
     last_ingested_at = None
     salary_rows: dict[str, list[tuple[Any, ...]]] = {
         "junior": [],
@@ -190,14 +191,27 @@ def _official_open_data_summary(
             )
     total = len(rows)
     category_total = 0
+    category_salary_rows: dict[str, list[tuple[Any, ...]]] = {
+        "junior": [],
+        "middle": [],
+        "senior": [],
+    }
     if include_category_context and source_id is not None:
         category_id = db.scalar(
             select(Profession.category_id).where(Profession.id == profession_id)
         )
         if category_id is not None:
-            category_dates = db.scalars(
-                select(Vacancy.published_at)
+            category_rows = db.execute(
+                select(
+                    Vacancy.published_at,
+                    Vacancy.salary_from,
+                    Vacancy.salary_to,
+                    Vacancy.is_remote,
+                    Vacancy.currency,
+                    SeniorityLevel.code,
+                )
                 .join(Profession, Vacancy.profession_id == Profession.id)
+                .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
                 .where(
                     Vacancy.source_id == source_id,
                     Profession.category_id == category_id,
@@ -205,11 +219,30 @@ def _official_open_data_summary(
                     Vacancy.published_at < window.end_at_exclusive,
                 )
             ).all()
-            category_total = len(category_dates)
-            for published_at in category_dates:
+            category_total = len(category_rows)
+            for (
+                published_at,
+                salary_from,
+                salary_to,
+                is_remote,
+                currency,
+                seniority_code,
+            ) in category_rows:
                 published_date = published_at.date()
                 if published_date in category_daily:
                     category_daily[published_date] += 1
+                category_salary_disclosed_count += int(
+                    salary_from is not None or salary_to is not None
+                )
+                category_remote_count += int(is_remote)
+                if seniority_code in category_salary_rows:
+                    category_salary_rows[seniority_code].append(
+                        (
+                            published_at,
+                            salary_from if currency == "RUB" else None,
+                            salary_to if currency == "RUB" else None,
+                        )
+                    )
     confidence = (
         "high"
         if total >= 100
@@ -219,42 +252,58 @@ def _official_open_data_summary(
         if total > 0
         else "insufficient"
     )
-    salary_by_seniority: list[OfficialSalarySlice] = []
-    for seniority_code in ("junior", "middle", "senior"):
-        level_rows = salary_rows[seniority_code]
-        stats = calculate_salary_statistics(
-            [
-                SalaryInput(lower=salary_from, upper=salary_to, gross=None)
-                for _, salary_from, salary_to in level_rows
-            ],
-            total_vacancies=len(level_rows),
-            min_sample=settings.min_salary_sample,
-            gross=None,
-        )
-        salary_by_seniority.append(
-            OfficialSalarySlice(
-                seniority=seniority_code,
-                vacancy_count=stats.vacancy_count,
-                salary_count=stats.salary_count,
-                salary_coverage=stats.salary_coverage,
-                sample_size=stats.midpoint_sample_size,
-                median=stats.median,
-                average=stats.average,
-                p25=stats.p25,
-                p75=stats.p75,
-                lower_bound_median=(
-                    stats.lower_bound_median
-                    if stats.midpoint_sample_size >= settings.min_salary_sample
-                    else None
-                ),
-                upper_bound_median=(
-                    stats.upper_bound_median
-                    if stats.midpoint_sample_size >= settings.min_salary_sample
-                    else None
-                ),
-                confidence_level=stats.confidence_level,
+    def build_salary_slices(
+        grouped_rows: dict[str, list[tuple[Any, ...]]],
+    ) -> list[OfficialSalarySlice]:
+        slices: list[OfficialSalarySlice] = []
+        for seniority_code in ("junior", "middle", "senior"):
+            level_rows = grouped_rows[seniority_code]
+            stats = calculate_salary_statistics(
+                [
+                    SalaryInput(lower=salary_from, upper=salary_to, gross=None)
+                    for _, salary_from, salary_to in level_rows
+                ],
+                total_vacancies=len(level_rows),
+                min_sample=settings.min_salary_sample,
+                gross=None,
             )
-        )
+            slices.append(
+                OfficialSalarySlice(
+                    seniority=seniority_code,
+                    vacancy_count=stats.vacancy_count,
+                    salary_count=stats.salary_count,
+                    salary_coverage=stats.salary_coverage,
+                    sample_size=stats.midpoint_sample_size,
+                    median=stats.median,
+                    average=stats.average,
+                    p25=stats.p25,
+                    p75=stats.p75,
+                    lower_bound_median=(
+                        stats.lower_bound_median
+                        if stats.midpoint_sample_size >= settings.min_salary_sample
+                        else None
+                    ),
+                    upper_bound_median=(
+                        stats.upper_bound_median
+                        if stats.midpoint_sample_size >= settings.min_salary_sample
+                        else None
+                    ),
+                    confidence_level=stats.confidence_level,
+                )
+            )
+        return slices
+
+    salary_by_seniority = build_salary_slices(salary_rows)
+    category_salary_by_seniority = build_salary_slices(category_salary_rows)
+    category_confidence = (
+        "high"
+        if category_total >= 100
+        else "medium"
+        if category_total >= 20
+        else "low"
+        if category_total > 0
+        else "insufficient"
+    )
 
     salary_history: list[OfficialSalaryHistoryPoint] = []
     history_date = date_from + timedelta(days=29)
@@ -304,6 +353,10 @@ def _official_open_data_summary(
             PublicationPoint(date=metric_date, count=count)
             for metric_date, count in category_daily.items()
         ],
+        category_salary_disclosed_count=category_salary_disclosed_count,
+        category_remote_count=category_remote_count,
+        category_confidence_level=category_confidence,
+        category_salary_by_seniority=category_salary_by_seniority,
         salary_currency="RUB",
         salary_gross_status="unknown",
         salary_min_sample=settings.min_salary_sample,

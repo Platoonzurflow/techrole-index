@@ -669,6 +669,10 @@ The public UI now has a compact profession-page outline, dynamic data-confidence
 
 The salary publication threshold is now `n=3`. Three complete ranges are a valid published result and are labeled as a baseline sample, not unreliable. Junior/Middle/Senior cards no longer mix an inverted official sequence with research values: a complete monotonic official sequence is used as one set, otherwise one coherent public study supplies all three displayed values while official sample sizes remain visible. The account page now has a theme-safe access summary and shortcuts; Premium is shown in the header and pricing page, and alert rules can be paused, resumed, opened by profession, and deleted.
 
+The comparison table now resolves each salary level through a transparent exact-profession → category → sourced-benchmark chain instead of reading only the last prepared-metric date. The same exact/category fallback is shown for 180-day publication totals and remote-work share. Category context returned with profession detail therefore includes category salary slices, disclosed-salary count, remote count and confidence. Catalog category selection submits immediately, cards are defensively filtered by `category_slug`, and the search and direction controls were reordered. Pricing shows 1,349 RUB as the crossed-out original plan beside the current server price of 290 RUB; an already-owned plan card is muted.
+
+The public-link crawl also exposed 404 responses from nested insight citation handlers. Canonical exports now use `/insight-citations/<slug>.csl.json`, `.bib` and `.ris`; redirects preserve the earlier `/insights/<slug>/cite/*` addresses.
+
 Public pages no longer expose owner-only editorial or infrastructure notes. The salary correction warning, legal pre-live notice, public admin link, runtime/cache/Dagster diagnostics and unfinished alert-delivery copy were removed; `/status` now shows only service health, metric freshness and the latest data load. The production Premium owner display name was normalized to `Premium`, and the account view defensively strips accidental leading `+` or `?` characters.
 
 ## Distribution and legal handoff (2026-07-23)

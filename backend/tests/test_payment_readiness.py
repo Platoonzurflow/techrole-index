@@ -23,6 +23,7 @@ def configured_robokassa(**overrides: object) -> Settings:
         "robokassa_password1": "password-one-placeholder",
         "robokassa_password2": "password-two-placeholder",
         "robokassa_password3": "password-three-placeholder",
+        "robokassa_payment_url": "https://auth.robokassa.ru/Merchant/Index.aspx",
         "public_base_url": "https://techrole.example",
         "frontend_origin": "https://techrole.example",
     }

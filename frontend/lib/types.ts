@@ -68,6 +68,10 @@ export interface OfficialOpenDataSummary {
   daily_publications: Array<{ date: string; count: number }>;
   category_total_publications: number;
   category_daily_publications: Array<{ date: string; count: number }>;
+  category_salary_disclosed_count?: number;
+  category_remote_count?: number;
+  category_confidence_level?: "insufficient" | "low" | "medium" | "high";
+  category_salary_by_seniority?: OfficialSalarySlice[];
   salary_currency: "RUB";
   salary_gross_status: "unknown";
   salary_min_sample: number;

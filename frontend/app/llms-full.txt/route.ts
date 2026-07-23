@@ -50,7 +50,7 @@ export async function GET() {
     `- ${source.name}: ${source.enabled ? "включён" : "выключен"}${source.terms_url ? `; документация ${source.terms_url}` : ""}`,
   ).join("\n");
   const insightLines = insights.map((article) =>
-    `- [${article.title}](${siteUrl}/insights/${article.slug}): ${article.description} CSL-JSON: ${siteUrl}/insights/${article.slug}/cite/csl-json`,
+    `- [${article.title}](${siteUrl}/insights/${article.slug}): ${article.description} CSL-JSON: ${siteUrl}/insight-citations/${article.slug}.csl.json`,
   ).join("\n");
 
   const content = `# TechRole Index - полный публичный контекст

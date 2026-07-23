@@ -193,6 +193,36 @@ test("catalog search controls use the dark palette", async ({ page }) => {
   )).toBeLessThanOrEqual(1);
 });
 
+test("catalog direction immediately leaves only matching professions", async ({ page }) => {
+  await page.goto("/professions");
+  const direction = page.getByLabel("Направление");
+  const order = await page.locator(".career-search").evaluate((form) => {
+    const button = form.querySelector("button");
+    const select = form.querySelector("select");
+    return Boolean(
+      button && select
+      && (button.compareDocumentPosition(select) & Node.DOCUMENT_POSITION_FOLLOWING),
+    );
+  });
+  expect(order).toBe(true);
+
+  await direction.selectOption("data-ai");
+  await expect(page).toHaveURL(/\/professions\?.*category=data-ai/);
+  const cards = page.locator(".profession-card");
+  await expect(cards.first()).toBeVisible();
+  expect(await cards.count()).toBeGreaterThan(0);
+  for (const card of await cards.all()) {
+    await expect(card).toContainText("Data & AI");
+  }
+});
+
+test("premium tariff shows the previous price", async ({ page }) => {
+  await page.goto("/pricing");
+  await expect(page.getByLabel("Прежняя цена 1 349 рублей")).toHaveText("1 349 ₽");
+  await expect(page.locator(".premium-old-price")).toHaveCSS("text-decoration-line", "none");
+  await expect(page.locator(".premium-old-price")).toBeVisible();
+});
+
 test("homepage search and candidate stay aligned in the dark theme", async ({ page }) => {
   await page.setViewportSize({ width: 1462, height: 822 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));
@@ -353,9 +383,9 @@ test("public navigation and machine-readable endpoints have no broken links", as
     "/insights/seniority-title-vs-experience-signals", "/insights/zero-matches-for-narrow-roles",
     "/insights/profession-index-0-100-not-a-promise", "/insights/server-side-paywall-ssr-json-ld",
     "/insights/llm-friendly-open-text-dataset-citation",
-    "/insights/llm-friendly-open-text-dataset-citation/cite/csl-json",
-    "/insights/llm-friendly-open-text-dataset-citation/cite/bibtex",
-    "/insights/llm-friendly-open-text-dataset-citation/cite/ris",
+    "/insight-citations/llm-friendly-open-text-dataset-citation.csl.json",
+    "/insight-citations/llm-friendly-open-text-dataset-citation.bib",
+    "/insight-citations/llm-friendly-open-text-dataset-citation.ris",
     "/data-status", "/data-status.json", "/salary-benchmarks", "/salary-benchmarks.json", "/salary-benchmarks.csv", "/open-data.csv", "/open-data-daily",
     "/open-data-daily.json", "/open-data-daily.csv", "/open-data-daily.csv-metadata.json", "/open-data-daily.schema.json",
     "/open-data-daily.croissant.json",
@@ -501,13 +531,13 @@ test("public navigation and machine-readable endpoints have no broken links", as
   const insightIndex = await (await request.get("/insights.json")).json();
   expect(insightIndex.articles).toHaveLength(12);
   expect(insightIndex.articles.every((article: { canonical_url: string }) => article.canonical_url.includes("/insights/"))).toBe(true);
-  expect(insightIndex.articles.every((article: { citation_urls: { csl_json: string } }) => article.citation_urls.csl_json.endsWith("/cite/csl-json"))).toBe(true);
+  expect(insightIndex.articles.every((article: { citation_urls: { csl_json: string } }) => article.citation_urls.csl_json.endsWith(".csl.json"))).toBe(true);
 
-  const articleCitation = await (await request.get("/insights/llm-friendly-open-text-dataset-citation/cite/csl-json")).json();
+  const articleCitation = await (await request.get("/insight-citations/llm-friendly-open-text-dataset-citation.csl.json")).json();
   expect(articleCitation.type).toBe("webpage");
   expect(articleCitation.URL).toContain("/insights/llm-friendly-open-text-dataset-citation");
-  const articleBib = await (await request.get("/insights/llm-friendly-open-text-dataset-citation/cite/bibtex")).text();
-  const articleRis = await (await request.get("/insights/llm-friendly-open-text-dataset-citation/cite/ris")).text();
+  const articleBib = await (await request.get("/insight-citations/llm-friendly-open-text-dataset-citation.bib")).text();
+  const articleRis = await (await request.get("/insight-citations/llm-friendly-open-text-dataset-citation.ris")).text();
   expect(articleBib).toContain("@online{techrole_index_llm_friendly_open_text_dataset_citation");
   expect(articleRis).toContain("TY  - ELEC");
 

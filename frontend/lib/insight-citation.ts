@@ -5,11 +5,10 @@ export function insightCanonicalUrl(article: InsightArticle, siteUrl: string) {
 }
 
 export function insightCitationUrls(article: InsightArticle, siteUrl: string) {
-  const canonical = insightCanonicalUrl(article, siteUrl);
   return {
-    csl_json: `${canonical}/cite/csl-json`,
-    bibtex: `${canonical}/cite/bibtex`,
-    ris: `${canonical}/cite/ris`,
+    csl_json: `${siteUrl}/insight-citations/${article.slug}.csl.json`,
+    bibtex: `${siteUrl}/insight-citations/${article.slug}.bib`,
+    ris: `${siteUrl}/insight-citations/${article.slug}.ris`,
   };
 }
 

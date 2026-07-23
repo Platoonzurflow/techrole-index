@@ -204,6 +204,12 @@ def test_free_response_does_not_contain_premium_fields():
         point["count"]
         for point in payload["official_open_data"]["category_daily_publications"]
     ) == payload["official_open_data"]["category_total_publications"]
+    assert payload["official_open_data"]["category_salary_disclosed_count"] == 20
+    assert payload["official_open_data"]["category_remote_count"] == 20
+    assert payload["official_open_data"]["category_confidence_level"] == "medium"
+    category_junior = payload["official_open_data"]["category_salary_by_seniority"][0]
+    assert category_junior["median"] == 150000
+    assert category_junior["sample_size"] == 20
     assert payload["salary_benchmark"]["coverage"] == "category"
     assert len(payload["salary_benchmark"]["points"]) == 7
     assert {

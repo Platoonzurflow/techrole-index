@@ -26,9 +26,9 @@ describe("article citation metadata", () => {
 
   it("advertises all three portable formats", () => {
     expect(insightCitationUrls(article, siteUrl)).toEqual({
-      csl_json: `${siteUrl}/insights/${article.slug}/cite/csl-json`,
-      bibtex: `${siteUrl}/insights/${article.slug}/cite/bibtex`,
-      ris: `${siteUrl}/insights/${article.slug}/cite/ris`,
+      csl_json: `${siteUrl}/insight-citations/${article.slug}.csl.json`,
+      bibtex: `${siteUrl}/insight-citations/${article.slug}.bib`,
+      ris: `${siteUrl}/insight-citations/${article.slug}.ris`,
     });
   });
 });

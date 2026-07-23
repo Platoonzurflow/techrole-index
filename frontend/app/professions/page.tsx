@@ -28,6 +28,9 @@ export default async function ProfessionsPage({ searchParams }: { searchParams: 
     safeApi<ProfessionSummary[]>(`/professions${apiQuery ? `?${apiQuery}` : ""}`, []),
     safeApi<Category[]>("/categories", categoryFallback),
   ]);
+  const visibleProfessions = category
+    ? professions.filter((profession) => profession.category_slug === category)
+    : professions;
   const currentCategory = categories.find((item) => item.slug === category);
 
   return (
@@ -43,14 +46,14 @@ export default async function ProfessionsPage({ searchParams }: { searchParams: 
           </p>
         </div>
         <div className="min-w-48 border-l-2 border-accent pl-5">
-          <strong className="block font-mono text-5xl tracking-tight">{professions.length}</strong>
+          <strong className="block font-mono text-5xl tracking-tight">{visibleProfessions.length}</strong>
           <span className="mt-1 block text-sm font-bold text-muted">профессий в выборке</span>
           <span className="mt-3 inline-flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-positive"><span className="live-dot" /> данные доступны</span>
         </div>
       </header>
 
       <div className="mt-8 max-w-4xl reveal" style={{ animationDelay: "40ms" }}>
-        <ProfessionSearch suggestions={professions} categories={categories} initialQuery={query} initialCategory={category} compact />
+        <ProfessionSearch suggestions={visibleProfessions} categories={categories} initialQuery={query} initialCategory={category} compact />
         <p className="mt-2 text-xs text-muted">Поиск учитывает русское и английское название. Направление можно выбрать одновременно с запросом.</p>
       </div>
 
@@ -63,11 +66,11 @@ export default async function ProfessionsPage({ searchParams }: { searchParams: 
         ))}
       </nav>
 
-      {professions.length ? (
+      {visibleProfessions.length ? (
         <>
-          <p className="mt-7 text-sm text-muted" aria-live="polite">Найдено профессий: <strong className="text-foreground">{professions.length}</strong></p>
+          <p className="mt-7 text-sm text-muted" aria-live="polite">Найдено профессий: <strong className="text-foreground">{visibleProfessions.length}</strong></p>
           <div className="mt-3 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {professions.map((item, index) => (
+          {visibleProfessions.map((item, index) => (
             <div key={item.slug} className="reveal" style={{ animationDelay: `${Math.min(index, 8) * 55}ms` }}>
               <ProfessionCard profession={item} />
             </div>

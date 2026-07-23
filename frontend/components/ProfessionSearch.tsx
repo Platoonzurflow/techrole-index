@@ -1,3 +1,5 @@
+"use client";
+
 import { Search } from "lucide-react";
 import { AppSelect } from "@/components/AppSelect";
 
@@ -48,13 +50,19 @@ export function ProfessionSearch({
       {categories.length ? (
         <label className="sr-only" htmlFor="profession-category">Направление</label>
       ) : null}
+      <button type="submit">Найти профессию</button>
       {categories.length ? (
-        <AppSelect id="profession-category" name="category" defaultValue={initialCategory ?? ""} aria-label="Направление">
+        <AppSelect
+          id="profession-category"
+          name="category"
+          defaultValue={initialCategory ?? ""}
+          aria-label="Направление"
+          onChange={(event) => event.currentTarget.form?.requestSubmit()}
+        >
           <option value="">Все направления</option>
           {categories.map((category) => <option key={category.slug} value={category.slug}>{category.name}</option>)}
         </AppSelect>
       ) : null}
-      <button type="submit">Найти профессию</button>
     </form>
   );
 }

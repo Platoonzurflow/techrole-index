@@ -5,9 +5,126 @@ import { ArrowRight, Scale } from "lucide-react";
 import { AppSelect } from "@/components/AppSelect";
 import { browserCsrf } from "@/lib/browser";
 import { rub } from "@/lib/format";
-import type { ProfessionDetail, ProfessionSummary } from "@/lib/types";
+import { salaryBenchmarkLevelPoints } from "@/lib/salary-benchmark-data";
+import type {
+  OfficialSalarySlice,
+  ProfessionDetail,
+  ProfessionSummary,
+  SalaryBenchmarkPoint,
+} from "@/lib/types";
 
 const pickerLabels = ["Первая профессия", "Вторая профессия", "Третья профессия"];
+const salaryLevels = ["junior", "middle", "senior"] as const;
+
+function salarySlicesAreCoherent(slices: OfficialSalarySlice[] | undefined) {
+  if (!slices?.length) return false;
+  const values = salaryLevels.map(
+    (level) => slices.find((slice) => slice.seniority === level)?.median,
+  );
+  return values.every((value): value is number => value != null)
+    && values.every((value, index) => index === 0 || value >= (values[index - 1] ?? 0));
+}
+
+function benchmarkValue(point: SalaryBenchmarkPoint | undefined) {
+  if (!point) return null;
+  if (point.metric === "range" && point.lower != null && point.upper != null) {
+    return `${rub(point.lower)} — ${rub(point.upper)}`;
+  }
+  return point.value != null ? rub(point.value) : null;
+}
+
+function comparisonSalary(
+  item: ProfessionDetail,
+  level: (typeof salaryLevels)[number],
+) {
+  const official = item.official_open_data;
+  const exactSlices = official?.salary_by_seniority;
+  const exact = exactSlices?.find((slice) => slice.seniority === level);
+  if (exact?.median != null && salarySlicesAreCoherent(exactSlices)) {
+    return {
+      value: rub(exact.median),
+      basis: `Профессия · n=${exact.sample_size}`,
+    };
+  }
+
+  const categorySlices = official?.category_salary_by_seniority;
+  const category = categorySlices?.find((slice) => slice.seniority === level);
+  if (category?.median != null && salarySlicesAreCoherent(categorySlices)) {
+    return {
+      value: rub(category.median),
+      basis: `${item.category_name} · n=${category.sample_size}`,
+    };
+  }
+
+  const benchmark = item.salary_benchmark
+    ? salaryBenchmarkLevelPoints(item.salary_benchmark).find(
+      (point) => point.seniority === level,
+    )
+    : undefined;
+  const value = benchmarkValue(benchmark);
+  if (value) {
+    return {
+      value,
+      basis: benchmark?.scope === "market_level"
+        ? "Ориентир IT-рынка"
+        : benchmark?.label ?? "Открытое исследование",
+    };
+  }
+
+  const categoryBenchmark = item.salary_benchmark?.points.find(
+    (point) => point.scope === "category"
+      && point.geography === "russia"
+      && point.seniority == null,
+  );
+  return {
+    value: benchmarkValue(categoryBenchmark) ?? "Данных пока нет",
+    basis: categoryBenchmark ? item.category_name : "",
+  };
+}
+
+function publicationComparison(item: ProfessionDetail) {
+  const official = item.official_open_data;
+  if (!official) return { value: "Данных пока нет", basis: "" };
+  if (official.total_publications > 0) {
+    return {
+      value: official.total_publications.toLocaleString("ru-RU"),
+      basis: "Профессия",
+    };
+  }
+  return {
+    value: official.category_total_publications.toLocaleString("ru-RU"),
+    basis: official.category_total_publications > 0 ? item.category_name : "",
+  };
+}
+
+function remoteComparison(item: ProfessionDetail) {
+  const official = item.official_open_data;
+  if (!official) return { value: "Данных пока нет", basis: "" };
+  if (official.total_publications > 0) {
+    return {
+      value: `${Math.round((official.remote_count / official.total_publications) * 100)}%`,
+      basis: "Профессия",
+    };
+  }
+  if (official.category_total_publications > 0) {
+    return {
+      value: `${Math.round(
+        ((official.category_remote_count ?? 0) / official.category_total_publications) * 100,
+      )}%`,
+      basis: item.category_name,
+    };
+  }
+  return { value: "Данных пока нет", basis: "" };
+}
+
+function ComparisonValue({ value, basis }: { value: string; basis: string }) {
+  return (
+    <div>
+      <span className="font-mono">{value}</span>
+      {basis ? <span className="mt-1 block text-xs text-muted">{basis}</span> : null}
+    </div>
+  );
+}
 
 export function CompareTool({ professions, initialSlugs = [] }: { professions: ProfessionSummary[]; initialSlugs?: string[] }) {
   const [selected, setSelected] = useState<string[]>(initialSlugs.length >= 2 ? initialSlugs : professions.slice(0, 2).map((item) => item.slug));
@@ -67,7 +184,43 @@ export function CompareTool({ professions, initialSlugs = [] }: { professions: P
 
       {message ? <p className="mt-4 rounded-xl border border-line bg-panel p-4 text-muted" role="status">{message}</p> : null}
       {data.length ? (
-        <><div className="mt-5 flex flex-wrap items-center gap-3"><a className="button-secondary" href={`/compare?slugs=${encodeURIComponent(data.map((item) => item.slug).join(","))}`}>Ссылка на это сравнение</a><span className="text-sm text-muted">Ссылку можно сохранить или отправить коллегам.</span></div><div className="table-wrap mt-6"><table className="data-table"><thead><tr><th>Показатель</th>{data.map((item) => <th key={item.slug}>{item.name_ru}</th>)}</tr></thead><tbody><tr><td>Индекс</td>{data.map((item) => <td key={item.slug} className="font-mono text-xl">{item.score}</td>)}</tr>{(["junior", "middle", "senior"] as const).map((level) => <tr key={level}><td>Медиана {level}</td>{data.map((item) => { const latestDate = item.metrics?.at(-1)?.date; const metric = item.metrics?.find((point) => point.date === latestDate && point.seniority === level); return <td key={item.slug} className="font-mono">{rub(metric?.salary_median)}</td>; })}</tr>)}</tbody></table></div></>
+        <>
+          <div className="mt-5 flex flex-wrap items-center gap-3">
+            <a className="button-secondary" href={`/compare?slugs=${encodeURIComponent(data.map((item) => item.slug).join(","))}`}>Ссылка на это сравнение</a>
+            <span className="text-sm text-muted">Ссылку можно сохранить или отправить коллегам.</span>
+          </div>
+          <div className="table-wrap mt-6">
+            <table className="data-table">
+              <thead><tr><th>Показатель</th>{data.map((item) => <th key={item.slug}>{item.name_ru}</th>)}</tr></thead>
+              <tbody>
+                <tr><td>Индекс</td>{data.map((item) => <td key={item.slug} className="font-mono text-xl">{item.score ?? "Нет расчёта"}</td>)}</tr>
+                {salaryLevels.map((level) => (
+                  <tr key={level}>
+                    <td>Зарплата {level}</td>
+                    {data.map((item) => {
+                      const salary = comparisonSalary(item, level);
+                      return <td key={item.slug}><ComparisonValue {...salary} /></td>;
+                    })}
+                  </tr>
+                ))}
+                <tr>
+                  <td>Публикации за 180 дней</td>
+                  {data.map((item) => {
+                    const publications = publicationComparison(item);
+                    return <td key={item.slug}><ComparisonValue {...publications} /></td>;
+                  })}
+                </tr>
+                <tr>
+                  <td>Удалённая работа</td>
+                  {data.map((item) => {
+                    const remote = remoteComparison(item);
+                    return <td key={item.slug}><ComparisonValue {...remote} /></td>;
+                  })}
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </>
       ) : null}
     </div>
   );

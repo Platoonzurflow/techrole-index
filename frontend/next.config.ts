@@ -12,6 +12,25 @@ const nextConfig: NextConfig = {
   devIndicators: false,
   output: "standalone",
   poweredByHeader: false,
+  async redirects() {
+    return [
+      {
+        source: "/insights/:slug/cite/csl-json",
+        destination: "/insight-citations/:slug.csl.json",
+        permanent: true,
+      },
+      {
+        source: "/insights/:slug/cite/bibtex",
+        destination: "/insight-citations/:slug.bib",
+        permanent: true,
+      },
+      {
+        source: "/insights/:slug/cite/ris",
+        destination: "/insight-citations/:slug.ris",
+        permanent: true,
+      },
+    ];
+  },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${internalApi}/api/:path*` }];
   },
