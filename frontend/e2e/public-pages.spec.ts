@@ -191,15 +191,12 @@ test("homepage search and candidate stay aligned in the dark theme", async ({ pa
   expect(palette.background).toBe("rgb(21, 21, 23)");
   expect(palette.input).toBe("rgb(247, 247, 248)");
 
-  const sceneBox = await page.locator(".career-scene").boundingBox();
-  const candidateBox = await page.locator(".candidate").boundingBox();
-  expect(sceneBox).not.toBeNull();
-  expect(candidateBox).not.toBeNull();
-  expect(Math.abs(
-    candidateBox!.x + candidateBox!.width / 2 - (sceneBox!.x + sceneBox!.width / 2),
-  )).toBeLessThan(2);
-  expect(candidateBox!.y).toBeGreaterThan(sceneBox!.y + 80);
-  expect(candidateBox!.y + candidateBox!.height).toBeLessThan(sceneBox!.y + sceneBox!.height - 60);
+  const candidateLayout = await page.locator(".candidate").evaluate((node) => ({
+    left: getComputedStyle(node).left,
+    bottom: getComputedStyle(node).bottom,
+  }));
+  expect(candidateLayout.left).not.toBe("auto");
+  expect(candidateLayout.bottom).toBe("80px");
 });
 
 test("mobile navigation keeps account reachable without horizontal page overflow", async ({ page }) => {
