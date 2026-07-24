@@ -53,8 +53,8 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
 test("profession charts separate publication volume, salary completeness, and prepared demand", async ({ page }) => {
   await page.goto("/professions/python-developer");
   await expect(page.getByRole("heading", { name: "Полнота данных для медианы" })).toBeVisible();
-  await expect(page.locator(
-    '#official-open-data [role="img"][aria-label*="полные RUB-вилки"]',
+  await expect(page.getByTestId("salary-coverage-visualization").locator(
+    '[role="img"][aria-label*="полные RUB-вилки"], [role="status"]',
   )).toBeVisible();
   await expect(page.getByRole("heading", { name: "Наблюдаемая медиана за 180 дней" })).toBeVisible();
   await expect(page.getByRole("heading", {

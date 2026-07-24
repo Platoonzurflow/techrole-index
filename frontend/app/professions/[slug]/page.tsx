@@ -236,7 +236,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <p className="eyebrow">Почему зарплатных точек меньше</p>
             <h3 className="mt-2 text-2xl font-semibold">Полнота данных для медианы</h3>
             <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Столбцы показывают новые публикации и записи с обеими границами зарплаты в RUB; линия — их долю. В медиану входят только полные вилки с распознанным уровнем.{salaryCoverageUsesCategory ? ` Для устойчивости здесь показано направление «${profession.category_name}»: точных публикаций профессии меньше 20.` : " Здесь показан точный срез профессии."}</p>
-            <div className="mt-6"><SalaryCoverageChart data={profession.official_open_data} /></div>
+            <div className="mt-6" data-testid="salary-coverage-visualization"><SalaryCoverageChart data={profession.official_open_data} /></div>
           </div>
           <div className="mt-8 border-t border-line pt-8">
             <p className="eyebrow">Динамика зарплатных вилок</p>
