@@ -64,9 +64,10 @@ test("profession charts separate publication volume, salary completeness, and pr
     '[role="img"][aria-label*="полные RUB-вилки"], [role="status"]',
   )).toBeVisible();
   await expect(page.getByRole("heading", { name: "Как менялась наблюдаемая зарплата" })).toBeVisible();
+  await expect(page.getByText("Подготовленная аналитическая витрина", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", {
     name: "Расчётный спрос — не текущий остаток вакансий",
-  })).toBeVisible();
+  })).toHaveCount(0);
   await expect(page.getByRole("img", {
     name: "Расчётный объём вакансий подготовленной витрины по уровням",
   })).toBeVisible();

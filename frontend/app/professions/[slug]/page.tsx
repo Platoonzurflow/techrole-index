@@ -287,12 +287,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
       {!profession.teaser_only && profession.metrics ? (
         <>
           <section id="market-metrics" className="mt-10">
-            <div className="panel p-6 sm:p-8">
-              <p className="eyebrow">Подготовленная аналитическая витрина</p>
-              <h2 className="mt-2 text-2xl font-semibold">Расчётный спрос — не текущий остаток вакансий</h2>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Этот детерминированный слой нужен для сопоставления профессий и проверки поведения индекса. Он не объединяется с официальными публикациями выше и не утверждает, что указанное число вакансий открыто прямо сейчас.</p>
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <article className="panel p-5"><p className="text-sm text-muted">Расчётный объём вакансий</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(currentVacancies)}</p><div className="mt-4"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7 дней" /></div></article>
               <article className="panel p-5"><p className="text-sm text-muted">Полнота gross-витрины</p><p className="mt-2 font-mono text-3xl font-semibold">{weightedVacancies ? percent(weightedSalaryCount / weightedVacancies) : "-"}</p><p className="mt-4 text-xs text-muted">доля записей с расчётной зарплатой</p></article>
               <article className="panel p-5"><p className="text-sm text-muted">Удалённая работа</p><p className="mt-2 font-mono text-3xl font-semibold">{latest.length ? percent(latest.reduce((sum, item) => sum + item.remote_share, 0) / latest.length) : "-"}</p><p className="mt-4 flex items-center gap-2 text-xs text-muted"><Wifi size={14} /> в расчётном срезе</p></article>
