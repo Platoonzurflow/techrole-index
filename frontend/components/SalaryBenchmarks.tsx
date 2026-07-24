@@ -66,8 +66,9 @@ function taxLabel(value: "gross" | "net" | "unknown") {
 }
 
 function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
+  const fragment = `salary-reference-${point.source_id}-${point.scope}-${point.geography}-${point.seniority ?? "all"}`;
   return (
-    <article className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
+    <article id={fragment} className="scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h4 className="font-semibold">{point.seniority ? levelLabels[point.seniority] : point.label}</h4>
         <span className="badge">{scopeLabels[point.scope]}</span>
@@ -103,7 +104,7 @@ export function SalaryBenchmarks({
   const levels = salaryBenchmarkLevelPoints(data);
 
   return (
-    <section className="panel mt-10 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
+    <section id="salary-benchmark" className="panel mt-10 scroll-mt-24 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Зарплатные ориентиры</p>
@@ -138,7 +139,7 @@ export function SalaryBenchmarks({
 
       <div className="mt-8 grid gap-3 lg:grid-cols-2">
         {data.sources.map((source) => (
-          <article key={source.id} className="rounded-2xl border border-line p-4 text-sm">
+          <article id={`salary-source-${source.id}`} key={source.id} className="scroll-mt-24 rounded-2xl border border-line p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div><h3 className="font-semibold">{source.name}</h3><p className="mt-1 text-muted">{source.period} · {taxLabel(source.tax_status)}{source.total_sample_size ? ` · n=${source.total_sample_size.toLocaleString("ru-RU")}` : ""}</p></div>
               <a className="button-secondary" href={source.url} target="_blank" rel="noreferrer">Источник <ExternalLink size={14} /></a>
@@ -192,7 +193,7 @@ export function SalaryBySeniority({
             : "Нет проверяемого среза";
 
         return (
-          <article key={seniority} className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
+          <article id={`salary-level-${seniority}`} key={seniority} className="scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-lg font-semibold">{levelLabels[seniority]}</h4>
               <span className={`badge ${useObserved ? "confidence-medium" : ""}`}>

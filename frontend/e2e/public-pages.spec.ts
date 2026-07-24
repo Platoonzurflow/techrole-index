@@ -50,6 +50,11 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Поделиться" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
+  await expect(page.locator("#salary-benchmark")).toBeVisible();
+  await expect(page.locator("#salary-level-junior")).toBeVisible();
+  await expect(page.locator("#salary-history")).toBeVisible();
+  await expect(page.locator("#publication-count-exact")).toBeVisible();
+  await expect(page.locator("#observation-period")).toBeVisible();
 });
 
 test("profession charts separate publication volume, salary completeness, and prepared demand", async ({ page }) => {
@@ -92,6 +97,7 @@ test("profession structured data cites only visible public datasets", async ({ p
   }));
   expect(observed).toEqual(expect.objectContaining({
     isAccessibleForFree: true,
+    url: expect.stringMatching(/\/professions\/dotnet-developer#official-open-data$/),
     distribution: expect.arrayContaining([
       expect.objectContaining({ contentUrl: expect.stringContaining("/open-data.json") }),
       expect.objectContaining({ contentUrl: expect.stringContaining("/open-data.csv") }),

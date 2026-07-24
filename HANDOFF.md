@@ -699,4 +699,5 @@ Profession pages have dynamic OG images, native share/copy-citation controls, an
 - Активная версия индекса — `v1.1.0`: demand 28%, salary 24%, growth 16%, junior 12%, remote 10%, quality 10%. Salary input выбирается из публичного salary benchmark, а API жёстко ограничивает score join активной версией.
 - Перед production обновлением применить migration `0010`, затем в том же релизе запустить `recompute_scores`; не оставлять активную новую версию без рассчитанных строк.
 - JSON-LD профессии получил отдельный видимый Salary Dataset с первичными source URL, scope, периодом и единицами. AI/search rules повторно сверены с официальными документами 24 июля 2026 года.
+- Ключевые зарплатные уровни, счётчики наблюдений, графики и период получили стабильные HTML-фрагменты; URL официального Dataset в JSON-LD теперь ведёт прямо на видимый блок `#official-open-data`.
 - Release `c9958f2b` is deployed on the Selectel VDS. Migration `0010` is current, all 50 active profession scores were recomputed for `v1.1.0`, production services are healthy, Robokassa is still `live`, and IndexNow accepted all 88 canonical sitemap URLs.

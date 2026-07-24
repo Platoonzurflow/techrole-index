@@ -65,7 +65,7 @@ function ObservationPeriod({ profession }: { profession: ProfessionDetail }) {
   const source = profession.official_open_data;
   if (!source) return null;
   return (
-    <section className="observation-period mt-10" aria-label="Период наблюдения">
+    <section id="observation-period" className="observation-period mt-10 scroll-mt-24" aria-label="Период наблюдения">
       <CalendarDays size={18} aria-hidden="true" />
       <div>
         <p className="text-xs font-bold uppercase tracking-[.13em] text-muted">Период наблюдения</p>
@@ -180,7 +180,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         "@id": `${canonicalUrl}#official-open-data`,
         name: `Публикации вакансий ${profession.name_ru} в официальном открытом API`,
         description: profession.official_open_data.methodology_note,
-        url: canonicalUrl,
+        url: `${canonicalUrl}#official-open-data`,
         inLanguage: "ru-RU",
         isAccessibleForFree: true,
         temporalCoverage: `${profession.official_open_data.date_from}/${profession.official_open_data.date_to}`,
@@ -234,7 +234,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
 
       <TechStack profession={profession} />
 
-      {profession.salary_benchmark ? <div id="salary-benchmark"><SalaryBenchmarks data={profession.salary_benchmark} official={profession.official_open_data} /></div> : null}
+      {profession.salary_benchmark ? <SalaryBenchmarks data={profession.salary_benchmark} official={profession.official_open_data} /> : null}
 
       {profession.official_open_data ? (
         <section id="official-open-data" className="market-showcase mt-10 p-5 sm:p-8" aria-labelledby="official-open-data-title">
@@ -247,13 +247,13 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <a className="button-secondary" href={profession.official_open_data.source_url} rel="noreferrer">Документация источника</a>
           </div>
           <div className="market-showcase-stats mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
-            <div><p className="text-sm text-muted">По направлению «{profession.category_name}»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
-            <div><p className="text-sm text-muted">С границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
-            <div><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
-            <div><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
+            <div id="publication-count-exact" className="scroll-mt-24"><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
+            <div id="publication-count-category" className="scroll-mt-24"><p className="text-sm text-muted">По направлению «{profession.category_name}»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
+            <div id="salary-disclosed-count" className="scroll-mt-24"><p className="text-sm text-muted">С границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
+            <div id="complete-salary-range-count" className="scroll-mt-24"><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
+            <div id="remote-publication-count" className="scroll-mt-24"><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
           </div>
-          <article className="market-stage market-stage-primary mt-7">
+          <article id="salary-history" className="market-stage market-stage-primary mt-7 scroll-mt-24">
             <div className="market-stage-copy">
               <p className="eyebrow">Главный график</p>
               <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
@@ -261,7 +261,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
             <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
           </article>
-          <article className="market-stage mt-5">
+          <article id="publication-history" className="market-stage mt-5 scroll-mt-24">
             <div className="market-stage-copy">
               <p className="eyebrow">Интенсивность рынка</p>
               <h3 className="mt-2 text-2xl font-semibold">Новые публикации по неделям</h3>
@@ -269,7 +269,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
             <div className="mt-5"><PublicationChart data={profession.official_open_data} /></div>
           </article>
-          <article className="market-stage mt-5">
+          <article id="salary-coverage" className="market-stage mt-5 scroll-mt-24">
             <div className="market-stage-copy">
               <p className="eyebrow">Качество зарплатных данных</p>
               <h3 className="mt-2 text-2xl font-semibold">Полнота вилок для медианы</h3>
@@ -300,7 +300,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
           </section>
 
-          <section className="panel mt-12 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Сопоставимый ряд Junior, Middle и Senior внутри подготовленной витрины. Для наблюдаемой зарплатной динамики используйте единый официальный график выше.</p></div><div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div></div><VacancyChart metrics={profession.metrics} /></section>
+          <section id="prepared-vacancy-history" className="panel mt-12 scroll-mt-24 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Сопоставимый ряд Junior, Middle и Senior внутри подготовленной витрины. Для наблюдаемой зарплатной динамики используйте единый официальный график выше.</p></div><div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div></div><VacancyChart metrics={profession.metrics} /></section>
         </>
       ) : null}
 
@@ -347,7 +347,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         </>
       )}
 
-      {related.length ? <section className="mt-14"><p className="eyebrow">Смежные роли</p><h2 className="mt-2 text-2xl font-semibold">Продолжить исследование</h2><div className="mt-5 grid gap-3 md:grid-cols-2">{related.map((item) => <Link key={item.slug} href={`/professions/${item.slug}`} className="panel flex items-center justify-between p-4 font-semibold hover:border-accent/50"><span>{item.name_ru}</span><ArrowRight size={16} className="text-muted" /></Link>)}</div></section> : null}
+      {related.length ? <section id="related-professions" className="mt-14 scroll-mt-24"><p className="eyebrow">Смежные роли</p><h2 className="mt-2 text-2xl font-semibold">Продолжить исследование</h2><div className="mt-5 grid gap-3 md:grid-cols-2">{related.map((item) => <Link key={item.slug} href={`/professions/${item.slug}`} className="panel flex items-center justify-between p-4 font-semibold hover:border-accent/50"><span>{item.name_ru}</span><ArrowRight size={16} className="text-muted" /></Link>)}</div></section> : null}
       <div className="mt-8 flex flex-wrap items-center gap-3 text-sm text-muted"><span className="flex items-center gap-2"><Radio size={15} /> Данные обновлены {profession.updated_at ?? "-"}; размер выборки показан для каждого уровня.</span><Link href="/citation" className="button-secondary">Как цитировать</Link>{profession.history_days === 180 ? <a href={`/api/v1/export/professions/${profession.slug}.csv`} className="button-secondary">Скачать CSV</a> : null}</div>
     </div>
   );
