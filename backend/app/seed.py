@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 
 from app.config import settings
 from app.data.catalog import CATEGORIES, PROFESSIONS, profession_description
+from app.data.salary_benchmarks import scoring_salary_benchmark
 from app.database import SessionLocal, engine
 from app.demo_accounts import DEMO_ACCOUNT_EMAILS
 from app.domain.scoring import DEFAULT_WEIGHTS, SCORING_VERSION, ScoreInputs, calculate_score
@@ -122,7 +123,10 @@ def _seed_sources_and_scoring(
     scoring = ScoringVersion(
         version=SCORING_VERSION,
         weights=DEFAULT_WEIGHTS,
-        description="Percentile rank, log demand и ограничение экстремумов; METHODOLOGY.md.",
+        description=(
+            "Карьерный индекс: prepared demand/growth/access/remote, "
+            "публичный salary benchmark и повышенный вес качества; METHODOLOGY.md."
+        ),
         is_active=True,
     )
     db.add(scoring)
@@ -283,17 +287,29 @@ def _seed_metrics(db, professions, levels, regions, scoring):
         and row["region_id"] == regions["ru"].id
         and row["seniority_id"] == levels["middle"].id
     ]
+    category_slugs = {
+        category.id: category.slug
+        for category in db.scalars(select(ProfessionCategory)).all()
+    }
     demand_peers = [float(row["vacancy_count"]) for row in current_rows]
     salary_peers = [
-        float(row["salary_median"] or row["lower_bound_median"] or 0) for row in current_rows
+        scoring_salary_benchmark(
+            profession.slug,
+            category_slugs[profession.category_id],
+        )
+        for profession in professions
     ]
     growth_peers = [
         0.32 if i % 3 == 0 else -0.24 if i % 3 == 1 else 0.015 for i in range(len(professions))
     ]
     for index, (profession, row) in enumerate(zip(professions, current_rows, strict=True)):
+        salary_benchmark = scoring_salary_benchmark(
+            profession.slug,
+            category_slugs[profession.category_id],
+        )
         inputs = ScoreInputs(
             vacancy_count=float(row["vacancy_count"]),
-            salary_median=float(row["salary_median"] or row["lower_bound_median"] or 0),
+            salary_median=salary_benchmark,
             demand_growth_percent=growth_peers[index] * 100,
             junior_share=0.13 + (index % 6) * 0.035,
             remote_share=float(row["remote_share"]),

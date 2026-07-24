@@ -25,7 +25,8 @@ const levelLabels = { junior: "Junior", middle: "Middle", senior: "Senior" };
 const scopeLabels = {
   exact_role: "точная профессия",
   related_role: "смежная профессия",
-  technology: "технологический срез",
+  technology: "данные по технологии",
+  occupation_group: "широкая группа занятий",
   category: "категория",
   market_level: "общий IT-рынок",
 };
@@ -139,7 +140,7 @@ export function SalaryBenchmarks({
         {data.sources.map((source) => (
           <article key={source.id} className="rounded-2xl border border-line p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><h3 className="font-semibold">{source.name}</h3><p className="mt-1 text-muted">{source.period} · {source.tax_status === "net" ? "на руки" : "gross/net не указан"}{source.total_sample_size ? ` · n=${source.total_sample_size.toLocaleString("ru-RU")}` : ""}</p></div>
+              <div><h3 className="font-semibold">{source.name}</h3><p className="mt-1 text-muted">{source.period} · {taxLabel(source.tax_status)}{source.total_sample_size ? ` · n=${source.total_sample_size.toLocaleString("ru-RU")}` : ""}</p></div>
               <a className="button-secondary" href={source.url} target="_blank" rel="noreferrer">Источник <ExternalLink size={14} /></a>
             </div>
             <p className="mt-3 leading-6 text-muted">{source.methodology_note}</p>

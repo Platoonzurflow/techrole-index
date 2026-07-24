@@ -85,6 +85,24 @@ HABR_CALCULATOR_MEDIANS = {
 }
 
 SOURCES: dict[str, SalarySource] = {
+    "rosstat_57t_2025": {
+        "id": "rosstat_57t_2025",
+        "name": "Росстат — заработная плата по группам занятий",
+        "url": "https://www.rosstat.gov.ru/compendium/document/60671",
+        "methodology_url": "https://www.rosstat.gov.ru/compendium/document/60671",
+        "period": "октябрь 2025",
+        "published_at": "2026-04-24",
+        "total_sample_size": None,
+        "currency": "RUB",
+        "tax_status": "gross",
+        "income_type": "salary",
+        "methodology_note": (
+            "Единовременное обследование организаций по форме 57-Т. Используется "
+            "таблица 9: средняя начисленная зарплата работников, полностью "
+            "отработавших октябрь 2025 года, по составным группам ОКЗ. Это широкий "
+            "официальный контекст, а не медиана и не оценка конкретного стека."
+        ),
+    },
     "habr_2026_h1": {
         "id": "habr_2026_h1",
         "name": "Хабр Карьера — зарплаты IT-специалистов",
@@ -152,6 +170,47 @@ SOURCES: dict[str, SalarySource] = {
         ),
     },
 }
+
+
+# label, average accrued salary, estimated workers who fully worked October.
+# Values are from Rosstat table 9 for the Russian Federation, all ownership
+# forms. Worker counts are estimates in the published table, not sample sizes.
+ROSSTAT_OCCUPATION_GROUPS = {
+    "software_applications": (
+        "Разработчики и аналитики ПО и приложений",
+        216348,
+        158400,
+    ),
+    "databases_networks": (
+        "Специалисты по базам данных и сетям",
+        165966,
+        62900,
+    ),
+    "ict_professionals": (
+        "Специалисты высшего уровня в ИКТ",
+        202029,
+        221300,
+    ),
+}
+
+ROSSTAT_DATABASE_NETWORK_SLUGS = {
+    "devops-engineer",
+    "sre",
+    "platform-engineer",
+    "system-administrator",
+    "network-engineer",
+    "cloud-engineer",
+    "database-administrator",
+    "postgresql-dba",
+}
+
+
+def _rosstat_occupation_group(slug: str, category_slug: str) -> str:
+    if slug in ROSSTAT_DATABASE_NETWORK_SLUGS:
+        return "databases_networks"
+    if category_slug == "security":
+        return "ict_professionals"
+    return "software_applications"
 
 for _profession_slug, (_alias, _label, _median) in HABR_CALCULATOR_MEDIANS.items():
     _source_id = f"habr_calculator_{_alias.lower()}_2026_07_22"
@@ -806,6 +865,25 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
                 )
             )
 
+    rosstat_key = _rosstat_occupation_group(slug, category_slug)
+    rosstat_label, rosstat_average, rosstat_workers = ROSSTAT_OCCUPATION_GROUPS[
+        rosstat_key
+    ]
+    points.append(
+        _point(
+            source_id="rosstat_57t_2025",
+            scope="occupation_group",
+            label=rosstat_label,
+            metric="average",
+            value=rosstat_average,
+            note=(
+                f"Широкая группа ОКЗ; оценка охватывает {rosstat_workers / 1000:g} "
+                "тыс. работников, полностью отработавших октябрь. Это не зарплата "
+                "конкретной профессии."
+            ),
+        )
+    )
+
     for seniority_point in SENIORITY_POINTS.get(slug, []):
         (
             seniority,
@@ -904,8 +982,9 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
         "methodology_note": (
             "Сначала показаны данные самой профессии. Для сравнения грейдов выбирается "
             "один полный непротиворечивый набор одного исследования; неполные или "
-            "пересекающиеся ролевые точки не смешиваются с другим источником. "
-            "Период, scope и первоисточник остаются видимыми."
+            "пересекающиеся ролевые точки не смешиваются с другим источником. Широкая "
+            "группа занятий Росстата показана только как независимый официальный фон. "
+            "Период, охват, scope и первоисточник остаются видимыми."
         ),
     }
 
@@ -924,3 +1003,52 @@ def salary_benchmark_catalog() -> list[dict[str, Any]]:
         }
         for slug, name_ru, name_en, category_slug, _aliases in PROFESSIONS
     ]
+
+
+def scoring_salary_benchmark(slug: str, category_slug: str) -> float:
+    """Return one reproducible salary input for the composite index.
+
+    The choice prefers a national profession/technology point, then a related
+    point, then the median of public regional role points. A broad official
+    occupation group is the final fallback. Grade points are intentionally not
+    mixed into this single salary component.
+    """
+    points = salary_benchmark_for(slug, category_slug)["points"]
+    national = [
+        point
+        for point in points
+        if point["geography"] == "russia"
+        and point["seniority"] is None
+        and not point["is_fallback"]
+    ]
+    for scope in ("exact_role", "technology", "related_role", "occupation_group"):
+        point = next((item for item in national if item["scope"] == scope), None)
+        if point and point["value"] is not None:
+            return float(point["value"])
+
+    regional = sorted(
+        float(point["value"])
+        for point in points
+        if point["geography"] != "russia"
+        and point["seniority"] is None
+        and not point["is_fallback"]
+        and point["scope"] in {"exact_role", "related_role"}
+        and point["value"] is not None
+    )
+    if regional:
+        middle = len(regional) // 2
+        if len(regional) % 2:
+            return regional[middle]
+        return (regional[middle - 1] + regional[middle]) / 2
+
+    category = next(
+        (
+            point
+            for point in points
+            if point["scope"] == "category"
+            and point["geography"] == "russia"
+            and point["value"] is not None
+        ),
+        None,
+    )
+    return float(category["value"]) if category else 0.0

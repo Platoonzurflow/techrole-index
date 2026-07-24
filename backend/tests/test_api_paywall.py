@@ -220,13 +220,20 @@ def test_free_response_does_not_contain_premium_fields():
     assert category_junior["median"] == 150000
     assert category_junior["sample_size"] == 20
     assert payload["salary_benchmark"]["coverage"] == "category"
-    assert len(payload["salary_benchmark"]["points"]) == 7
+    assert len(payload["salary_benchmark"]["points"]) == 8
+    assert any(
+        point["scope"] == "occupation_group"
+        and point["source_id"] == "rosstat_57t_2025"
+        and point["metric"] == "average"
+        for point in payload["salary_benchmark"]["points"]
+    )
     assert {
         point["seniority"]
         for point in payload["salary_benchmark"]["points"]
         if point.get("seniority")
     } == {"junior", "middle", "senior"}
     assert {source["tax_status"] for source in payload["salary_benchmark"]["sources"]} == {
+        "gross",
         "net",
         "unknown",
     }
@@ -474,6 +481,45 @@ def test_payment_catalog_is_public_server_priced_and_describes_receipt(monkeypat
     assert product["refund_policy_url"].endswith("/legal/refunds")
     assert client.get("/api/v1/payments").status_code == 401
     client.close()
+    session.close()
+
+
+def test_catalog_uses_only_the_active_scoring_version_for_the_latest_date():
+    client, session = build_client()
+    previous = session.scalar(select(ScoringVersion).where(ScoringVersion.is_active.is_(True)))
+    assert previous is not None
+    previous.is_active = False
+    current = ScoringVersion(
+        version="test-v2",
+        weights=DEFAULT_WEIGHTS,
+        description="Новая активная версия",
+        is_active=True,
+    )
+    session.add(current)
+    session.flush()
+    professions = session.scalars(select(Profession).order_by(Profession.id)).all()
+    for index, profession in enumerate(professions):
+        session.add(
+            ProfessionScoreDaily(
+                score_date=date(2026, 7, 17),
+                profession_id=profession.id,
+                scoring_version_id=current.id,
+                score=Decimal(str(40 + index)),
+                breakdown={"demand": 40 + index},
+                data_confidence="medium",
+            )
+        )
+    session.commit()
+
+    response = client.get("/api/v1/professions")
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert len(payload) == 4
+    by_slug = {item["slug"]: item for item in payload}
+    assert by_slug["role-1"]["score"] == 41
+    assert by_slug["role-2"]["score"] == 42
+    assert by_slug["role-3"]["score"] == 43
     session.close()
     app.dependency_overrides.clear()
 

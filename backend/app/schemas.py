@@ -143,6 +143,7 @@ class SalaryBenchmarkPoint(BaseModel):
         "exact_role",
         "related_role",
         "technology",
+        "occupation_group",
         "category",
         "market_level",
     ]

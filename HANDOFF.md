@@ -690,3 +690,12 @@ Profession pages have dynamic OG images, native share/copy-citation controls, an
 - `/answers` and `/answers.json` add stable answer-first demand, level salary, region and weekly-dynamics citations. AI/open-data/research/full-context/RSS endpoints fail with 503 rather than empty 200 and support validators. Croissant self-citation misuse was replaced by `subjectOf`. Search/AI rules and the only owner login steps are documented in `SEARCH_AI.md`.
 - Migration `0009` and `/admin/analytics` add consented privacy-first unique-browser, pageview, click, citation-signal, AI-referral and declared crawler reporting. Admin/automation/private paths are excluded; IP/email/raw UA/query/forms are never stored. Production enablement uses two independent secrets and is documented in `ANALYTICS.md`.
 - Required final sequence remains: full backend/frontend/build/Compose/E2E/public audit and secret scan; commit public-main; push it to remote main; wait for CI and Secret scan; deploy VDS with migrations; enable analytics securely; keep payment mode test; production smoke and IndexNow.
+
+## Profession-card and score handoff (2026-07-24)
+
+- Карточка профессии перестроена: первым содержательным блоком стал типичный стек, затем фактические доходы, единое визуальное шоу из трёх честных графиков, подготовленный расчётный ряд, компактный период, разделение provenance-слоёв и только затем неизменённые таблицы индекса/навыков/регионов.
+- Графики публикаций и полноты выбирают точную профессию при `total_publications >= 20`, иначе направление. Зарплатный ряд сохраняет per-level точный приоритет и fallback направления при `n < 3`; переключатель 30/90/180 дней меняет только окно.
+- Добавлен Росстат 57-Т (октябрь 2025, таблица 9) как широкий официальный `occupation_group` с gross average и оценкой работников; это не role median и не sample size.
+- Активная версия индекса — `v1.1.0`: demand 28%, salary 24%, growth 16%, junior 12%, remote 10%, quality 10%. Salary input выбирается из публичного salary benchmark, а API жёстко ограничивает score join активной версией.
+- Перед production обновлением применить migration `0010`, затем в том же релизе запустить `recompute_scores`; не оставлять активную новую версию без рассчитанных строк.
+- JSON-LD профессии получил отдельный видимый Salary Dataset с первичными source URL, scope, периодом и единицами. AI/search rules повторно сверены с официальными документами 24 июля 2026 года.

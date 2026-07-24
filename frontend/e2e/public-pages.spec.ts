@@ -19,7 +19,9 @@ async function getWithTransientRetries(
 }
 
 async function expectHealthyRoutes(request: APIRequestContext, routes: string[]) {
-  const batchSize = 4;
+  // Next dev compiles dynamic SSR routes lazily. Serial crawling keeps the
+  // public-contract audit stable under the same 2 GB memory limit as CI.
+  const batchSize = 1;
   for (let start = 0; start < routes.length; start += batchSize) {
     await Promise.all(routes.slice(start, start + batchSize).map(async (route) => {
       const response = await getWithTransientRetries(request, route);
@@ -34,12 +36,12 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await page.goto("/professions/python-developer");
   await expect(page.getByRole("heading", { level: 1, name: "Python-разработчик" })).toBeVisible();
   await expect(page.getByText("n=", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Публикации за последние 180 дней" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Зарплата и поток вакансий за 180 дней" })).toBeVisible();
   await expect(page.getByText("Это не историческое число одновременно активных вакансий", { exact: false })).toBeVisible();
   await expect(page.getByText("gross/net не определён", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Рыночные ориентиры зарплаты" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
-  await expect(page.getByText("технологический срез", { exact: true }).first()).toBeVisible();
+  await expect(page.getByText("данные по технологии", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 4, name: "Junior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 4, name: "Middle" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 4, name: "Senior" })).toHaveCount(1);
@@ -52,11 +54,11 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
 
 test("profession charts separate publication volume, salary completeness, and prepared demand", async ({ page }) => {
   await page.goto("/professions/python-developer");
-  await expect(page.getByRole("heading", { name: "Полнота данных для медианы" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Полнота вилок для медианы" })).toBeVisible();
   await expect(page.getByTestId("salary-coverage-visualization").locator(
     '[role="img"][aria-label*="полные RUB-вилки"], [role="status"]',
   )).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Наблюдаемая медиана за 180 дней" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Как менялась наблюдаемая зарплата" })).toBeVisible();
   await expect(page.getByRole("heading", {
     name: "Расчётный спрос — не текущий остаток вакансий",
   })).toBeVisible();
@@ -67,6 +69,37 @@ test("profession charts separate publication volume, salary completeness, and pr
     .toHaveCount(0);
 });
 
+test("profession structured data cites only visible public datasets", async ({ page }) => {
+  await page.goto("/professions/dotnet-developer");
+  const schemas = await page.locator('script[type="application/ld+json"]').allTextContents();
+  const nodes = schemas.flatMap((schema) => {
+    const parsed = JSON.parse(schema);
+    return parsed["@graph"] ?? [parsed];
+  });
+  const datasets = nodes.filter((node: { "@type"?: string }) => node["@type"] === "Dataset");
+  const salary = datasets.find((node: { "@id"?: string }) => node["@id"]?.endsWith("#salary-benchmark"));
+  const observed = datasets.find((node: { "@id"?: string }) => node["@id"]?.endsWith("#official-open-data"));
+
+  expect(datasets).toHaveLength(2);
+  expect(salary).toEqual(expect.objectContaining({
+    isAccessibleForFree: true,
+    license: expect.stringContaining("/citation#reuse"),
+    citation: expect.arrayContaining([expect.stringMatching(/^https:\/\//)]),
+    distribution: expect.arrayContaining([
+      expect.objectContaining({ contentUrl: expect.stringContaining("/salary-benchmarks.json") }),
+      expect.objectContaining({ contentUrl: expect.stringContaining("/salary-benchmarks.csv") }),
+    ]),
+  }));
+  expect(observed).toEqual(expect.objectContaining({
+    isAccessibleForFree: true,
+    distribution: expect.arrayContaining([
+      expect.objectContaining({ contentUrl: expect.stringContaining("/open-data.json") }),
+      expect.objectContaining({ contentUrl: expect.stringContaining("/open-data.csv") }),
+    ]),
+  }));
+  expect(JSON.stringify(datasets)).not.toMatch(/premium|market-metrics|\/api\/v1\/professions/i);
+});
+
 test("grade cards stay coherent while observed salary inversions remain explained", async ({ page }) => {
   await page.goto("/professions/dotnet-developer");
   const gradeSection = page.getByRole("heading", {
@@ -75,7 +108,7 @@ test("grade cards stay coherent while observed salary inversions remain explaine
   await expect(gradeSection).toContainText("100 000 ₽ — 130 000 ₽");
   await expect(gradeSection).toContainText("230 000 ₽ — 270 000 ₽");
   await expect(gradeSection).toContainText("370 000 ₽ — 380 000 ₽");
-  await expect(page.getByRole("heading", { name: "Полнота данных для медианы" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Полнота вилок для медианы" })).toBeVisible();
 
   await page.goto("/professions/firmware-engineer");
   await expect(page.getByText("Линии наблюдений могут пересекаться", { exact: false }))

@@ -5,9 +5,12 @@ from decimal import Decimal
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.data.salary_benchmarks import scoring_salary_benchmark
 from app.domain.scoring import ScoreInputs, calculate_score
 from app.domain.trends import calculate_trend
 from app.models import (
+    Profession,
+    ProfessionCategory,
     ProfessionMetricDaily,
     ProfessionScoreDaily,
     Region,
@@ -29,16 +32,26 @@ def recompute_scores(db: Session) -> int:
     rows = db.execute(
         select(ProfessionMetricDaily, SeniorityLevel.code)
         .join(SeniorityLevel, ProfessionMetricDaily.seniority_id == SeniorityLevel.id)
+        .join(Profession, ProfessionMetricDaily.profession_id == Profession.id)
         .where(
             ProfessionMetricDaily.metric_date == score_date,
             ProfessionMetricDaily.region_id == region_id,
             ProfessionMetricDaily.gross.is_(True),
+            Profession.is_active.is_(True),
         )
     ).all()
     by_profession: dict[int, dict[str, ProfessionMetricDaily]] = defaultdict(dict)
     for metric, level_code in rows:
         by_profession[metric.profession_id][level_code] = metric
 
+    profession_context = {
+        profession_id: (slug, category_slug)
+        for profession_id, slug, category_slug in db.execute(
+            select(Profession.id, Profession.slug, ProfessionCategory.slug)
+            .join(ProfessionCategory, Profession.category_id == ProfessionCategory.id)
+            .where(Profession.is_active.is_(True))
+        ).all()
+    }
     prepared: dict[int, ScoreInputs] = {}
     growth_by_profession: dict[int, float] = {}
     for profession_id, levels in by_profession.items():
@@ -60,13 +73,11 @@ def recompute_scores(db: Session) -> int:
         growth_by_profession[profession_id] = growth
         total_vacancies = sum(item.vacancy_count for item in levels.values())
         total_salary = sum(item.salary_count for item in levels.values())
-        middle = levels.get("middle")
         junior = levels.get("junior")
+        slug, category_slug = profession_context[profession_id]
         prepared[profession_id] = ScoreInputs(
             vacancy_count=float(total_vacancies),
-            salary_median=float(
-                (middle.salary_median or middle.lower_bound_median or 0) if middle else 0
-            ),
+            salary_median=scoring_salary_benchmark(slug, category_slug),
             demand_growth_percent=growth,
             junior_share=(junior.vacancy_count / total_vacancies)
             if junior and total_vacancies

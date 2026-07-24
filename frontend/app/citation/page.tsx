@@ -15,6 +15,8 @@ const formats = [
   ["RIS", "/citation.ris", "Для библиографических менеджеров и импорта."],
   ["Data Package", "/datapackage.json", "Описание публичных JSON-ресурсов и их назначения."],
   ["CSV", "/open-data.csv", "Плоская таблица профессий и seniority-срезов с provenance."],
+  ["Salary JSON", "/salary-benchmarks.json", "Ролевые, технологические и широкие зарплатные ориентиры с source-specific условиями."],
+  ["Salary CSV", "/salary-benchmarks.csv", "Плоский зарплатный справочник со scope, tax status, периодом и первичным URL."],
   ["Daily dataset", "/open-data-daily", "Описание, словарь полей, охват и правила цитирования ежедневного observed-publication слоя."],
   ["Daily JSON", "/open-data-daily.json", "Нормализованные observed-publication срезы из инкрементальной SQL-витрины."],
   ["Daily CSV", "/open-data-daily.csv", "Переносимая плоская таблица daily creation-date срезов."],
@@ -90,6 +92,12 @@ export default async function CitationPage() {
           <li><strong className="text-ink">4. Provenance:</strong> TechRole Index как расчётный слой и исходный провайдер как источник наблюдений.</li>
         </ol>
         <div className="mt-6 flex flex-wrap gap-3"><Link href="/methodology" className="button-primary">Методология</Link><Link href="/sources" className="button-secondary">Источники</Link><Link href="/data-status" className="button-secondary">Статус данных</Link><Link href="/open-data.json" className="button-secondary">Каталог JSON</Link><Link href="/open-data-daily" className="button-secondary">Ежедневный датасет</Link><Link href="/open-data-daily.json" className="button-secondary">Daily JSON</Link><Link href="/open-data-daily.csv" className="button-secondary">Daily CSV</Link><Link href="/open-data-daily.schema.json" className="button-secondary">JSON Schema</Link><Link href="/open-data-daily.croissant.json" className="button-secondary">Croissant 1.1</Link></div>
+      </section>
+
+      <section id="reuse" className="panel mt-8 p-6 sm:p-8">
+        <p className="eyebrow">Повторное использование</p>
+        <h2 className="mt-2 text-2xl font-extrabold">Атрибуция и условия первоисточника</h2>
+        <p className="mt-4 max-w-4xl leading-7 text-muted">Можно ссылаться на страницы и цитировать отдельные показатели с указанием TechRole Index, канонического URL, периода, охвата и первичного источника. Права на исходные данные не передаются TechRole Index: перед массовым, коммерческим или производным использованием проверьте условия каждого источника на странице «Источники». Нельзя убирать provenance, менять смысл метрики или выдавать широкий срез за точную профессию.</p>
       </section>
     </article>
   );

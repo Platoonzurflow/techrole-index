@@ -91,6 +91,7 @@ export function salaryBenchmarkLevelPoints(benchmark: SalaryBenchmarkSummary) {
     exact_role: 5,
     technology: 4,
     related_role: 3,
+    occupation_group: 2,
     category: 2,
     market_level: 1,
   };
@@ -195,6 +196,7 @@ export function primarySalaryBenchmarkPoint(item: SalaryBenchmarkCatalogItem) {
     "exact_role",
     "technology",
     "related_role",
+    "occupation_group",
     "category",
     "market_level",
   ];

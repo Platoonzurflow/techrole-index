@@ -1,5 +1,10 @@
 from app.data.catalog import PROFESSIONS
-from app.data.salary_benchmarks import SOURCES, salary_benchmark_catalog, salary_benchmark_for
+from app.data.salary_benchmarks import (
+    SOURCES,
+    salary_benchmark_catalog,
+    salary_benchmark_for,
+    scoring_salary_benchmark,
+)
 from app.schemas import SalaryBenchmarkSummary
 
 
@@ -168,3 +173,46 @@ def test_salary_benchmark_catalog_exports_every_profession() -> None:
         == {"junior", "middle", "senior"}
         for item in catalog
     )
+
+
+def test_rosstat_occupation_context_is_visible_and_never_relabelled_as_role() -> None:
+    expected = {
+        ("dotnet-developer", "development"): (
+            "Разработчики и аналитики ПО и приложений",
+            216348,
+        ),
+        ("devops-engineer", "infrastructure"): (
+            "Специалисты по базам данных и сетям",
+            165966,
+        ),
+        ("security-engineer", "security"): (
+            "Специалисты высшего уровня в ИКТ",
+            202029,
+        ),
+    }
+
+    for (slug, category), (label, value) in expected.items():
+        parsed = SalaryBenchmarkSummary.model_validate(
+            salary_benchmark_for(slug, category)
+        )
+        point = next(
+            item
+            for item in parsed.points
+            if item.source_id == "rosstat_57t_2025"
+        )
+        assert point.scope == "occupation_group"
+        assert point.label == label
+        assert point.metric == "average"
+        assert point.value == value
+        assert point.is_fallback is False
+        assert "не зарплата конкретной профессии" in (point.note or "").lower()
+
+
+def test_scoring_salary_prefers_direct_public_point_over_broad_context() -> None:
+    payload = SalaryBenchmarkSummary.model_validate(
+        salary_benchmark_for("dotnet-developer", "development")
+    )
+    direct = next(point for point in payload.points if point.scope == "technology")
+
+    assert direct.value is not None
+    assert scoring_salary_benchmark("dotnet-developer", "development") == direct.value

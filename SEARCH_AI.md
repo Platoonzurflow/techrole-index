@@ -1,6 +1,6 @@
 # Поиск и AI-цитирование TechRole Index
 
-Актуальность аудита: 23 июля 2026 года. Цель слоя discoverability — дать поиску и AI-поиску одинаковый открытый, видимый человеку и проверяемый материал. Ни один файл, метатег или crawler rule не гарантирует индексацию, позицию или цитирование.
+Актуальность аудита: 24 июля 2026 года. Цель слоя discoverability — дать поиску и AI-поиску одинаковый открытый, видимый человеку и проверяемый материал. Ни один файл, метатег или crawler rule не гарантирует индексацию, позицию или цитирование.
 
 ## Публичный контракт
 
@@ -24,6 +24,8 @@
 - [OpenAI crawlers](https://developers.openai.com/api/docs/bots) — `OAI-SearchBot`, `GPTBot` и `ChatGPT-User` имеют разные назначения и независимые robots controls.
 - [Anthropic crawlers](https://support.anthropic.com/en/articles/8896518-does-anthropic-crawl-data-from-the-web-and-how-can-site-owners-block-the-crawler) — отдельно заявлены `ClaudeBot`, `Claude-User` и `Claude-SearchBot`.
 - [Perplexity crawlers](https://docs.perplexity.ai/docs/resources/perplexity-crawlers) — отдельно заявлены `PerplexityBot` и `Perplexity-User`; серверный счётчик опирается только на представившийся User-Agent и поэтому не доказывает личность клиента.
+
+Проверка актуальных официальных страниц 24 июля 2026 года подтвердила отдельные search-agent правила: `OAI-SearchBot`, `Claude-SearchBot` и `PerplexityBot` разрешены для публичного корпуса. Это повышает техническую доступность, но не даёт возможности узнать все факты внешнего цитирования: first-party аналитика различает только объявленный crawler User-Agent, AI-referrer и совершённое на сайте действие «копировать цитату».
 
 `robots.txt` разрешает публичный корпус и закрывает API, кабинет, admin, оплату и другие приватные маршруты одинаково для обычных и заявленных AI/search crawlers. Crawler cloaking, hidden text, keyword stuffing, фиктивные rating/review/FAQ и разметка, не совпадающая с видимым содержимым, запрещены.
 
@@ -51,3 +53,4 @@ Google Search Console:
 3. `/answers.json`, `/open-data.json`, `/ai-index.json`, `/research.json`, `/llms-full.txt` не превращают outage в пустые «актуальные» числа.
 4. У каждой цитируемой цифры есть видимая расшифровка, источник, период, `n` или числитель/знаменатель, scope, tax status, дата и стабильная ссылка/fragment.
 5. После deploy отправляется IndexNow и проверяется RSS. Рост оценивается по Search Console/Webmaster, качественным внешним ссылкам и измеримым переходам, а не по обещанию цитирования конкретной нейросетью.
+6. JSON-LD на карточке профессии содержит отдельные Dataset для зарплатного ориентира и официальных публикаций; значения, охват и источники совпадают с видимым HTML, а Premium-поля не попадают в разметку.

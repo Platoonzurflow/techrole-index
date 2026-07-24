@@ -116,8 +116,23 @@ def open_data_publications(db: Session = Depends(get_db)):
     return publications
 
 
-def _latest_score_date(db: Session):
-    return db.scalar(select(func.max(ProfessionScoreDaily.score_date)))
+def _active_scoring_version_id(db: Session) -> int | None:
+    return db.scalar(
+        select(ScoringVersion.id)
+        .where(ScoringVersion.is_active.is_(True))
+        .order_by(ScoringVersion.created_at.desc())
+    )
+
+
+def _latest_score_date(db: Session, scoring_version_id: int | None = None):
+    version_id = scoring_version_id or _active_scoring_version_id(db)
+    if version_id is None:
+        return None
+    return db.scalar(
+        select(func.max(ProfessionScoreDaily.score_date)).where(
+            ProfessionScoreDaily.scoring_version_id == version_id
+        )
+    )
 
 
 def _official_open_data_summary(
@@ -438,14 +453,16 @@ def _official_open_data_summary(
 
 
 def _summary_rows(db: Session):
-    score_date = _latest_score_date(db)
+    scoring_version_id = _active_scoring_version_id(db)
+    score_date = _latest_score_date(db, scoring_version_id)
     statement = (
         select(Profession, ProfessionCategory, ProfessionScoreDaily)
         .join(ProfessionCategory, Profession.category_id == ProfessionCategory.id)
         .outerjoin(
             ProfessionScoreDaily,
             (ProfessionScoreDaily.profession_id == Profession.id)
-            & (ProfessionScoreDaily.score_date == score_date),
+            & (ProfessionScoreDaily.score_date == score_date)
+            & (ProfessionScoreDaily.scoring_version_id == scoring_version_id),
         )
         .where(Profession.is_active.is_(True))
         .order_by(Profession.name_ru)
@@ -575,14 +592,16 @@ def list_categories(db: Session = Depends(get_db)):
 
 
 def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDetail:
-    score_date = _latest_score_date(db)
+    scoring_version_id = _active_scoring_version_id(db)
+    score_date = _latest_score_date(db, scoring_version_id)
     row = db.execute(
         select(Profession, ProfessionCategory, ProfessionScoreDaily, ScoringVersion)
         .join(ProfessionCategory, Profession.category_id == ProfessionCategory.id)
         .outerjoin(
             ProfessionScoreDaily,
             (ProfessionScoreDaily.profession_id == Profession.id)
-            & (ProfessionScoreDaily.score_date == score_date),
+            & (ProfessionScoreDaily.score_date == score_date)
+            & (ProfessionScoreDaily.scoring_version_id == scoring_version_id),
         )
         .outerjoin(ScoringVersion, ProfessionScoreDaily.scoring_version_id == ScoringVersion.id)
         .where(Profession.slug == slug, Profession.is_active.is_(True))

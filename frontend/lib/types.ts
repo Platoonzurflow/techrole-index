@@ -107,7 +107,7 @@ export interface SalaryBenchmarkSource {
 
 export interface SalaryBenchmarkPoint {
   source_id: string;
-  scope: "exact_role" | "related_role" | "technology" | "category" | "market_level";
+  scope: "exact_role" | "related_role" | "technology" | "occupation_group" | "category" | "market_level";
   label: string;
   geography: "russia" | "moscow" | "saint_petersburg" | "regions";
   metric: "median" | "average" | "range";

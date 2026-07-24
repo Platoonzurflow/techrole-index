@@ -2,14 +2,14 @@ import math
 from dataclasses import dataclass
 
 DEFAULT_WEIGHTS = {
-    "demand": 0.30,
-    "salary": 0.25,
-    "demand_growth": 0.20,
-    "junior_access": 0.10,
+    "demand": 0.28,
+    "salary": 0.24,
+    "demand_growth": 0.16,
+    "junior_access": 0.12,
     "remote_share": 0.10,
-    "data_quality": 0.05,
+    "data_quality": 0.10,
 }
-SCORING_VERSION = "v1.0.0"
+SCORING_VERSION = "v1.1.0"
 
 
 @dataclass(frozen=True)

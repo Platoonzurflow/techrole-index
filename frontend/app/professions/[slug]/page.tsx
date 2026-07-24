@@ -41,6 +41,66 @@ function latestByLevel(metrics: MetricPoint[]) {
 
 function jsonLd(value: unknown) { return JSON.stringify(value).replace(/</g, "\\u003c"); }
 
+function TechStack({ profession }: { profession: ProfessionDetail }) {
+  if (!profession.tech_stack?.length) return null;
+  return (
+    <section id="tech-stack" className="panel mt-10 p-6 sm:p-8" aria-labelledby="tech-stack-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><p className="eyebrow">Рабочий инструментарий</p><h2 id="tech-stack-title" className="mt-2 text-2xl font-semibold">Типичный стек профессии</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Языки, программы и платформы, которые часто встречаются в задачах этой роли. Конкретный набор зависит от компании и проекта.</p></div>
+        <span className="insight-icon"><Layers3 size={19} /></span>
+      </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        {profession.tech_stack.map((group) => (
+          <article key={group.title} className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
+            <h3 className="font-semibold">{group.title}</h3>
+            <div className="mt-4 flex flex-wrap gap-2">{group.items.map((item) => <span key={item} className="badge">{item}</span>)}</div>
+          </article>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function ObservationPeriod({ profession }: { profession: ProfessionDetail }) {
+  const source = profession.official_open_data;
+  if (!source) return null;
+  return (
+    <section className="observation-period mt-10" aria-label="Период наблюдения">
+      <CalendarDays size={18} aria-hidden="true" />
+      <div>
+        <p className="text-xs font-bold uppercase tracking-[.13em] text-muted">Период наблюдения</p>
+        <p className="mt-1 font-mono font-semibold">{source.date_from} — {source.date_to}</p>
+      </div>
+      <span className={confidenceBadge(source.confidence_level).className}>{confidenceBadge(source.confidence_level).label}</span>
+    </section>
+  );
+}
+
+function DataLayers({ profession }: { profession: ProfessionDetail }) {
+  return (
+    <section id="data-layers" className="mt-10 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-5 sm:p-6" aria-labelledby="data-layers-title">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div><p className="eyebrow">Статус данных</p><h2 id="data-layers-title" className="mt-2 text-2xl font-semibold">Слои, которые нельзя смешивать</h2></div>
+        <Link href="/data-status" className="button-secondary">Как читать статусы</Link>
+      </div>
+      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+        <article className="rounded-2xl border border-line p-5">
+          <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Официальные публикации</h3>{(() => { const badge = confidenceBadge(profession.official_open_data?.confidence_level); return <span className={badge.className}>{badge.label}</span>; })()}</div>
+          <p className="mt-3 text-sm leading-6 text-muted">{profession.official_open_data ? `${profession.official_open_data.total_publications.toLocaleString("ru-RU")} классифицированных публикаций за ${profession.official_open_data.date_from} — ${profession.official_open_data.date_to}. Публикации не равны одновременно активным вакансиям; gross/net не определён.${profession.official_open_data.last_ingested_at ? ` Загрузка: ${profession.official_open_data.last_ingested_at}.` : ""}` : "Для этой роли пока нет классифицированных публикаций официального слоя."}</p>
+        </article>
+        <article className="rounded-2xl border border-line p-5">
+          <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Подготовленная витрина</h3>{(() => { const badge = confidenceBadge(profession.data_confidence); return <span className={badge.className}>{badge.label}</span>; })()}</div>
+          <p className="mt-3 text-sm leading-6 text-muted">Показатели спроса, gross-зарплат и индекса рассчитаны в детерминированной витрине{profession.updated_at ? ` на дату ${profession.updated_at}` : ""}. Эта дата не является подтверждением текущего состояния рынка.</p>
+        </article>
+        <article className="rounded-2xl border border-line p-5">
+          <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Публичные зарплатные исследования</h3><span className={confidenceBadge(profession.salary_benchmark?.coverage === "direct" ? "high" : profession.salary_benchmark?.coverage === "related" ? "medium" : "low").className}>{profession.salary_benchmark?.coverage === "direct" ? "точный срез" : profession.salary_benchmark?.coverage === "related" ? "смежный срез" : "ориентир"}</span></div>
+          <p className="mt-3 text-sm leading-6 text-muted">Фактические доходы специалистов показаны отдельным справочным слоем: точные, смежные и категорийные значения никогда не смешиваются с вилками вакансий.</p>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 export default async function ProfessionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   let profession: ProfessionDetail;
@@ -54,8 +114,6 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const canonicalUrl = `${siteUrl}/professions/${slug}`;
   const stackItems = profession.tech_stack?.flatMap((group) => group.items) ?? [];
-  const metricDates = (profession.metrics ?? []).map((item) => item.date).sort();
-  const temporalCoverage = metricDates.length ? `${metricDates[0]}/${metricDates.at(-1)}` : undefined;
   const salaryHistoryUsesCategory = profession.official_open_data?.salary_history.some(
     (item) => item.median != null && item.scope === "category",
   ) ?? false;
@@ -84,6 +142,39 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         inLanguage: "ru-RU",
         sameAs: canonicalUrl,
       },
+      ...(profession.salary_benchmark ? [{
+        "@type": "Dataset",
+        "@id": `${canonicalUrl}#salary-benchmark`,
+        name: `Фактические доходы специалистов: ${profession.name_ru}`,
+        description: profession.salary_benchmark.methodology_note,
+        url: `${canonicalUrl}#salary-benchmark`,
+        inLanguage: "ru-RU",
+        isAccessibleForFree: true,
+        dateModified: profession.updated_at,
+        spatialCoverage: { "@type": "Country", name: "Россия" },
+        creator: { "@type": "Organization", name: "TechRole Index", url: siteUrl },
+        license: `${siteUrl}/citation#reuse`,
+        measurementTechnique: "Раздельная публикация точных, технологических, смежных и широких профессиональных срезов без смешивания выборок",
+        isBasedOn: profession.salary_benchmark.sources.map((source) => source.url),
+        citation: profession.salary_benchmark.sources.map((source) => source.url),
+        variableMeasured: profession.salary_benchmark.points
+          .filter((point) => !point.is_fallback)
+          .map((point) => ({
+            "@type": "PropertyValue",
+            name: `${point.label}${point.seniority ? ` · ${levelLabels[point.seniority]}` : ""}`,
+            value: point.value ?? (point.lower != null && point.upper != null ? `${point.lower}–${point.upper}` : undefined),
+            unitText: "RUB в месяц",
+            description: `${point.metric}; ${point.scope}; ${point.geography}${point.sample_size != null ? `; n=${point.sample_size}` : ""}`,
+          })),
+        subjectOf: [
+          { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
+          { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },
+        ],
+        distribution: [
+          { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: `${siteUrl}/salary-benchmarks.json` },
+          { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: `${siteUrl}/salary-benchmarks.csv` },
+        ],
+      }] : []),
       ...(profession.official_open_data ? [{
         "@type": "Dataset",
         "@id": `${canonicalUrl}#official-open-data`,
@@ -114,38 +205,11 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
           { "@type": "CreativeWork", name: "Источники TechRole Index", url: `${siteUrl}/sources` },
         ],
-      }] : []),
-      ...(!profession.teaser_only && profession.updated_at ? [{
-        "@type": "Dataset",
-        "@id": `${canonicalUrl}#dataset`,
-        name: `Аналитика профессии ${profession.name_ru}`,
-        description: `Спрос, зарплаты и динамика профессии ${profession.name_ru} по уровням Junior, Middle и Senior.`,
-        url: canonicalUrl,
-        dateModified: profession.updated_at,
-        inLanguage: "ru-RU",
-        isAccessibleForFree: true,
-        temporalCoverage,
-        spatialCoverage: { "@type": "Place", name: "Россия" },
-        keywords: [profession.name_ru, profession.name_en, profession.category_name, ...stackItems].join(", "),
-        creator: { "@type": "Organization", name: "TechRole Index", url: siteUrl },
-        includedInDataCatalog: { "@id": `${siteUrl}/#catalog` },
-        measurementTechnique: "Агрегация вакансий, медианы зарплат и сравнение соседних временных окон",
-        variableMeasured: [
-          { "@type": "PropertyValue", name: "Расчётный объём вакансий", description: "Детерминированный показатель подготовленной аналитической витрины; не текущий остаток активных вакансий" },
-          { "@type": "PropertyValue", name: "Медианная зарплата", unitText: "RUB в месяц" },
-          { "@type": "PropertyValue", name: "Доля удалённой работы", unitText: "%" },
-          { "@type": "PropertyValue", name: "Изменение спроса", unitText: "%" },
+        distribution: [
+          { "@type": "DataDownload", encodingFormat: "application/ld+json", contentUrl: `${siteUrl}/open-data.json#${profession.slug}` },
+          { "@type": "DataDownload", encodingFormat: "text/csv", contentUrl: `${siteUrl}/open-data.csv` },
+          { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: `${siteUrl}/open-data-daily.json` },
         ],
-        subjectOf: [
-          { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
-          { "@type": "CreativeWork", name: "Источники TechRole Index", url: `${siteUrl}/sources` },
-          { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },
-        ],
-        distribution: {
-          "@type": "DataDownload",
-          encodingFormat: "application/json",
-          contentUrl: `${siteUrl}/api/v1/professions/${profession.slug}`,
-        },
       }] : []),
     ],
   };
@@ -160,94 +224,67 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
       <div className="mt-6"><ShareActions url={canonicalUrl} title={`${profession.name_ru} — TechRole Index`} citation={`TechRole Index. ${profession.name_ru}. ${canonicalUrl}. Дата обновления: ${profession.updated_at ?? "не указана"}.`} /></div>
 
       <nav className="profession-toc mt-7 flex flex-wrap gap-2" aria-label="Разделы страницы профессии">
+        <a href="#tech-stack">Стек</a>
         <a href="#salary-benchmark">Зарплата</a>
-        <a href="#official-open-data">Публикации</a>
-        {!profession.teaser_only && profession.metrics ? <><a href="#market-metrics">Метрики</a><a href="#score-breakdown">Индекс</a><a href="#market-skills">Навыки и регионы</a></> : null}
+        <a href="#official-open-data">Динамика</a>
+        {!profession.teaser_only && profession.metrics ? <a href="#market-metrics">Расчётный ряд</a> : null}
+        <a href="#data-layers">Источники</a>
+        {!profession.teaser_only && profession.metrics ? <><a href="#score-breakdown">Индекс</a><a href="#market-skills">Навыки и регионы</a></> : null}
       </nav>
 
-      <section className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4" aria-label="Коротко о профессии">
-        <article className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-4"><p className="text-xs uppercase tracking-wider text-muted">Индекс</p><p className="mt-2 font-mono text-2xl font-semibold">{profession.score ?? "-"}<span className="ml-1 text-sm text-muted">/100</span></p></article>
-        <article className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-4"><p className="text-xs uppercase tracking-wider text-muted">Официальные публикации</p><p className="mt-2 font-mono text-2xl font-semibold">{profession.official_open_data ? compact(profession.official_open_data.total_publications) : "-"}</p></article>
-        <article className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-4"><p className="text-xs uppercase tracking-wider text-muted">Период</p><p className="mt-2 text-lg font-semibold">{profession.official_open_data ? `${profession.official_open_data.date_from} — ${profession.official_open_data.date_to}` : "не указан"}</p></article>
-        <article className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-4"><p className="text-xs uppercase tracking-wider text-muted">Что дальше</p><p className="mt-2 text-sm leading-5 text-muted">Откройте зарплатный срез и затем проверьте вклад факторов индекса.</p></article>
-      </section>
-
-      <section className="mt-10 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.45)] p-5 sm:p-6" aria-labelledby="data-layers-title">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div><p className="eyebrow">Статус данных</p><h2 id="data-layers-title" className="mt-2 text-2xl font-semibold">Слои, которые нельзя смешивать</h2></div>
-          <Link href="/data-status" className="button-secondary">Как читать статусы</Link>
-        </div>
-        <div className="mt-5 grid gap-4 lg:grid-cols-3">
-          <article className="rounded-2xl border border-line p-5">
-            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Официальные публикации</h3>{(() => { const badge = confidenceBadge(profession.official_open_data?.confidence_level); return <span className={badge.className}>{badge.label}</span>; })()}</div>
-            <p className="mt-3 text-sm leading-6 text-muted">{profession.official_open_data ? `${profession.official_open_data.total_publications.toLocaleString("ru-RU")} классифицированных публикаций за ${profession.official_open_data.date_from} — ${profession.official_open_data.date_to}. Публикации не равны одновременно активным вакансиям; gross/net не определён.${profession.official_open_data.last_ingested_at ? ` Загрузка: ${profession.official_open_data.last_ingested_at}.` : ""}` : "Для этой роли пока нет классифицированных публикаций официального слоя."}</p>
-          </article>
-          <article className="rounded-2xl border border-line p-5">
-            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Подготовленная витрина</h3>{(() => { const badge = confidenceBadge(profession.data_confidence); return <span className={badge.className}>{badge.label}</span>; })()}</div>
-            <p className="mt-3 text-sm leading-6 text-muted">Показатели спроса, gross-зарплат и индекса рассчитаны в детерминированной витрине{profession.updated_at ? ` на дату ${profession.updated_at}` : ""}. Эта дата не является подтверждением текущего состояния рынка.</p>
-          </article>
-          <article className="rounded-2xl border border-line p-5">
-            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Публичные зарплатные исследования</h3><span className={confidenceBadge(profession.salary_benchmark?.coverage === "direct" ? "high" : profession.salary_benchmark?.coverage === "related" ? "medium" : "low").className}>{profession.salary_benchmark?.coverage === "direct" ? "точный срез" : profession.salary_benchmark?.coverage === "related" ? "смежный срез" : "ориентир"}</span></div>
-            <p className="mt-3 text-sm leading-6 text-muted">Фактические доходы специалистов показаны отдельным справочным слоем: точные, смежные и категорийные значения никогда не смешиваются с вилками вакансий.</p>
-          </article>
-        </div>
-      </section>
-
-      {profession.tech_stack?.length ? (
-        <section className="panel mt-10 p-6 sm:p-8" aria-labelledby="tech-stack-title">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div><p className="eyebrow">Рабочий инструментарий</p><h2 id="tech-stack-title" className="mt-2 text-2xl font-semibold">Типичный стек профессии</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Языки, программы и платформы, которые часто встречаются в задачах этой роли. Конкретный набор зависит от компании и проекта.</p></div>
-            <span className="insight-icon"><Layers3 size={19} /></span>
-          </div>
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {profession.tech_stack.map((group) => (
-              <article key={group.title} className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
-                <h3 className="font-semibold">{group.title}</h3>
-                <div className="mt-4 flex flex-wrap gap-2">{group.items.map((item) => <span key={item} className="badge">{item}</span>)}</div>
-              </article>
-            ))}
-          </div>
-        </section>
-      ) : null}
+      <TechStack profession={profession} />
 
       {profession.salary_benchmark ? <div id="salary-benchmark"><SalaryBenchmarks data={profession.salary_benchmark} official={profession.official_open_data} /></div> : null}
 
       {profession.official_open_data ? (
-        <section id="official-open-data" className="panel mt-10 p-6 sm:p-8" aria-labelledby="official-open-data-title">
+        <section id="official-open-data" className="market-showcase mt-10 p-5 sm:p-8" aria-labelledby="official-open-data-title">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="eyebrow">Официальный открытый источник</p>
-              <h2 id="official-open-data-title" className="mt-2 text-2xl font-semibold">Публикации за последние 180 дней</h2>
+              <p className="eyebrow">Динамика рынка</p>
+              <h2 id="official-open-data-title" className="mt-2 text-3xl font-semibold">Зарплата и поток вакансий за 180 дней</h2>
               <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.official_open_data.methodology_note}</p>
             </div>
             <a className="button-secondary" href={profession.official_open_data.source_url} rel="noreferrer">Документация источника</a>
           </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
-            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">По направлению «{profession.category_name}»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
-            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С любой границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
-            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
-            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
+          <div className="market-showcase-stats mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
+            <div><p className="text-sm text-muted">По направлению «{profession.category_name}»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
+            <div><p className="text-sm text-muted">С границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
+            <div><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
+            <div><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
           </div>
-          <p className="mt-3 text-xs leading-5 text-muted">Первое число — только вакансии, уверенно отнесённые к этой профессии. Второе и синяя линия на графике — все классифицированные публикации профессий того же направления; это контекст рынка, который не прибавляется к точному числу.</p>
-          <div className="mt-5"><PublicationChart data={profession.official_open_data} /></div>
-          <p className="mt-3 text-xs text-muted">Период: {profession.official_open_data.date_from} - {profession.official_open_data.date_to}. Статус выборки: {confidenceBadge(profession.official_open_data.confidence_level).label}.</p>
-          <div className="mt-8 border-t border-line pt-8">
-            <p className="eyebrow">Почему зарплатных точек меньше</p>
-            <h3 className="mt-2 text-2xl font-semibold">Полнота данных для медианы</h3>
-            <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Столбцы показывают новые публикации и записи с обеими границами зарплаты в RUB; линия — их долю. В медиану входят только полные вилки с распознанным уровнем.{salaryCoverageUsesCategory ? ` Для устойчивости здесь показано направление «${profession.category_name}»: точных публикаций профессии меньше 20.` : " Здесь показан точный срез профессии."}</p>
-            <div className="mt-6" data-testid="salary-coverage-visualization"><SalaryCoverageChart data={profession.official_open_data} /></div>
-          </div>
-          <div className="mt-8 border-t border-line pt-8">
-            <p className="eyebrow">Динамика зарплатных вилок</p>
-            <h3 className="mt-2 text-2xl font-semibold">Наблюдаемая медиана за 180 дней</h3>
-            <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Сплошная линия показывает накопительную медиану полных RUB-вилок от начала периода до даты. Для неё нужно не менее {profession.official_open_data.salary_min_sample} вилок одного уровня.{salaryHistoryUsesCategory ? ` Если точных данных мало, сплошная линия явно подписана как срез направления «${profession.category_name}».` : ""} Недостающий уровень дополняется только пунктирным статичным ориентиром открытого исследования и не выдаётся за динамику.</p>
-            <div className="mt-6"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
+          <article className="market-stage market-stage-primary mt-7">
+            <div className="market-stage-copy">
+              <p className="eyebrow">Главный график</p>
+              <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Накопительная медиана полных RUB-вилок. Для каждого уровня сначала берётся точная профессия; при выборке меньше {profession.official_open_data.salary_min_sample} используется явно подписанное направление «{profession.category_name}». Статичный ориентир показан пунктиром и не выдаётся за динамику.</p>
+            </div>
+            <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
+          </article>
+          <article className="market-stage mt-5">
+            <div className="market-stage-copy">
+              <p className="eyebrow">Интенсивность рынка</p>
+              <h3 className="mt-2 text-2xl font-semibold">Новые публикации по неделям</h3>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Если точный ряд слишком редкий, график автоматически показывает направление и подписывает выбранный охват. Публикации за период не равны числу вакансий, одновременно активных сегодня.</p>
+            </div>
+            <div className="mt-5"><PublicationChart data={profession.official_open_data} /></div>
+          </article>
+          <article className="market-stage mt-5">
+            <div className="market-stage-copy">
+              <p className="eyebrow">Качество зарплатных данных</p>
+              <h3 className="mt-2 text-2xl font-semibold">Полнота вилок для медианы</h3>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Столбцы показывают новые публикации и записи с обеими границами зарплаты в RUB; линия — долю полных вилок. В медиану входят только полные вилки с распознанным уровнем.{salaryCoverageUsesCategory ? ` Для устойчивости показано направление «${profession.category_name}»: точных публикаций профессии меньше 20.` : " Здесь показан точный срез профессии."}</p>
+            </div>
+            <div className="mt-5" data-testid="salary-coverage-visualization"><SalaryCoverageChart data={profession.official_open_data} /></div>
+          </article>
+          <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
+            <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>
+            {salaryHistoryUsesCategory ? <p className="mt-2">В зарплатной динамике хотя бы один уровень использует направление из-за малой точной выборки.</p> : null}
           </div>
         </section>
       ) : null}
 
-      {profession.teaser_only || !profession.metrics ? <div className="mt-10"><Paywall title={`Метрики «${profession.name_ru}» доступны в Premium`} /></div> : (
+      {!profession.teaser_only && profession.metrics ? (
         <>
           <section id="market-metrics" className="mt-10">
             <div className="panel p-6 sm:p-8">
@@ -264,7 +301,14 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           </section>
 
           <section className="panel mt-12 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Сопоставимый ряд Junior, Middle и Senior внутри подготовленной витрины. Для наблюдаемой зарплатной динамики используйте единый официальный график выше.</p></div><div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div></div><VacancyChart metrics={profession.metrics} /></section>
+        </>
+      ) : null}
 
+      <ObservationPeriod profession={profession} />
+      <DataLayers profession={profession} />
+
+      {profession.teaser_only || !profession.metrics ? <div className="mt-10"><Paywall title={`Метрики «${profession.name_ru}» доступны в Premium`} /></div> : (
+        <>
           <section className="mt-12 grid gap-5 lg:grid-cols-2">
             <article id="score-breakdown" className="panel p-6">
               <p className="eyebrow">Индекс {profession.scoring_version}</p>
