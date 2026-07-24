@@ -151,7 +151,7 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await expect(salaryHistory).not.toContainText("Junior от");
   await expect(salaryHistory).not.toContainText("Middle от");
   await expect(salaryHistory).not.toContainText("Senior от");
-  await expect(salaryHistory).toContainText("направление");
+  await expect(salaryHistory).toContainText("Пунктир");
 });
 
 test("status page shows public freshness without internal runtime details", async ({ page }) => {
