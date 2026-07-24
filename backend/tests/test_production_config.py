@@ -10,6 +10,7 @@ from app.models import (
     Base,
     Profession,
     ProfessionMetricDaily,
+    ScoringVersion,
     User,
     Vacancy,
     VacancySource,
@@ -275,6 +276,36 @@ def test_reference_bootstrap_contains_no_demo_accounts_or_metrics() -> None:
         assert demo_source is not None
         assert demo_source.enabled is False
         _assert_production_catalog_safe(db)
+    engine.dispose()
+
+
+def test_reference_bootstrap_reuses_scoring_version_created_by_migration() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    with Session(engine) as db:
+        existing = ScoringVersion(
+            version="v1.1.0",
+            weights={"legacy": 1.0},
+            description="migration placeholder",
+            is_active=True,
+        )
+        db.add(existing)
+        db.commit()
+
+        _, scoring = _seed_sources_and_scoring(db, demo_enabled=False)
+        db.commit()
+
+        assert scoring.id == existing.id
+        assert db.scalar(select(func.count(ScoringVersion.id))) == 1
+        assert scoring.weights == {
+            "demand": 0.28,
+            "salary": 0.24,
+            "demand_growth": 0.16,
+            "junior_access": 0.12,
+            "remote_share": 0.10,
+            "data_quality": 0.10,
+        }
+        assert scoring.is_active is True
     engine.dispose()
 
 

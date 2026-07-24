@@ -120,16 +120,28 @@ def _seed_sources_and_scoring(
         terms_url=settings.trudvsem_terms_url,
     )
     db.add_all([demo_source, hh_source, trudvsem_source])
-    scoring = ScoringVersion(
-        version=SCORING_VERSION,
-        weights=DEFAULT_WEIGHTS,
-        description=(
-            "Карьерный индекс: prepared demand/growth/access/remote, "
-            "публичный salary benchmark и повышенный вес качества; METHODOLOGY.md."
-        ),
-        is_active=True,
+    scoring = db.scalar(
+        select(ScoringVersion).where(ScoringVersion.version == SCORING_VERSION)
     )
-    db.add(scoring)
+    scoring_description = (
+        "Карьерный индекс: prepared demand/growth/access/remote, "
+        "публичный salary benchmark и повышенный вес качества; METHODOLOGY.md."
+    )
+    if scoring is None:
+        scoring = ScoringVersion(
+            version=SCORING_VERSION,
+            weights=DEFAULT_WEIGHTS,
+            description=scoring_description,
+            is_active=True,
+        )
+        db.add(scoring)
+    for active_version in db.scalars(
+        select(ScoringVersion).where(ScoringVersion.is_active.is_(True))
+    ).all():
+        active_version.is_active = active_version is scoring
+    scoring.weights = DEFAULT_WEIGHTS
+    scoring.description = scoring_description
+    scoring.is_active = True
     db.flush()
 
     return demo_source, scoring
