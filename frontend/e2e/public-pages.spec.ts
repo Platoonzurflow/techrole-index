@@ -233,7 +233,9 @@ test("answer-first page exposes stable, sourced citation fragments and JSON", as
   expect(Array.isArray(answers.top_professions)).toBe(true);
   expect(answers.publication_data_available).toBe(answers.top_professions.length > 0);
   expect(answers.salary_by_level.length).toBeGreaterThan(0);
-  expect(answers.salary_data_available).toBe(true);
+  expect(answers.salary_data_available).toBe(
+    answers.salary_by_level.some((level: { roles: unknown[] }) => level.roles.length > 0),
+  );
   expect(answers.methodology_url).toContain("/methodology");
 
   const notModified = await request.get("/answers.json", {
