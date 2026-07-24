@@ -59,7 +59,7 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
 
 test("profession charts separate publication volume, salary completeness, and prepared demand", async ({ page }) => {
   await page.goto("/professions/python-developer");
-  await expect(page.getByRole("heading", { name: "Полнота вилок для медианы" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toBeVisible();
   await expect(page.getByTestId("salary-coverage-visualization").locator(
     '[role="img"][aria-label*="полные RUB-вилки"], [role="status"]',
   )).toBeVisible();
@@ -115,7 +115,7 @@ test("grade cards stay coherent while observed salary inversions remain explaine
   await expect(gradeSection).toContainText("100 000 ₽ — 130 000 ₽");
   await expect(gradeSection).toContainText("230 000 ₽ — 270 000 ₽");
   await expect(gradeSection).toContainText("370 000 ₽ — 380 000 ₽");
-  await expect(page.getByRole("heading", { name: "Полнота вилок для медианы" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toBeVisible();
 
   await page.goto("/professions/firmware-engineer");
   await expect(page.getByText("Линии наблюдений могут пересекаться", { exact: false }))
@@ -143,6 +143,14 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await expect(source).toBeVisible();
   await expect(source.locator("xpath=ancestor::article"))
     .toContainText("gross/net не указан");
+
+  await page.goto("/professions/soc-analyst");
+  const salaryHistory = page.locator("#salary-history");
+  await expect(page.getByText("146 000 ₽", { exact: true })).toBeVisible();
+  await expect(salaryHistory).toContainText("Junior от 58 тыс. ₽");
+  await expect(salaryHistory).toContainText("Middle от 102 тыс. ₽");
+  await expect(salaryHistory).toContainText("Senior от 146 тыс. ₽");
+  await expect(salaryHistory).toContainText("направление");
 });
 
 test("status page shows public freshness without internal runtime details", async ({ page }) => {

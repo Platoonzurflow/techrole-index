@@ -405,7 +405,7 @@ export function OfficialSalaryChart({
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted">RUB в месяц · полные вилки</span>
+        <span className="text-xs text-muted">RUB в месяц · отсечка 40/70/100%</span>
       </div>
       {visibleSummaries.length ? (
         <div className="chart-kpis">
@@ -417,7 +417,10 @@ export function OfficialSalaryChart({
           ))}
         </div>
       ) : null}
-      <Chart option={option} label={`Накопительная медиана зарплаты по уровням за ${periodDays} дней и статические ориентиры для отсутствующих рядов`} heightClass="h-[25rem]" />
+      <Chart option={option} label={`Накопительная медиана зарплаты по уровням за ${periodDays} дней после нижней отсечки и статические ориентиры для отсутствующих рядов`} heightClass="h-[25rem]" />
+      <p className="mt-3 text-xs text-muted">
+        Нижняя граница midpoint: Junior от {Math.round(data.salary_history_minimum_salary.junior / 1000)} тыс. ₽ · Middle от {Math.round(data.salary_history_minimum_salary.middle / 1000)} тыс. ₽ · Senior от {Math.round(data.salary_history_minimum_salary.senior / 1000)} тыс. ₽. Базовая медиана — {Math.round(data.salary_history_reference_median / 1000)} тыс. ₽.
+      </p>
       {usesReference && (
         <div className="mt-3 space-y-2 text-sm text-muted">
           <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>

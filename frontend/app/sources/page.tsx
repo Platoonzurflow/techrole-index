@@ -78,7 +78,11 @@ export default async function SourcesPage() {
       </div>
       <section className="mt-8 rounded-2xl border border-amber-400/35 bg-amber-400/5 p-6">
         <h2 className="text-xl font-semibold">Договорные API остаются выключенными</h2>
-        <p className="mt-3 max-w-4xl leading-7 text-muted">Будущее коммерческое использование данных hh.ru может требовать отдельного разрешения правообладателя. TechRole Index не утверждает наличие такого разрешения. Provider запускается только при одновременных <code>HH_ENABLED=true</code>, <code>HH_COMMERCIAL_USE_CONFIRMED=true</code>, app name и контактном email. Используется только официальный API и корректный HH-User-Agent; HTML scraping, логотипы и товарные знаки источника не используются.</p>
+        <p className="mt-3 max-w-4xl leading-7 text-muted">Технически API hh.ru отдаёт вакансии с указанными работодателями зарплатами, но его условия не дают автоматического права собирать из них публичную стороннюю базу. TechRole Index включит provider только после письменного согласования агрегации, хранения и публикации, а также при <code>HH_ENABLED=true</code>, <code>HH_COMMERCIAL_USE_CONFIRMED=true</code>, app name и контактном email. API Хабр Карьеры также требует активированное OAuth-приложение; публичного метода массовой выгрузки зарплат в открытой документации нет. Поэтому сейчас используются только явно опубликованные агрегаты и отчёты, без HTML scraping, обхода входа или CAPTCHA.</p>
+        <div className="mt-4 flex flex-wrap gap-4">
+          <a className="font-semibold text-accent" href="https://dev.hh.ru/admin/developer_agreement" rel="noreferrer">Условия API hh.ru ↗</a>
+          <a className="font-semibold text-accent" href="https://career.habr.com/info/legal/api_rules" rel="noreferrer">Условия API Хабр Карьеры ↗</a>
+        </div>
       </section>
       <section className="mt-8 panel p-6">
         <h2 className="text-xl font-semibold">Открытые данные «Работы России»</h2>

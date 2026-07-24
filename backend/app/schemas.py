@@ -119,6 +119,16 @@ class OfficialOpenDataSummary(BaseModel):
     salary_min_sample: int
     salary_by_seniority: list[OfficialSalarySlice]
     salary_history: list[OfficialSalaryHistoryPoint]
+    salary_history_reference_median: float
+    salary_history_reference_scope: Literal[
+        "exact_role", "related_role", "technology", "category", "market_level"
+    ]
+    salary_history_minimum_ratio: dict[
+        Literal["junior", "middle", "senior"], float
+    ]
+    salary_history_minimum_salary: dict[
+        Literal["junior", "middle", "senior"], float
+    ]
     salary_methodology_note: str
     methodology_note: str
 

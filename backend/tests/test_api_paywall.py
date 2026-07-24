@@ -200,6 +200,18 @@ def test_free_response_does_not_contain_premium_fields():
         assert forbidden not in payload
     assert payload["teaser_only"] is True
     assert payload["official_open_data"]["salary_gross_status"] == "unknown"
+    assert payload["official_open_data"]["salary_history_reference_median"] == 223000
+    assert payload["official_open_data"]["salary_history_reference_scope"] == "category"
+    assert payload["official_open_data"]["salary_history_minimum_ratio"] == {
+        "junior": 0.4,
+        "middle": 0.7,
+        "senior": 1.0,
+    }
+    assert payload["official_open_data"]["salary_history_minimum_salary"] == {
+        "junior": 89200,
+        "middle": 156100,
+        "senior": 223000,
+    }
     assert payload["official_open_data"]["category_total_publications"] >= 20
     assert sum(
         point["count"]
@@ -259,6 +271,84 @@ def test_free_response_does_not_contain_premium_fields():
     catalog = client.get("/api/v1/open-data/publications").json()
     assert catalog[0]["category_slug"] == "development"
     assert catalog[0]["salary_by_seniority"][0]["median"] == 150000
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
+    client, session = build_client()
+    source = session.scalar(
+        select(VacancySource).where(VacancySource.code == "trudvsem_open")
+    )
+    profession = session.scalar(select(Profession).where(Profession.slug == "role-0"))
+    region = session.scalar(select(Region).where(Region.code == "ru"))
+    levels = {
+        item.code: item
+        for item in session.scalars(select(SeniorityLevel)).all()
+    }
+    assert source and profession and region
+    observed_at = datetime.now(timezone.utc) - timedelta(days=1)
+    observations = [
+        ("junior", 5, "30000", "50000"),
+        ("middle", 3, "140000", "150000"),
+        ("middle", 3, "160000", "180000"),
+        ("senior", 3, "200000", "220000"),
+        ("senior", 3, "230000", "250000"),
+    ]
+    external_index = 0
+    for seniority, count, salary_from, salary_to in observations:
+        for _ in range(count):
+            session.add(
+                Vacancy(
+                    source_id=source.id,
+                    external_id=f"reference-filter-{external_index}",
+                    title=f"{seniority.title()} тестовая вакансия",
+                    region_id=region.id,
+                    currency="RUB",
+                    salary_gross=None,
+                    salary_from=Decimal(salary_from),
+                    salary_to=Decimal(salary_to),
+                    published_at=observed_at,
+                    first_seen_at=observed_at,
+                    last_seen_at=observed_at,
+                    work_format="office",
+                    is_remote=False,
+                    profession_id=profession.id,
+                    seniority_id=levels[seniority].id,
+                    classification_confidence=Decimal("0.95"),
+                    classifier_version="rules-v1",
+                    raw_payload={"provider": "test"},
+                )
+            )
+            external_index += 1
+    session.commit()
+
+    response = client.get("/api/v1/professions/role-0?days=180")
+    assert response.status_code == 200
+    official = response.json()["official_open_data"]
+    assert official["total_publications"] == 37
+    assert official["complete_salary_range_count"] == 37
+    expected_history = {
+        "junior": (150000, 20),
+        "middle": (170000, 3),
+        "senior": (240000, 3),
+    }
+    for seniority, (expected_median, expected_sample) in expected_history.items():
+        points = [
+            point
+            for point in official["salary_history"]
+            if point["seniority"] == seniority and point.get("median") is not None
+        ]
+        assert points[-1]["median"] == expected_median
+        assert points[-1]["sample_size"] == expected_sample
+
+    raw_slices = {
+        item["seniority"]: item for item in official["salary_by_seniority"]
+    }
+    assert raw_slices["middle"]["median"] == 157500
+    assert raw_slices["senior"]["median"] == 225000
+
     client.close()
     session.close()
     app.dependency_overrides.clear()

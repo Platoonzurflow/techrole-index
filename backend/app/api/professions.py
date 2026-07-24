@@ -37,6 +37,7 @@ from app.schemas import (
     ProfessionSummary,
     PublicationPoint,
     SalaryBenchmarkCatalogItem,
+    SalaryBenchmarkSummary,
     TrendOut,
 )
 from app.security import has_premium, optional_user, require_premium
@@ -48,6 +49,45 @@ profession_cache = RedisJsonCache(
     redis_url=settings.redis_url,
     ttl_seconds=settings.catalog_cache_ttl_seconds,
 )
+
+SalaryHistorySeniority = Literal["junior", "middle", "senior"]
+SalaryHistoryReferenceScope = Literal[
+    "exact_role", "related_role", "technology", "category", "market_level"
+]
+
+SALARY_HISTORY_MINIMUM_RATIO: dict[SalaryHistorySeniority, float] = {
+    "junior": 0.4,
+    "middle": 0.7,
+    "senior": 1.0,
+}
+
+
+def _salary_history_reference(
+    benchmark: dict[str, Any],
+) -> tuple[float, SalaryHistoryReferenceScope]:
+    """Choose the visible national median used to trim implausibly low history points.
+
+    The rule never changes the reference layer itself. It prefers a median for the
+    exact role, then a technology or related-role median, and finally the published
+    category/general-IT reference already shown on the profession page.
+    """
+    points = benchmark["points"]
+    for scope in ("exact_role", "technology", "related_role", "category", "market_level"):
+        point = next(
+            (
+                item
+                for item in points
+                if item["scope"] == scope
+                and item["geography"] == "russia"
+                and item["seniority"] is None
+                and item["metric"] == "median"
+                and item["value"] is not None
+            ),
+            None,
+        )
+        if point is not None:
+            return float(point["value"]), scope
+    raise ValueError("Salary benchmark has no national median reference")
 
 
 @router.get(
@@ -142,6 +182,19 @@ def _official_open_data_summary(
     *,
     include_category_context: bool = False,
 ) -> OfficialOpenDataSummary:
+    profession_context = db.execute(
+        select(Profession.slug, ProfessionCategory.slug)
+        .join(ProfessionCategory, Profession.category_id == ProfessionCategory.id)
+        .where(Profession.id == profession_id)
+    ).one()
+    profession_slug, category_slug = profession_context
+    history_reference_median, history_reference_scope = _salary_history_reference(
+        salary_benchmark_for(profession_slug, category_slug)
+    )
+    history_minimum_salary: dict[SalaryHistorySeniority, float] = {
+        seniority: history_reference_median * ratio
+        for seniority, ratio in SALARY_HISTORY_MINIMUM_RATIO.items()
+    }
     now = datetime.now(timezone.utc)
     window = utc_calendar_window(now, days=period_days)
     date_to = window.date_to
@@ -363,6 +416,10 @@ def _official_open_data_summary(
                     (salary_from, salary_to)
                     for published_at, salary_from, salary_to in grouped_rows[seniority_code]
                     if date_from <= published_at.date() <= point_date
+                    and salary_from is not None
+                    and salary_to is not None
+                    and float((salary_from + salary_to) / 2)
+                    >= history_minimum_salary[seniority_code]
                 ]
                 point_stats = calculate_salary_statistics(
                     [
@@ -438,12 +495,20 @@ def _official_open_data_summary(
         salary_min_sample=settings.min_salary_sample,
         salary_by_seniority=salary_by_seniority,
         salary_history=salary_history,
+        salary_history_reference_median=history_reference_median,
+        salary_history_reference_scope=history_reference_scope,
+        salary_history_minimum_ratio=SALARY_HISTORY_MINIMUM_RATIO,
+        salary_history_minimum_salary=history_minimum_salary,
         salary_methodology_note=(
-            "Статистика рассчитана только по RUB-записям с двумя границами вилки. "
-            "Каждая недельная точка показывает накопительную медиану от начала 180-дневного периода. "
-            "Для уровня используется точная профессия, а если она не образует временной ряд — явно "
-            "помеченный срез направления. gross/net источником не определён. Значения публикуются "
-            f"только при выборке не менее {settings.min_salary_sample}."
+            "Динамика рассчитана по RUB-записям с двумя границами вилки после "
+            "воспроизводимой нижней отсечки относительно видимой зарплатной медианы: "
+            "40% для Junior, 70% для Middle и 100% для Senior. Каждая недельная точка "
+            "показывает накопительную медиану от начала 180-дневного периода. Сначала "
+            "используется точная профессия, затем явно подписанное направление; если "
+            "обоих рядов недостаточно, график оставляет только статичный ориентир общего "
+            "рынка. Исходные публикации и показатели полноты не фильтруются. gross/net "
+            "источником не определён. Значения публикуются только при выборке не менее "
+            f"{settings.min_salary_sample}."
         ),
         methodology_note=(
             "Количество найденных публикаций по дате создания записи. Это не историческое "
@@ -617,7 +682,9 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
         profession.id,
         include_category_context=True,
     )
-    salary_benchmark = salary_benchmark_for(profession.slug, category.slug)
+    salary_benchmark = SalaryBenchmarkSummary.model_validate(
+        salary_benchmark_for(profession.slug, category.slug)
+    )
     if summary.teaser_only:
         return ProfessionDetail(
             **summary.model_dump(),

@@ -87,6 +87,10 @@ export interface OfficialOpenDataSummary {
     sample_size: number;
     scope?: "profession" | "category";
   }>;
+  salary_history_reference_median: number;
+  salary_history_reference_scope: "exact_role" | "related_role" | "technology" | "category" | "market_level";
+  salary_history_minimum_ratio: Record<"junior" | "middle" | "senior", number>;
+  salary_history_minimum_salary: Record<"junior" | "middle" | "senior", number>;
   salary_methodology_note: string;
   methodology_note: string;
 }

@@ -257,7 +257,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div className="market-stage-copy">
               <p className="eyebrow">Главный график</p>
               <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Накопительная медиана полных RUB-вилок. Для каждого уровня сначала берётся точная профессия; при выборке меньше {profession.official_open_data.salary_min_sample} используется явно подписанное направление «{profession.category_name}». Статичный ориентир показан пунктиром и не выдаётся за динамику.</p>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Накопительная медиана полных RUB-вилок после нижней отсечки от зарплатного ориентира: 40% для Junior, 70% для Middle и 100% для Senior. Сначала берётся точная профессия; при малой выборке — направление «{profession.category_name}». Пунктиром показан статичный ориентир общего рынка.</p>
             </div>
             <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
           </article>
@@ -272,7 +272,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           <article id="salary-coverage" className="market-stage mt-5 scroll-mt-24">
             <div className="market-stage-copy">
               <p className="eyebrow">Качество зарплатных данных</p>
-              <h3 className="mt-2 text-2xl font-semibold">Полнота вилок для медианы</h3>
+              <h3 className="mt-2 text-2xl font-semibold">Доля публикаций с полной зарплатной вилкой</h3>
               <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Столбцы показывают новые публикации и записи с обеими границами зарплаты в RUB; линия — долю полных вилок. В медиану входят только полные вилки с распознанным уровнем.{salaryCoverageUsesCategory ? ` Для устойчивости показано направление «${profession.category_name}»: точных публикаций профессии меньше 20.` : " Здесь показан точный срез профессии."}</p>
             </div>
             <div className="mt-5" data-testid="salary-coverage-visualization"><SalaryCoverageChart data={profession.official_open_data} /></div>
