@@ -47,7 +47,7 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("heading", { level: 4, name: "Senior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toHaveCount(0);
   await expect(page.getByText("сохранены для проверки", { exact: false })).toHaveCount(0);
-  await expect(page.getByText("n=45 226", { exact: false })).toBeVisible();
+  await expect(page.getByText("в исследовании n=45 226", { exact: false })).toBeVisible();
   await expect(page.getByRole("button", { name: "Поделиться" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
   await expect(page.locator("#salary-benchmark")).toBeVisible();
@@ -109,6 +109,13 @@ test("profession structured data cites only visible public datasets", async ({ p
 
 test("grade cards stay coherent while observed salary inversions remain explained", async ({ page }) => {
   await page.goto("/professions/dotnet-developer");
+  const benchmarkSection = page.locator("#salary-benchmark");
+  await expect(benchmarkSection).toContainText("Источник");
+  await expect(benchmarkSection).toContainText("Период");
+  await expect(benchmarkSection).toContainText("Выборка");
+  await expect(benchmarkSection).toContainText("Налоговый статус");
+  await expect(benchmarkSection).toContainText("Что измеряется");
+  await expect(benchmarkSection).toContainText("Опубликовано");
   const gradeSection = page.getByRole("heading", {
     name: "Зарплата Junior, Middle и Senior",
   }).locator("xpath=parent::div");
@@ -147,11 +154,11 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await page.goto("/professions/soc-analyst");
   const salaryHistory = page.locator("#salary-history");
   await expect(page.getByText("146 000 ₽", { exact: true })).toBeVisible();
-  await expect(salaryHistory).toContainText("медиана с ограничениями");
+  await expect(salaryHistory).toContainText("среднее за 30 дней с ограничениями");
   await expect(salaryHistory).not.toContainText("Junior от");
   await expect(salaryHistory).not.toContainText("Middle от");
   await expect(salaryHistory).not.toContainText("Senior от");
-  await expect(salaryHistory).toContainText("Пунктир");
+  await expect(salaryHistory).toContainText(/направление|IT-рынок|точная профессия/);
 });
 
 test("status page shows public freshness without internal runtime details", async ({ page }) => {

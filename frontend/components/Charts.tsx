@@ -306,8 +306,8 @@ export function OfficialSalaryChart({
       level,
       new Map(
         data.salary_history
-          .filter((item) => item.seniority === level && item.median != null)
-          .map((item) => [item.date, item.median as number]),
+          .filter((item) => item.seniority === level && item.average != null)
+          .map((item) => [item.date, item.average as number]),
       ),
     ]),
   );
@@ -322,11 +322,16 @@ export function OfficialSalaryChart({
   const salarySeries: LineSeriesOption[] = [];
   for (const level of salaryLevelOrder) {
     const points = data.salary_history.filter((item) => item.seniority === level);
-    const visiblePoints = points.filter((item) => item.median != null).length;
+    const visiblePoints = points.filter((item) => item.average != null).length;
     if (visiblePoints >= data.salary_min_sample) {
-      const scope = points.find((item) => item.median != null)?.scope ?? points[0]?.scope ?? "profession";
+      const scope = points.find((item) => item.average != null)?.scope ?? points[0]?.scope ?? "profession";
+      const scopeLabel = scope === "category"
+        ? "направление"
+        : scope === "market"
+          ? "IT-рынок"
+          : "профессия";
       salarySeries.push({
-        name: `${levelLabels[level]} · ${scope === "category" ? "направление" : "профессия"}`,
+        name: `${levelLabels[level]} · ${scopeLabel}`,
         type: "line",
         smooth: true,
         showSymbol: visiblePoints < 4,
@@ -344,7 +349,7 @@ export function OfficialSalaryChart({
           ]),
         },
         itemStyle: { color: colors[level] },
-        data: dates.map((date) => points.find((item) => item.date === date)?.median ?? null),
+        data: dates.map((date) => points.find((item) => item.date === date)?.average ?? null),
       });
       continue;
     }
@@ -383,9 +388,9 @@ export function OfficialSalaryChart({
   const visibleSummaries = salaryLevelOrder.flatMap((level) => {
     const point = [...data.salary_history]
       .reverse()
-      .find((item) => item.seniority === level && item.median != null && dates.includes(item.date));
-    return point?.median != null
-      ? [{ level, value: point.median, scope: point.scope }]
+      .find((item) => item.seniority === level && item.average != null && dates.includes(item.date));
+    return point?.average != null
+      ? [{ level, value: point.average, scope: point.scope, sampleSize: point.sample_size }]
       : [];
   });
 
@@ -405,19 +410,19 @@ export function OfficialSalaryChart({
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted">RUB в месяц · медиана с ограничениями</span>
+        <span className="text-xs text-muted">RUB в месяц · среднее за {data.salary_history_window_days ?? 30} дней с ограничениями</span>
       </div>
       {visibleSummaries.length ? (
         <div className="chart-kpis">
           {visibleSummaries.map((item) => (
             <span key={item.level}>
               <strong>{levelLabels[item.level]} · {Math.round(item.value / 1000)} тыс. ₽</strong>
-              <small>{item.scope === "category" ? "направление" : "точная профессия"}</small>
+              <small>{item.scope === "category" ? "направление" : item.scope === "market" ? "IT-рынок" : "точная профессия"} · n={item.sampleSize}</small>
             </span>
           ))}
         </div>
       ) : null}
-      <Chart option={option} label={`Медиана зарплаты с ограничениями по уровням за ${periodDays} дней и статические ориентиры для отсутствующих рядов`} heightClass="h-[25rem]" />
+      <Chart option={option} label={`Скользящее среднее зарплаты за ${data.salary_history_window_days ?? 30} дней с ограничениями по уровням; видимый период ${periodDays} дней`} heightClass="h-[25rem]" />
       {usesReference && (
         <div className="mt-3 space-y-2 text-sm text-muted">
           <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>

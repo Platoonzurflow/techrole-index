@@ -246,7 +246,10 @@ describe("analytics components", () => {
     expect(screen.getByText("есть прямой срез")).toBeInTheDocument();
     expect(screen.getByText("точная профессия")).toBeInTheDocument();
     expect(screen.queryByText("Категорийный fallback")).not.toBeInTheDocument();
-    expect(screen.getByText(/n=45[\s\u00a0]226/)).toBeInTheDocument();
+    expect(screen.getAllByText(/n=45[\s\u00a0]226/)).toHaveLength(2);
+    expect(screen.getByText("Что измеряется")).toBeInTheDocument();
+    expect(screen.getByText("оклад и премия")).toBeInTheDocument();
+    expect(screen.getByText("Опубликовано")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /Источник/ })).toHaveAttribute(
       "href",
       "https://habr.com/ru/specials/1060148/",

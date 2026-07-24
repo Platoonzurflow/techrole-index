@@ -103,9 +103,9 @@ class OfficialSalarySlice(BaseModel):
 class OfficialSalaryHistoryPoint(BaseModel):
     date: date
     seniority: Literal["junior", "middle", "senior"]
-    median: float | None = None
+    average: float | None = None
     sample_size: int
-    scope: Literal["profession", "category"] = "profession"
+    scope: Literal["profession", "category", "market"] = "profession"
 
 
 class OfficialOpenDataSummary(BaseModel):
@@ -137,6 +137,8 @@ class OfficialOpenDataSummary(BaseModel):
     salary_min_sample: int
     salary_by_seniority: list[OfficialSalarySlice]
     salary_history: list[OfficialSalaryHistoryPoint]
+    salary_history_metric: Literal["rolling_average"] = "rolling_average"
+    salary_history_window_days: int = 30
     salary_history_reference_median: float
     salary_history_reference_scope: Literal[
         "exact_role", "related_role", "technology", "category", "market_level"

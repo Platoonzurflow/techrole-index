@@ -115,7 +115,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const canonicalUrl = `${siteUrl}/professions/${slug}`;
   const stackItems = profession.tech_stack?.flatMap((group) => group.items) ?? [];
   const salaryHistoryUsesCategory = profession.official_open_data?.salary_history.some(
-    (item) => item.median != null && item.scope === "category",
+    (item) => item.average != null && item.scope === "category",
+  ) ?? false;
+  const salaryHistoryUsesMarket = profession.official_open_data?.salary_history.some(
+    (item) => item.average != null && item.scope === "market",
   ) ?? false;
   const salaryCoverageUsesCategory = (profession.official_open_data?.total_publications ?? 0) < 20;
   const schema = {
@@ -257,7 +260,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div className="market-stage-copy">
               <p className="eyebrow">Главный график</p>
               <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Медиана полных RUB-вилок с ограничениями. Охват каждого ряда указан в легенде; пунктиром показан статичный ориентир общего рынка.</p>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Среднее полной RUB-вилки в скользящем 30-дневном окне с ограничениями. Охват каждого ряда указан в легенде; пунктиром показан статичный ориентир только там, где наблюдений всё ещё недостаточно.</p>
             </div>
             <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
           </article>
@@ -280,6 +283,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
             <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>
             {salaryHistoryUsesCategory ? <p className="mt-2">В зарплатной динамике хотя бы один уровень использует направление из-за малой точной выборки.</p> : null}
+            {salaryHistoryUsesMarket ? <p className="mt-2">Если данных направления тоже недостаточно, уровень показывает общий IT-рынок и подписывает этот охват отдельно.</p> : null}
           </div>
         </section>
       ) : null}

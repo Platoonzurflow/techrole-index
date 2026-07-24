@@ -83,10 +83,12 @@ export interface OfficialOpenDataSummary {
   salary_history: Array<{
     date: string;
     seniority: "junior" | "middle" | "senior";
-    median?: number;
+    average?: number;
     sample_size: number;
-    scope?: "profession" | "category";
+    scope?: "profession" | "category" | "market";
   }>;
+  salary_history_metric?: "rolling_average";
+  salary_history_window_days?: number;
   salary_history_reference_median: number;
   salary_history_reference_scope: "exact_role" | "related_role" | "technology" | "category" | "market_level";
   salary_history_minimum_ratio: Record<"junior" | "middle" | "senior", number>;

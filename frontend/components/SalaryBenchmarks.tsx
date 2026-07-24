@@ -9,6 +9,7 @@ import {
 import type {
   OfficialOpenDataSummary,
   SalaryBenchmarkPoint,
+  SalaryBenchmarkSource,
   SalaryBenchmarkSummary,
 } from "@/lib/types";
 
@@ -65,25 +66,58 @@ function taxLabel(value: "gross" | "net" | "unknown") {
   return "gross/net не указан";
 }
 
-function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
+function BenchmarkCard({
+  point,
+  source,
+  featured = false,
+}: {
+  point: SalaryBenchmarkPoint;
+  source?: SalaryBenchmarkSource;
+  featured?: boolean;
+}) {
   const fragment = `salary-reference-${point.source_id}-${point.scope}-${point.geography}-${point.seniority ?? "all"}`;
+  const sample = point.sample_size != null
+    ? `n=${point.sample_size.toLocaleString("ru-RU")}`
+    : source?.total_sample_size
+      ? `в исследовании n=${source.total_sample_size.toLocaleString("ru-RU")}`
+      : "n не опубликован";
   return (
-    <article id={fragment} className="scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <h4 className="font-semibold">{point.seniority ? levelLabels[point.seniority] : point.label}</h4>
-        <span className="badge">{scopeLabels[point.scope]}</span>
+    <article
+      id={fragment}
+      className={`scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5 ${featured ? "lg:grid lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] lg:gap-8 lg:p-6" : ""}`}
+    >
+      <div>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h4 className="font-semibold">{point.seniority ? levelLabels[point.seniority] : point.label}</h4>
+          <span className="badge">{scopeLabels[point.scope]}</span>
+        </div>
+        <p className="mt-5 text-sm text-muted">{metricLabel(point)} · {geographyLabels[point.geography]}</p>
+        <p className="mt-1 font-mono text-2xl font-semibold">{pointValue(point)}</p>
+        {point.seniority ? <p className="mt-2 text-xs text-muted">Срез: {point.label}</p> : null}
       </div>
-      <p className="mt-5 text-sm text-muted">{metricLabel(point)} · {geographyLabels[point.geography]}</p>
-      <p className="mt-1 font-mono text-2xl font-semibold">{pointValue(point)}</p>
-      {point.seniority ? <p className="mt-2 text-xs text-muted">Срез: {point.label}</p> : null}
-      {point.p10 != null && point.p90 != null ? (
-        <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm">
-          <div><dt className="text-muted">P10</dt><dd className="mt-1 font-mono">{rub(point.p10)}</dd></div>
-          <div><dt className="text-muted">P90</dt><dd className="mt-1 font-mono">{rub(point.p90)}</dd></div>
-        </dl>
-      ) : null}
-      {point.sample_size != null ? <p className="mt-4 text-xs text-muted">Выборка: n={point.sample_size}</p> : null}
-      {point.note ? <p className="mt-3 text-xs leading-5 text-muted">{point.note}</p> : null}
+      <div>
+        {featured && source ? (
+          <dl className="mt-5 grid gap-x-6 gap-y-4 border-t border-line pt-5 text-sm sm:grid-cols-2 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
+            <div>
+              <dt className="text-muted">Источник</dt>
+              <dd className="mt-1 font-medium"><a className="link" href={`#salary-source-${source.id}`}>{source.name}</a></dd>
+            </div>
+            <div><dt className="text-muted">Период</dt><dd className="mt-1 font-medium">{source.period}</dd></div>
+            <div><dt className="text-muted">Выборка</dt><dd className="mt-1 font-mono">{sample}</dd></div>
+            <div><dt className="text-muted">Налоговый статус</dt><dd className="mt-1">{taxLabel(source.tax_status)}</dd></div>
+            <div><dt className="text-muted">Что измеряется</dt><dd className="mt-1">{source.income_type === "salary_plus_bonus" ? "оклад и премия" : "зарплата"}</dd></div>
+            <div><dt className="text-muted">Опубликовано</dt><dd className="mt-1">{new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${source.published_at}T00:00:00Z`))}</dd></div>
+          </dl>
+        ) : null}
+        {point.p10 != null && point.p90 != null ? (
+          <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm">
+            <div><dt className="text-muted">P10</dt><dd className="mt-1 font-mono">{rub(point.p10)}</dd></div>
+            <div><dt className="text-muted">P90</dt><dd className="mt-1 font-mono">{rub(point.p90)}</dd></div>
+          </dl>
+        ) : null}
+        {!featured && point.sample_size != null ? <p className="mt-4 text-xs text-muted">Выборка: n={point.sample_size}</p> : null}
+        {point.note ? <p className="mt-3 text-xs leading-5 text-muted">{point.note}</p> : null}
+      </div>
     </article>
   );
 }
@@ -115,13 +149,13 @@ export function SalaryBenchmarks({
       </div>
 
       {national.length ? (
-        <div className="mt-6 grid gap-4 lg:grid-cols-2">{national.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.label}`} point={point} />)}</div>
+        <div className="mt-6 grid gap-4">{national.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.label}`} point={point} source={salaryBenchmarkSourceForPoint(data, point)} featured />)}</div>
       ) : null}
 
       {regional.length ? (
         <div className="mt-8">
           <h3 className="text-lg font-semibold">По регионам для профессии</h3>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">{regional.map((point) => <BenchmarkCard key={`${point.source_id}-${point.label}-${point.geography}`} point={point} />)}</div>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">{regional.map((point) => <BenchmarkCard key={`${point.source_id}-${point.label}-${point.geography}`} point={point} source={salaryBenchmarkSourceForPoint(data, point)} />)}</div>
         </div>
       ) : null}
 
@@ -132,7 +166,7 @@ export function SalaryBenchmarks({
           {official ? (
             <SalaryBySeniority official={official} benchmark={data} />
           ) : (
-            <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} source={salaryBenchmarkSourceForPoint(data, point)} />)}</div>
           )}
         </div>
       ) : null}

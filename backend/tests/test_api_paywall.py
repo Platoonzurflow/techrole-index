@@ -138,6 +138,7 @@ def build_client():
     session.flush()
     observed_at = datetime.now(timezone.utc) - timedelta(days=2)
     for index in range(20):
+        publication_at = observed_at - timedelta(days=index % 5)
         session.add(
             Vacancy(
                 source_id=source.id,
@@ -148,8 +149,8 @@ def build_client():
                 salary_gross=None,
                 salary_from=Decimal("100000"),
                 salary_to=Decimal("200000"),
-                published_at=observed_at,
-                first_seen_at=observed_at,
+                published_at=publication_at,
+                first_seen_at=publication_at,
                 last_seen_at=observed_at,
                 work_format="remote",
                 is_remote=True,
@@ -213,6 +214,8 @@ def test_free_response_does_not_contain_premium_fields():
         "middle": 156100,
         "senior": 223000,
     }
+    assert payload["official_open_data"]["salary_history_metric"] == "rolling_average"
+    assert payload["official_open_data"]["salary_history_window_days"] == 30
     assert payload["official_open_data"]["category_total_publications"] >= 20
     assert sum(
         point["count"]
@@ -256,18 +259,20 @@ def test_free_response_does_not_contain_premium_fields():
     junior_history = [
         point
         for point in payload["official_open_data"]["salary_history"]
-        if point["seniority"] == "junior" and point.get("median") is not None
+        if point["seniority"] == "junior" and point.get("average") is not None
     ]
     assert junior_history[-1]["sample_size"] == 20
     assert junior_history[-1]["scope"] == "profession"
+    assert junior_history[-1]["average"] == 150000
+    assert len(junior_history) >= 3
 
     category_fallback = client.get("/api/v1/professions/role-1?days=180").json()
     fallback_history = [
         point
         for point in category_fallback["official_open_data"]["salary_history"]
-        if point["seniority"] == "junior" and point.get("median") is not None
+        if point["seniority"] == "junior" and point.get("average") is not None
     ]
-    assert fallback_history[-1]["median"] == 150000
+    assert fallback_history[-1]["average"] == 150000
     assert fallback_history[-1]["scope"] == "category"
     catalog = client.get("/api/v1/open-data/publications").json()
     assert catalog[0]["category_slug"] == "development"
@@ -289,7 +294,7 @@ def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
         for item in session.scalars(select(SeniorityLevel)).all()
     }
     assert source and profession and region
-    observed_at = datetime.now(timezone.utc) - timedelta(days=1)
+    observed_at = datetime.now(timezone.utc) - timedelta(days=10)
     observations = [
         ("junior", 5, "30000", "50000"),
         ("middle", 3, "140000", "150000"),
@@ -299,7 +304,8 @@ def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
     ]
     external_index = 0
     for seniority, count, salary_from, salary_to in observations:
-        for _ in range(count):
+        for offset in range(count):
+            publication_at = observed_at - timedelta(days=offset)
             session.add(
                 Vacancy(
                     source_id=source.id,
@@ -310,8 +316,8 @@ def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
                     salary_gross=None,
                     salary_from=Decimal(salary_from),
                     salary_to=Decimal(salary_to),
-                    published_at=observed_at,
-                    first_seen_at=observed_at,
+                    published_at=publication_at,
+                    first_seen_at=publication_at,
                     last_seen_at=observed_at,
                     work_format="office",
                     is_remote=False,
@@ -335,13 +341,21 @@ def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
         "middle": (170000, 3),
         "senior": (240000, 3),
     }
-    for seniority, (expected_median, expected_sample) in expected_history.items():
+    for seniority, (expected_average, expected_sample) in expected_history.items():
         points = [
             point
             for point in official["salary_history"]
-            if point["seniority"] == seniority and point.get("median") is not None
+            if point["seniority"] == seniority and point.get("average") is not None
         ]
-        assert points[-1]["median"] == expected_median
+        assert points, (
+            seniority,
+            {
+                point["scope"]
+                for point in official["salary_history"]
+                if point["seniority"] == seniority
+            },
+        )
+        assert points[-1]["average"] == expected_average
         assert points[-1]["sample_size"] == expected_sample
 
     raw_slices = {
