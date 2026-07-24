@@ -39,7 +39,7 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Зарплата и поток вакансий за 180 дней" })).toBeVisible();
   await expect(page.getByText("Это не историческое число одновременно активных вакансий", { exact: false })).toBeVisible();
   await expect(page.getByText("gross/net не определён", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Рыночные ориентиры зарплаты" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
   await expect(page.getByText("данные по технологии", { exact: true }).first()).toBeVisible();
   await expect(page.getByRole("heading", { level: 4, name: "Junior" })).toHaveCount(1);

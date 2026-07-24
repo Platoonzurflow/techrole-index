@@ -106,8 +106,8 @@ export function SalaryBenchmarks({
     <section className="panel mt-10 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="eyebrow">Фактические доходы специалистов</p>
-          <h2 id="salary-benchmark-title" className="mt-2 text-2xl font-semibold">Рыночные ориентиры зарплаты</h2>
+          <p className="eyebrow">Зарплатные ориентиры</p>
+          <h2 id="salary-benchmark-title" className="mt-2 text-2xl font-semibold">Фактические доходы специалистов</h2>
           <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">{data.methodology_note}</p>
         </div>
         <span className="badge confidence-medium">{coverageLabels[data.coverage]}</span>
