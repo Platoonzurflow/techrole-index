@@ -112,6 +112,24 @@ jobs:
         run: |
           docker compose restart frontend
           docker compose up -d --wait frontend
+          for path in \
+            /professions/python-developer \
+            /categories/development \
+            /insights/median-vs-average-salary \
+            /reports/weekly
+          do
+            ready=false
+            for attempt in $(seq 1 30)
+            do
+              if curl --fail --silent --show-error "http://127.0.0.1:3000${path}" >/dev/null
+              then
+                ready=true
+                break
+              fi
+              sleep 2
+            done
+            test "$ready" = true
+          done
       - name: Audit public pages serially on the development server
         run: docker compose exec -T -e PUBLIC_AUDIT_CONCURRENCY=1 frontend npm run audit:public
       - name: Show service logs on failure
