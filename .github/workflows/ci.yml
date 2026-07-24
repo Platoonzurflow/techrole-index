@@ -108,6 +108,10 @@ jobs:
           mlcroissant validate --jsonld=http://127.0.0.1:3000/open-data-daily.croissant.json
           mlcroissant load --jsonld=http://127.0.0.1:3000/open-data-daily.croissant.json --record_set=observed_publication_daily --num_records=3
       - run: docker compose --profile e2e run --rm e2e
+      - name: Reset frontend memory before the full public crawl
+        run: |
+          docker compose restart frontend
+          docker compose up -d --wait frontend
       - name: Audit public pages serially on the development server
         run: docker compose exec -T -e PUBLIC_AUDIT_CONCURRENCY=1 frontend npm run audit:public
       - name: Show service logs on failure
