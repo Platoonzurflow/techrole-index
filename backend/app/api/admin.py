@@ -2,7 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 from celery.result import AsyncResult
 from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import desc, select
+from sqlalchemy import desc, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -20,6 +20,8 @@ from app.models import (
     Vacancy,
 )
 from app.schemas import (
+    AdminUserAccessUpdate,
+    AdminUserOut,
     AliasCreate,
     PaymentReadinessOut,
     ProfessionUpdate,
@@ -30,6 +32,7 @@ from app.services.payment_readiness import payment_readiness
 from app.worker import celery_app
 
 router = APIRouter(prefix="/admin", tags=["admin"], dependencies=[Depends(require_csrf)])
+ADMIN_PREMIUM_SOURCES = ("admin_grant", "admin_override")
 
 
 @router.get("/payment-readiness", response_model=PaymentReadinessOut)
@@ -272,6 +275,142 @@ def block_user(
     audit(db, admin, request, "user.block", "user", str(user_id), {"blocked": blocked})
     db.commit()
     return {"status": "updated"}
+
+
+def _admin_user_out(
+    user: User,
+    active_entitlements: list[Entitlement],
+) -> AdminUserOut:
+    admin_grant_active = any(
+        entitlement.source in ADMIN_PREMIUM_SOURCES for entitlement in active_entitlements
+    )
+    paid_premium_active = any(
+        entitlement.source.startswith("payment:") for entitlement in active_entitlements
+    )
+    entitlement_ends = [entitlement.ends_at for entitlement in active_entitlements]
+    expires_at = (
+        None
+        if user.role == "admin"
+        or not entitlement_ends
+        or any(value is None for value in entitlement_ends)
+        else max(value for value in entitlement_ends if value is not None)
+    )
+    return AdminUserOut(
+        id=user.id,
+        email=user.email,
+        display_name=user.display_name,
+        role=user.role,
+        is_blocked=user.is_blocked,
+        access_level="premium" if user.role == "admin" or active_entitlements else "free",
+        premium_expires_at=expires_at,
+        admin_grant_active=admin_grant_active,
+        paid_premium_active=paid_premium_active,
+    )
+
+
+def _active_premium_entitlements(db: Session, user_id: int) -> list[Entitlement]:
+    now = datetime.now(timezone.utc)
+    return list(
+        db.scalars(
+            select(Entitlement).where(
+                Entitlement.user_id == user_id,
+                Entitlement.code == "premium",
+                Entitlement.starts_at <= now,
+                Entitlement.revoked_at.is_(None),
+                or_(Entitlement.ends_at.is_(None), Entitlement.ends_at > now),
+            )
+        ).all()
+    )
+
+
+@router.get("/users", response_model=list[AdminUserOut])
+def users(db: Session = Depends(get_db), admin: User = Depends(require_admin)):
+    del admin
+    user_rows = list(
+        db.scalars(select(User).order_by(desc(User.created_at)).limit(500)).all()
+    )
+    entitlements_by_user: dict[int, list[Entitlement]] = {
+        user.id: [] for user in user_rows
+    }
+    if user_rows:
+        now = datetime.now(timezone.utc)
+        entitlements = db.scalars(
+            select(Entitlement).where(
+                Entitlement.user_id.in_([user.id for user in user_rows]),
+                Entitlement.code == "premium",
+                Entitlement.starts_at <= now,
+                Entitlement.revoked_at.is_(None),
+                or_(Entitlement.ends_at.is_(None), Entitlement.ends_at > now),
+            )
+        ).all()
+        for entitlement in entitlements:
+            entitlements_by_user[entitlement.user_id].append(entitlement)
+    return [
+        _admin_user_out(user, entitlements_by_user[user.id])
+        for user in user_rows
+    ]
+
+
+@router.put("/users/{user_id}/access", response_model=AdminUserOut)
+def set_user_access(
+    user_id: int,
+    payload: AdminUserAccessUpdate,
+    request: Request,
+    db: Session = Depends(get_db),
+    admin: User = Depends(require_admin),
+):
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Пользователь не найден")
+    if user.role == "admin":
+        raise HTTPException(
+            status_code=409,
+            detail="Администратор всегда имеет Premium-доступ",
+        )
+
+    now = datetime.now(timezone.utc)
+    active_entitlements = _active_premium_entitlements(db, user.id)
+    active_admin_grants = [
+        entitlement
+        for entitlement in active_entitlements
+        if entitlement.source in ADMIN_PREMIUM_SOURCES
+    ]
+    changed = False
+    if payload.access_level == "premium" and not active_admin_grants:
+        db.add(
+            Entitlement(
+                user_id=user.id,
+                code="premium",
+                source="admin_override",
+                starts_at=now,
+                ends_at=None,
+            )
+        )
+        changed = True
+    elif payload.access_level == "free" and active_admin_grants:
+        for entitlement in active_admin_grants:
+            entitlement.revoked_at = now
+        changed = True
+
+    audit(
+        db,
+        admin,
+        request,
+        "premium.mode.set",
+        "user",
+        str(user.id),
+        {
+            "requested_access_level": payload.access_level,
+            "admin_grant_changed": changed,
+            "paid_access_preserved": any(
+                entitlement.source.startswith("payment:")
+                for entitlement in active_entitlements
+            ),
+        },
+    )
+    db.commit()
+    db.refresh(user)
+    return _admin_user_out(user, _active_premium_entitlements(db, user.id))
 
 
 @router.post("/users/{user_id}/grant-premium", status_code=201)

@@ -257,7 +257,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div className="market-stage-copy">
               <p className="eyebrow">Главный график</p>
               <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Накопительная медиана полных RUB-вилок после нижней отсечки от зарплатного ориентира: 40% для Junior, 70% для Middle и 100% для Senior. Сначала берётся точная профессия; при малой выборке — направление «{profession.category_name}». Пунктиром показан статичный ориентир общего рынка.</p>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Медиана полных RUB-вилок с ограничениями. Охват каждого ряда указан в легенде; пунктиром показан статичный ориентир общего рынка.</p>
             </div>
             <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
           </article>

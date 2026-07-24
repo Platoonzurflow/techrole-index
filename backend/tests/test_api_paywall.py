@@ -15,6 +15,7 @@ from app.domain.scoring import DEFAULT_WEIGHTS
 from app.main import app
 from app.models import (
     AnalyticsEvent,
+    AuditLog,
     Base,
     Entitlement,
     PaymentEvent,
@@ -1045,6 +1046,113 @@ def test_refund_of_an_earlier_extension_removes_exactly_its_access_days(monkeypa
     me = client.get("/api/v1/auth/me").json()
     assert me["access_level"] == "premium"
     assert datetime.fromisoformat(me["premium_expires_at"]) == entitlements[1].ends_at
+    client.close()
+    session.close()
+    app.dependency_overrides.clear()
+
+
+def test_admin_can_toggle_manual_premium_without_revoking_paid_access():
+    client, session = build_client()
+    assert client.get("/api/v1/admin/users").status_code == 401
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "free@example.com", "password": "FreePassword1!"},
+    )
+    assert client.get("/api/v1/admin/users").status_code == 403
+
+    client.post(
+        "/api/v1/auth/login",
+        json={"email": "admin@example.com", "password": "AdminPassword1!"},
+    )
+    users = client.get("/api/v1/admin/users")
+    assert users.status_code == 200
+    assert "password_hash" not in users.text
+    free_user = next(item for item in users.json() if item["email"] == "free@example.com")
+    assert free_user["access_level"] == "free"
+    assert free_user["admin_grant_active"] is False
+
+    no_csrf = client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        json={"access_level": "premium"},
+    )
+    assert no_csrf.status_code == 403
+    headers = {"X-CSRF-Token": client.cookies.get("techrole_csrf")}
+    rejected_extra = client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        headers=headers,
+        json={"access_level": "premium", "ends_at": "2099-01-01T00:00:00Z"},
+    )
+    assert rejected_extra.status_code == 422
+    enabled = client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        headers=headers,
+        json={"access_level": "premium"},
+    )
+    assert enabled.status_code == 200
+    assert enabled.json()["access_level"] == "premium"
+    assert enabled.json()["admin_grant_active"] is True
+    assert enabled.json()["premium_expires_at"] is None
+
+    repeated = client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        headers=headers,
+        json={"access_level": "premium"},
+    )
+    assert repeated.status_code == 200
+    manual_grants = session.scalars(
+        select(Entitlement).where(
+            Entitlement.user_id == free_user["id"],
+            Entitlement.source == "admin_override",
+        )
+    ).all()
+    assert len(manual_grants) == 1
+
+    disabled = client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        headers=headers,
+        json={"access_level": "free"},
+    )
+    assert disabled.status_code == 200
+    assert disabled.json()["access_level"] == "free"
+    assert disabled.json()["admin_grant_active"] is False
+
+    now = datetime.now(timezone.utc)
+    session.add(
+        Entitlement(
+            user_id=free_user["id"],
+            code="premium",
+            source="payment:paid-order",
+            starts_at=now - timedelta(minutes=1),
+            ends_at=now + timedelta(days=30),
+        )
+    )
+    session.commit()
+    client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        headers=headers,
+        json={"access_level": "premium"},
+    )
+    paid_preserved = client.put(
+        f"/api/v1/admin/users/{free_user['id']}/access",
+        headers=headers,
+        json={"access_level": "free"},
+    )
+    assert paid_preserved.status_code == 200
+    assert paid_preserved.json()["access_level"] == "premium"
+    assert paid_preserved.json()["admin_grant_active"] is False
+    assert paid_preserved.json()["paid_premium_active"] is True
+    paid = session.scalar(
+        select(Entitlement).where(Entitlement.source == "payment:paid-order")
+    )
+    assert paid is not None
+    assert paid.revoked_at is None
+    audit_entries = session.scalars(
+        select(AuditLog).where(AuditLog.action == "premium.mode.set")
+    ).all()
+    assert len(audit_entries) == 5
+    assert audit_entries[-1].details["paid_access_preserved"] is True
+
     client.close()
     session.close()
     app.dependency_overrides.clear()

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { browserCsrf } from "@/lib/browser";
 
 interface AdminProfession {
@@ -27,6 +27,23 @@ interface PaymentReadiness {
   test_checks: PaymentReadinessCheck[];
   live_checks: PaymentReadinessCheck[];
   result_url?: string;
+}
+
+interface AdminUser {
+  id: number;
+  email: string;
+  display_name: string;
+  role: string;
+  is_blocked: boolean;
+  access_level: "free" | "premium";
+  premium_expires_at?: string | null;
+  admin_grant_active: boolean;
+  paid_premium_active: boolean;
+}
+
+function formatAccessEnd(value?: string | null) {
+  if (!value) return "без ограничения";
+  return new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium" }).format(new Date(value));
 }
 
 function ReadinessList({ checks }: { checks: PaymentReadinessCheck[] }) {
@@ -91,8 +108,12 @@ function PaymentReadinessCard({ data }: { data: PaymentReadiness }) {
 
 export function AdminPanel() {
   const [items, setItems] = useState<AdminProfession[]>([]);
+  const [users, setUsers] = useState<AdminUser[]>([]);
   const [readiness, setReadiness] = useState<PaymentReadiness | null>(null);
   const [message, setMessage] = useState("Загрузка…");
+  const [usersMessage, setUsersMessage] = useState("Загрузка пользователей…");
+  const [userQuery, setUserQuery] = useState("");
+  const [updatingUserId, setUpdatingUserId] = useState<number | null>(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -119,8 +140,30 @@ export function AdminPanel() {
         if (response.ok) setReadiness(await response.json());
       })
       .catch(() => undefined);
+    fetch("/api/v1/admin/users", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok) {
+          setUsersMessage("Не удалось загрузить пользователей.");
+          return;
+        }
+        setUsers(await response.json());
+        setUsersMessage("");
+      })
+      .catch((error: unknown) => {
+        if (error instanceof Error && error.name !== "AbortError") {
+          setUsersMessage("Не удалось загрузить пользователей.");
+        }
+      });
     return () => controller.abort();
   }, []);
+
+  const visibleUsers = useMemo(() => {
+    const query = userQuery.trim().toLocaleLowerCase("ru-RU");
+    if (!query) return users;
+    return users.filter((user) =>
+      `${user.email} ${user.display_name} ${user.id}`.toLocaleLowerCase("ru-RU").includes(query),
+    );
+  }, [userQuery, users]);
 
   const toggle = async (item: AdminProfession, field: "is_premium" | "is_active") => {
     const response = await fetch(`/api/v1/admin/professions/${item.id}`, {
@@ -146,6 +189,34 @@ export function AdminPanel() {
     });
     const payload = await response.json().catch(() => ({}));
     setMessage(response.ok ? `Задача поставлена: ${payload.task_id}` : "Не удалось запустить расчёт.");
+  };
+
+  const setAccess = async (user: AdminUser) => {
+    const accessLevel = user.admin_grant_active ? "free" : "premium";
+    setUpdatingUserId(user.id);
+    setUsersMessage("");
+    try {
+      const response = await fetch(`/api/v1/admin/users/${user.id}/access`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json", "X-CSRF-Token": browserCsrf() },
+        body: JSON.stringify({ access_level: accessLevel }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        setUsersMessage(payload.detail ?? "Изменение доступа отклонено сервером.");
+        return;
+      }
+      setUsers((current) => current.map((item) => item.id === user.id ? payload : item));
+      setUsersMessage(
+        accessLevel === "premium"
+          ? `Premium включён для ${user.email}.`
+          : user.paid_premium_active
+            ? `Ручная выдача снята; оплаченный Premium ${user.email} сохранён.`
+            : `Для ${user.email} включён режим Free.`,
+      );
+    } finally {
+      setUpdatingUserId(null);
+    }
   };
 
   if (!items.length) {
@@ -175,6 +246,101 @@ export function AdminPanel() {
         ) : null}
       </div>
       {readiness ? <PaymentReadinessCard data={readiness} /> : null}
+      <section className="panel mt-8 p-6" aria-labelledby="user-access-title">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">Доступ пользователей</p>
+            <h2 id="user-access-title" className="mt-2 text-2xl font-bold">
+              Режим Free / Premium
+            </h2>
+            <p className="mt-2 max-w-3xl text-sm text-muted">
+              Ручной Premium действует до отключения. Переключение в Free снимает только
+              административную выдачу и не отменяет оплаченный период.
+            </p>
+          </div>
+          <label className="grid gap-1 text-sm font-semibold">
+            Найти пользователя
+            <input
+              type="search"
+              className="field min-w-64"
+              value={userQuery}
+              onChange={(event) => setUserQuery(event.target.value)}
+              placeholder="Email, имя или ID"
+            />
+          </label>
+        </div>
+        {usersMessage ? (
+          <p className="mt-4 text-sm text-muted" role="status">{usersMessage}</p>
+        ) : null}
+        <div className="table-wrap mt-6">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Пользователь</th>
+                <th>Доступ</th>
+                <th>Источник</th>
+                <th>Действие</th>
+              </tr>
+            </thead>
+            <tbody>
+              {visibleUsers.map((user) => {
+                const isAdmin = user.role === "admin";
+                const paidOnly = user.paid_premium_active && !user.admin_grant_active;
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <span className="font-semibold">{user.display_name}</span>
+                      <span className="block text-sm text-muted">{user.email} · ID {user.id}</span>
+                    </td>
+                    <td>
+                      <span className={`badge ${user.access_level === "premium" ? "badge-premium" : ""}`}>
+                        {user.access_level === "premium" ? "Premium" : "Free"}
+                      </span>
+                      {user.access_level === "premium" && !isAdmin ? (
+                        <span className="mt-1 block text-xs text-muted">
+                          {formatAccessEnd(user.premium_expires_at)}
+                        </span>
+                      ) : null}
+                    </td>
+                    <td className="text-sm text-muted">
+                      {isAdmin
+                        ? "роль администратора"
+                        : user.admin_grant_active && user.paid_premium_active
+                          ? "ручной + оплаченный"
+                          : user.admin_grant_active
+                            ? "ручной"
+                            : user.paid_premium_active
+                              ? "оплаченный"
+                              : "нет"}
+                    </td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`${user.admin_grant_active ? "button-secondary" : "button-primary"} disabled:cursor-not-allowed disabled:opacity-50`}
+                        disabled={isAdmin || paidOnly || updatingUserId === user.id}
+                        onClick={() => setAccess(user)}
+                      >
+                        {updatingUserId === user.id
+                          ? "Сохраняю…"
+                          : isAdmin
+                            ? "Всегда Premium"
+                            : paidOnly
+                              ? "Оплачен"
+                              : user.admin_grant_active
+                                ? "Сделать Free"
+                                : "Включить Premium"}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {!visibleUsers.length && !usersMessage ? (
+                <tr><td colSpan={4} className="text-muted">Пользователи не найдены.</td></tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
       <div className="table-wrap mt-8">
         <table className="data-table">
           <thead>

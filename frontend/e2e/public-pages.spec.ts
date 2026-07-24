@@ -147,9 +147,10 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await page.goto("/professions/soc-analyst");
   const salaryHistory = page.locator("#salary-history");
   await expect(page.getByText("146 000 ₽", { exact: true })).toBeVisible();
-  await expect(salaryHistory).toContainText("Junior от 58 тыс. ₽");
-  await expect(salaryHistory).toContainText("Middle от 102 тыс. ₽");
-  await expect(salaryHistory).toContainText("Senior от 146 тыс. ₽");
+  await expect(salaryHistory).toContainText("медиана с ограничениями");
+  await expect(salaryHistory).not.toContainText("Junior от");
+  await expect(salaryHistory).not.toContainText("Middle от");
+  await expect(salaryHistory).not.toContainText("Senior от");
   await expect(salaryHistory).toContainText("направление");
 });
 

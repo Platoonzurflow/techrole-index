@@ -131,6 +131,10 @@ describe("analytics components", () => {
           ],
           result_url: "https://techrole.example/api/v1/payments/webhooks/robokassa",
         }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([]),
       });
     vi.stubGlobal("fetch", request);
 
@@ -145,6 +149,72 @@ describe("analytics components", () => {
       "/api/v1/admin/payment-readiness",
       expect.objectContaining({ signal: expect.any(AbortSignal) }),
     );
+  });
+
+  it("switches a manual user grant and keeps paid access visibly protected", async () => {
+    document.cookie = "techrole_csrf=csrf-token";
+    const freeUser = {
+      id: 17,
+      email: "reader@example.com",
+      display_name: "Reader",
+      role: "user",
+      is_blocked: false,
+      access_level: "free",
+      premium_expires_at: null,
+      admin_grant_active: false,
+      paid_premium_active: false,
+    };
+    const request = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([{
+          id: 1,
+          slug: "data-engineer",
+          name_ru: "Инженер по данным",
+          name_en: "Data Engineer",
+          is_premium: false,
+          is_active: true,
+        }]),
+      })
+      .mockResolvedValueOnce({ ok: false })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue([freeUser, {
+          ...freeUser,
+          id: 18,
+          email: "paid@example.com",
+          display_name: "Paid",
+          access_level: "premium",
+          paid_premium_active: true,
+          premium_expires_at: "2026-08-23T12:00:00Z",
+        }]),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: vi.fn().mockResolvedValue({
+          ...freeUser,
+          access_level: "premium",
+          admin_grant_active: true,
+        }),
+      });
+    vi.stubGlobal("fetch", request);
+
+    render(<AdminPanel />);
+
+    const enable = await screen.findByRole("button", { name: "Включить Premium" });
+    expect(screen.getByRole("button", { name: "Оплачен" })).toBeDisabled();
+    fireEvent.click(enable);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Сделать Free" })).toBeVisible());
+    expect(request).toHaveBeenNthCalledWith(
+      4,
+      "/api/v1/admin/users/17/access",
+      expect.objectContaining({
+        method: "PUT",
+        headers: expect.objectContaining({ "X-CSRF-Token": "csrf-token" }),
+        body: JSON.stringify({ access_level: "premium" }),
+      }),
+    );
+    expect(screen.getByText("Premium включён для reader@example.com.")).toBeVisible();
   });
 
   it("shows the exact benchmark without a separate category fallback block", () => {

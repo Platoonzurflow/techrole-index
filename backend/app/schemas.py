@@ -23,6 +23,24 @@ class UserOut(BaseModel):
     premium_expires_at: datetime | None = None
 
 
+class AdminUserAccessUpdate(BaseModel):
+    model_config = {"extra": "forbid"}
+
+    access_level: Literal["free", "premium"]
+
+
+class AdminUserOut(BaseModel):
+    id: int
+    email: str
+    display_name: str
+    role: str
+    is_blocked: bool
+    access_level: Literal["free", "premium"]
+    premium_expires_at: datetime | None = None
+    admin_grant_active: bool
+    paid_premium_active: bool
+
+
 class ProfessionSummary(BaseModel):
     id: int
     slug: str

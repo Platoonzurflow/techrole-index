@@ -195,6 +195,8 @@ docker compose exec -T frontend npm run audit:public
 
 Администратор видит безопасный checklist на `/admin`: отдельно для тестового магазина и реальных платежей. `GET /api/v1/admin/payment-readiness` возвращает только булевы признаки и готовый ResultURL, но никогда не возвращает MerchantLogin, пароли или API-ключи. Реальный режим дополнительно требует `PAYMENTS_STABLE_HTTPS_CONFIRMED=true`; Tailscale Funnel этим условием не считается.
 
+На той же странице admin может найти пользователя по email, имени или ID и включить/снять бессрочную ручную выдачу Premium. Переключение в Free отзывает только entitlement с административным источником; оплаченный доступ сохраняется и снимается только штатным refund-процессом. Список не содержит password hash, платёжных идентификаторов или credentials, mutation защищена RBAC + CSRF и записывается в `audit_logs`.
+
 Privacy-first аудитория доступна владельцу на `/admin/analytics`: consented visitors, pageviews, clicks, citation signals и declared crawler requests без IP/email/raw User-Agent. Admin и automation исключаются. Ограничения и production enablement: [ANALYTICS.md](ANALYTICS.md). Аудит поискового и AI-слоя и ручные Search Console/Яндекс шаги: [SEARCH_AI.md](SEARCH_AI.md).
 
 ## Подключение законного источника

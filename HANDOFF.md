@@ -328,10 +328,10 @@ Backend endpoints и UI позволяют:
 - смотреть ingestion runs;
 - создавать scoring version с новыми весами;
 - блокировать пользователя;
-- выдавать Premium;
+- искать пользователей и переключать ручной режим Free/Premium;
 - просматривать audit logs.
 
-Admin mutation endpoints защищены backend RBAC + CSRF. Действия записываются в `audit_logs`.
+`PUT /admin/users/{user_id}/access` создаёт бессрочный `admin_override` или отзывает только активные административные выдачи. Оплаченный entitlement не отзывается: при действующем платеже эффективный режим останется Premium и UI явно блокирует случайное отключение. Admin mutation endpoints защищены backend RBAC + CSRF. Действия записываются в `audit_logs`, а выдаваемый списком пользователей контракт не содержит password hash, payment IDs или credentials.
 
 ## 12. Основные API
 
