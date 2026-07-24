@@ -1,6 +1,6 @@
 # TechRole Index - полный handoff проекта
 
-Последнее обновление: 2026-07-23, Europe/Moscow.
+Последнее обновление: 2026-07-24, Europe/Moscow.
 
 Этот файл предназначен для нового чата или разработчика, который продолжит проект без истории текущего диалога. Перед любыми изменениями необходимо полностью прочитать `AGENTS.md`, затем этот файл, `DECISIONS.md` и профильный документ из списка ниже.
 
@@ -312,7 +312,7 @@ Auth: Argon2 password hash, JWT HttpOnly/SameSite cookie, CSRF для mutation e
 
 `DemoPaymentProvider` проводит локальный sandbox без списания. Серверный product catalog определяет цену и 30-дневный доступ; `payment_orders` сохраняет idempotency key, provider id, сумму, test/live и принятую версию условий. HMAC demo webhook проверяет raw body, повторы дедуплицируются, отмена терминальна. Полный admin refund идемпотентен и отзывает только entitlement соответствующего заказа.
 
-Владелец подтвердил статус самозанятого НПД. Основной вариант — Robokassa с «Робочеками СМЗ», резервный — ЮKassa. `RobokassaPaymentProvider` создаёт подписанный запрос с числовым `InvId`, server-side Receipt и Success/Fail URL; frontend передаёт эти поля официальному host HTML-формой `POST`. ResultURL проверяет подпись Паролем №2, test/live режим и возвращает обязательный `OK<InvId>`. Live refund получает `OpKey`, отправляет HS256 JWT по Password3 с исходной номенклатурой услуги, а Celery сверяет pending-состояние каждые пять минут. `YooKassaPaymentProvider` сохраняет REST idempotency, возврат и авторизованную проверку webhook. Оба адаптера покрыты MockTransport/HTTP contract tests. Магазин Robokassa прошёл KYC и активирован 2026-07-23; «Робочеки СМЗ» имеют статус «Активно», SHA-256 и Result/Success/Fail URL подтверждены по email, а test/live credentials сохранены только в production `.env`. Официальный sandbox прошёл без списания. 24 июля live-readiness прошёл; после трёх неподтверждённых попыток из-за недостаточного остатка контрольный InvoiceID 33 на 290 ₽ получил расчётное состояние, подписанный ResultURL, `succeeded` и отдельный Premium entitlement до 23 августа 2026 года. Production работает в `robokassa/live`. `/admin` показывает отдельную готовность test/live через admin-only `/admin/payment-readiness`; ответ содержит только признаки и ResultURL, без credentials. Факт внешнего фискального чека владелец проверяет в Robokassa/«Мой налог». Полная памятка: `PAYMENTS.md`.
+Владелец подтвердил статус самозанятого НПД. Основной вариант — Robokassa с «Робочеками СМЗ», резервный — ЮKassa. `RobokassaPaymentProvider` создаёт подписанный запрос с числовым `InvId`, server-side Receipt и Success/Fail URL; frontend передаёт эти поля официальному host HTML-формой `POST`. ResultURL проверяет подпись Паролем №2, test/live режим и возвращает обязательный `OK<InvId>`. Live refund получает `OpKey`, отправляет HS256 JWT по Password3 с исходной номенклатурой услуги, а Celery сверяет pending-состояние каждые пять минут. `YooKassaPaymentProvider` сохраняет REST idempotency, возврат и авторизованную проверку webhook. Оба адаптера покрыты MockTransport/HTTP contract tests. Магазин Robokassa прошёл KYC и активирован 2026-07-23; «Робочеки СМЗ» имеют статус «Активно», SHA-256 и Result/Success/Fail URL подтверждены по email, а test/live credentials сохранены только в production `.env`. Официальный sandbox прошёл без списания. 24 июля live-readiness прошёл; после трёх неподтверждённых попыток из-за недостаточного остатка контрольный InvoiceID 33 на 290 ₽ получил расчётное состояние, подписанный ResultURL, `succeeded` и отдельный Premium entitlement до 23 августа 2026 года. Владелец подтвердил фискальный чек одновременно в Robokassa и «Мой налог». Production работает в `robokassa/live`. `/admin` показывает отдельную готовность test/live через admin-only `/admin/payment-readiness`; ответ содержит только признаки и ResultURL, без credentials. Checkout использует email авторизованного аккаунта; произвольный адрес из браузера не принимается. Полная памятка: `PAYMENTS.md`.
 
 ## 11. Административная панель
 
@@ -596,10 +596,10 @@ Next build может автоматически дописывать custom dis
 - официальный open-data API «Работа России» подключён: реальные публикации и salary midpoint видны отдельным публичным слоем и инкрементально материализованы, но неизвестный gross/net намеренно не преобразуется в gross-витрину;
 - юридическое разрешение на коммерческое использование данных hh.ru не подтверждено;
 - официальный CBR currency provider подключён отдельным контуром и локально включён: migration `0004`, snapshots USD/EUR/KZT, requested/effective date и Dagster op. Эти rates ещё не применяются к несовместимому gross/net слою автоматически;
-- владелец подтвердил НПД; Robokassa выбрана основным payment-кандидатом из-за автоматических «Робочеков СМЗ», ЮKassa оставлена резервом. Demo sandbox и оба адаптера готовы, но test/live credentials, KYC, договор, активацию чеков, юридические реквизиты и постоянный HTTPS-host может предоставить только владелец;
+- владелец подтвердил НПД; Robokassa выбрана основным payment-провайдером, credentials/KYC/договор/«Робочеки СМЗ»/юридические реквизиты/HTTPS настроены, а контрольный live-платёж и чек успешно подтверждены 2026-07-24; ЮKassa остаётся резервом;
 - Yandex SMTP и IMAP работают; пять писем Support/Mentorship/Nightly подтверждены во входящих, две сохранённые заявки доставлены. Пароль остаётся только в локальном `.env`;
 - Tailscale работает на ПК и iPhone. Firewall ограничен tailnet, но TCP 3389 ещё не слушает: владелец должен один раз повторно запустить исправленный `infra/windows/enable-private-remote-access.ps1` от администратора и получить `ListenerReady=True`;
-- production Compose теперь fail closed проверяет secrets/URLs/DB credentials, удаляет source mounts/лишние ports и безопасно bootstrap-ит пустую БД без demo data; сам deployment, постоянный домен, TLS и внешняя observability ещё не настроены;
+- production Compose fail closed проверяет secrets/URLs/DB credentials, удаляет source mounts/лишние ports и безопасно bootstrap-ит пустую БД без demo data; deployment работает круглосуточно на Selectel VDS с постоянным `techrole.ru`, Caddy TLS и внутренними health checks;
 - перед публичным Git push Gitleaks 8.30.1 проверил все 20 commits: точечно разрешён только synthetic production-settings fixture, повторный scan сообщает `no leaks found`; SHA-pinned workflow `secret-scan.yml` готов повторять проверку;
 - auth rate limit перенесён в Redis, HMAC-хеширует IP и fail-closed в production;
 - Prometheus-compatible HTTP metrics, multiprocess Gunicorn storage, loopback-only Prometheus profile и alerts down/5xx/p95/cache-errors добавлены; внешний Alertmanager/Sentry/OpenTelemetry collector ещё не подключён;
@@ -618,22 +618,22 @@ Next build может автоматически дописывать custom dis
 2. Зафиксировать допустимые production-условия использования API «Работа России» и отдельно документированное право для любого будущего коммерческого источника.
 3. Publication-date materialization и quality gate выполнены отдельным Dagster op; дальше нужна только юридически и методически подтверждённая gross/net-нормализация перед любым переносом зарплат в prepared слой. CBR snapshots работают отдельно.
 4. Выполнено: UI, profession SSR, `data-status.json` и CSV разделяют `prepared_baseline` и `observed_historical`, не подменяя статус свежей датой.
-5. Production secret/Compose contract подготовлен и проверен на синтетических credentials; дальше на отдельном host создать пустую БД, заполнить реальный `.env`, выбрать постоянный домен и проверить Caddy TLS. Local demo volume намеренно не подходит.
+5. Выполнено: production secret/Compose contract, отдельный Selectel host, пустая production БД, server-only `.env`, постоянный домен и Caddy TLS проверены. Local demo volume не используется.
 
 Приоритет P1:
 
 1. Поддерживать очищенную `public-main`, проверять обязательные GitHub Actions после каждого push и не публиковать внутреннюю историю/локальные секреты.
-2. Официальный sandbox Robokassa завершён успешно: форма, ResultURL и выдача Premium проверены. Credentials, SHA-256, постоянный HTTPS и активные «Робочеки СМЗ» настроены; явное разрешение владельца на live получено 2026-07-23. Перед реальными списаниями остаётся итоговая проверка и явная установка legal guard.
+2. Выполнено: официальный sandbox и контрольный live-платёж Robokassa завершены успешно; ResultURL, entitlement, фискальный чек, credentials, SHA-256, HTTPS, «Робочеки СМЗ» и legal guard подтверждены. Production работает в live.
 3. Определить срок хранения обращений и процедуру ротации SMTP app password; раздельная доставка Support/Mentorship/Nightly уже проверена.
 4. Prometheus-compatible метрики и локальные alert rules выполнены; дальше выбрать внешний Alertmanager-канал и при необходимости Sentry/OpenTelemetry collector.
-5. После стабильного домена настроить Search Console/Webmaster, IndexNow key и содержательные внешние публикации; временные tunnel URL не регистрировать.
+5. IndexNow key опубликован, 88 canonical URL повторно приняты API. Владелец должен подтвердить `techrole.ru` и sitemap только в Google Search Console/Яндекс Вебмастере; содержательные внешние публикации развивать без спама.
 
 Приоритет P2:
 
 1. Redis cache каталога/detail, изолированные incremental SQL transforms, публичные daily JSON/CSV/Schema exports и HTTP validators выполнены; следующий шаг - измерить query/cache нагрузку и долю `304` после стабильного трафика и только затем усложнять storage.
 2. Рассмотреть ClickHouse только после фактической нагрузки.
 3. Провести benchmark локальных моделей; AI оставлять только вспомогательным механизмом uncertain records.
-4. Accessibility, lab performance budgets и полный SEO crawl автоматизированы и проходят на local/public preview; после стабильного production domain остаются полевые p75 Core Web Vitals/RUM и повторный внешний crawl на каноническом host.
+4. Accessibility, lab performance budgets, Playwright 41/41 и внешний production crawl 88/88 проходят; остаются полевые p75 Core Web Vitals/RUM после накопления реального трафика.
 
 ## 22. Продуктовые предпочтения владельца
 
