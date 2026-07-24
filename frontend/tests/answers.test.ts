@@ -71,6 +71,8 @@ describe("answer-first summary", () => {
       item("backend", "Backend-разработчик", 12, 9),
     ], records);
 
+    expect(summary.publication_data_available).toBe(true);
+    expect(summary.salary_data_available).toBe(true);
     expect(summary.top_professions.map((candidate) => candidate.slug)).toEqual(["backend", "frontend"]);
     expect(summary.salary_by_level[0].roles[0]).toMatchObject({ slug: "backend", sample_size: 9 });
     expect(summary.top_regions.map((region) => region.publications)).toEqual([11, 10]);
@@ -91,5 +93,17 @@ describe("answer-first summary", () => {
     const summary = buildAnswerSummary([fresh], []);
 
     expect(summary.date_modified).toBe("2026-07-14T23:59:59Z");
+  });
+
+  it("marks missing publication and salary slices without presenting zero as observed data", () => {
+    const empty = item("backend", "Backend-разработчик", 0, 0);
+    empty.salary_by_seniority = [];
+
+    const summary = buildAnswerSummary([empty], []);
+
+    expect(summary.publication_data_available).toBe(false);
+    expect(summary.salary_data_available).toBe(false);
+    expect(summary.top_professions).toEqual([]);
+    expect(summary.top_regions).toEqual([]);
   });
 });

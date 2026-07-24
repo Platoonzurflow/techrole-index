@@ -230,8 +230,10 @@ test("answer-first page exposes stable, sourced citation fragments and JSON", as
   expect(response.headers()["last-modified"]).toBeTruthy();
   const answers = await response.json();
   expect(answers.current_market_claim).toBe(false);
-  expect(answers.top_professions.length).toBeGreaterThan(0);
+  expect(Array.isArray(answers.top_professions)).toBe(true);
+  expect(answers.publication_data_available).toBe(answers.top_professions.length > 0);
   expect(answers.salary_by_level.length).toBeGreaterThan(0);
+  expect(answers.salary_data_available).toBe(true);
   expect(answers.methodology_url).toContain("/methodology");
 
   const notModified = await request.get("/answers.json", {

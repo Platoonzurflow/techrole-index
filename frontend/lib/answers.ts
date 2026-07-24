@@ -18,6 +18,8 @@ export interface AnswerSummary {
   date_from: string | null;
   date_to: string | null;
   date_modified: string | null;
+  publication_data_available: boolean;
+  salary_data_available: boolean;
   top_professions: Array<{ slug: string; name: string; publications: number }>;
   salary_by_level: Array<{
     seniority: "junior" | "middle" | "senior";
@@ -112,6 +114,8 @@ export function buildAnswerSummary(
     date_from: dateFrom,
     date_to: dateTo,
     date_modified: dateModified,
+    publication_data_available: topProfessions.length > 0 || topRegions.length > 0,
+    salary_data_available: levels.some((level) => level.roles.length > 0),
     top_professions: topProfessions,
     salary_by_level: levels,
     top_regions: topRegions,
