@@ -66,3 +66,7 @@ Provider выключен по умолчанию через `CBR_CURRENCY_ENABL
 `/answers` и `/answers.json` являются производными только от уже разрешённого публичного слоя «Работы России». Они не создают новые наблюдения и не смешивают prepared/Premium данные. Срезы выбираются детерминированно: top профессий по числу публикаций, наиболее наполненные прошедшие `n≥3` зарплатные выборки для каждого seniority, top регионов и два соседних семидневных окна публикаций. Для каждого ответа сохраняются period, source, `n`, tax status, canonical URL и `current_market_claim=false`.
 
 Динамические exports `/answers.json`, `/open-data.json`, `/open-data.csv`, `/ai-index.json`, `/research.json`, `/llms-full.txt` и RSS не подменяют недоступность backend пустым набором: outage возвращает `503/no-store`. Успешные machine responses используют ETag, Last-Modified при наличии даты и `304`. Форматы публикуются по стабильным suffix URL и связаны через `alternate`, HTTP `Link`, JSON-LD distributions, DCAT и RFC 9264 Linkset; отсутствие implicit Accept-negotiation не мешает автоматическому выбору формата.
+
+## Аналитика аудитории не является источником рыночных данных
+
+First-party события посещений, кликов, citation actions, AI referrals и заявленных crawler User-Agent хранятся отдельно от вакансий и зарплатных наблюдений. Они не участвуют в index, ranking, salary, answer-first срезах, JSON-LD Dataset или open-data exports. Показатели `/admin/analytics` описывают только consented взаимодействия с сайтом; они не доказывают личность crawler и не измеряют все внешние цитирования.
