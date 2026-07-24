@@ -835,10 +835,7 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
         )
 
     if slug in DEVELOPER_MARKET_LEVEL_SLUGS:
-        existing_levels = {point["seniority"] for point in points if point["seniority"] is not None}
         for seniority, lower, upper, sample_size in DEVELOPER_MARKET_LEVELS:
-            if seniority in existing_levels:
-                continue
             points.append(
                 _point(
                     source_id="getgrade_2025",
@@ -853,26 +850,23 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
                     is_fallback=True,
                 )
             )
-
-    existing_levels = {point["seniority"] for point in points if point["seniority"] is not None}
-    for seniority, value in IT_MARKET_LEVELS:
-        if seniority in existing_levels:
-            continue
-        points.append(
-            _point(
-                source_id="ruitunion_2026_h1",
-                scope="market_level",
-                label="IT-специалисты в России",
-                metric="median",
-                value=value,
-                seniority=seniority,
-                note=(
-                    "Общерыночная медиана грейда используется только потому, что "
-                    "отдельное значение для этой профессии не опубликовано."
-                ),
-                is_fallback=True,
+    else:
+        for seniority, value in IT_MARKET_LEVELS:
+            points.append(
+                _point(
+                    source_id="ruitunion_2026_h1",
+                    scope="market_level",
+                    label="IT-специалисты в России",
+                    metric="median",
+                    value=value,
+                    seniority=seniority,
+                    note=(
+                        "Общерыночная медиана грейда используется как единая "
+                        "непротиворечивая шкала, если ролевые уровни неполны или пересекаются."
+                    ),
+                    is_fallback=True,
+                )
             )
-        )
 
     category_key = _category_key(slug, category_slug)
     label, national, moscow, petersburg, regions = CATEGORY_BENCHMARKS[category_key]
@@ -908,9 +902,10 @@ def salary_benchmark_for(slug: str, category_slug: str) -> dict[str, Any]:
         "points": points,
         "sources": [SOURCES[source_id] for source_id in source_ids],
         "methodology_note": (
-            "Сначала показаны данные самой профессии. Если отдельного значения для "
-            "грейда нет, используется подписанный ориентир смежной роли, технологии "
-            "или всего IT-рынка — вместе с периодом и первоисточником."
+            "Сначала показаны данные самой профессии. Для сравнения грейдов выбирается "
+            "один полный непротиворечивый набор одного исследования; неполные или "
+            "пересекающиеся ролевые точки не смешиваются с другим источником. "
+            "Период, scope и первоисточник остаются видимыми."
         ),
     }
 

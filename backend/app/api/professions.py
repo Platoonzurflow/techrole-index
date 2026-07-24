@@ -156,9 +156,17 @@ def _official_open_data_summary(
             ).all()
         ]
     daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
+    daily_complete_salary_ranges = {
+        date_from + timedelta(days=index): 0 for index in range(period_days)
+    }
     category_daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
+    category_daily_complete_salary_ranges = {
+        date_from + timedelta(days=index): 0 for index in range(period_days)
+    }
     salary_disclosed_count = remote_count = 0
+    complete_salary_range_count = 0
     category_salary_disclosed_count = category_remote_count = 0
+    category_complete_salary_range_count = 0
     last_ingested_at = None
     salary_rows: dict[str, list[tuple[Any, ...]]] = {
         "junior": [],
@@ -178,6 +186,12 @@ def _official_open_data_summary(
         if published_date in daily:
             daily[published_date] += 1
         salary_disclosed_count += int(salary_from is not None or salary_to is not None)
+        has_complete_rub_range = (
+            currency == "RUB" and salary_from is not None and salary_to is not None
+        )
+        complete_salary_range_count += int(has_complete_rub_range)
+        if published_date in daily_complete_salary_ranges and has_complete_rub_range:
+            daily_complete_salary_ranges[published_date] += 1
         remote_count += int(is_remote)
         if last_seen_at is not None:
             last_ingested_at = max(last_ingested_at or last_seen_at, last_seen_at)
@@ -234,6 +248,15 @@ def _official_open_data_summary(
                 category_salary_disclosed_count += int(
                     salary_from is not None or salary_to is not None
                 )
+                has_complete_rub_range = (
+                    currency == "RUB" and salary_from is not None and salary_to is not None
+                )
+                category_complete_salary_range_count += int(has_complete_rub_range)
+                if (
+                    published_date in category_daily_complete_salary_ranges
+                    and has_complete_rub_range
+                ):
+                    category_daily_complete_salary_ranges[published_date] += 1
                 category_remote_count += int(is_remote)
                 if seniority_code in category_salary_rows:
                     category_salary_rows[seniority_code].append(
@@ -376,12 +399,22 @@ def _official_open_data_summary(
         daily_publications=[
             PublicationPoint(date=metric_date, count=count) for metric_date, count in daily.items()
         ],
+        complete_salary_range_count=complete_salary_range_count,
+        daily_complete_salary_ranges=[
+            PublicationPoint(date=metric_date, count=count)
+            for metric_date, count in daily_complete_salary_ranges.items()
+        ],
         category_total_publications=category_total,
         category_daily_publications=[
             PublicationPoint(date=metric_date, count=count)
             for metric_date, count in category_daily.items()
         ],
         category_salary_disclosed_count=category_salary_disclosed_count,
+        category_complete_salary_range_count=category_complete_salary_range_count,
+        category_daily_complete_salary_ranges=[
+            PublicationPoint(date=metric_date, count=count)
+            for metric_date, count in category_daily_complete_salary_ranges.items()
+        ],
         category_remote_count=category_remote_count,
         category_confidence_level=category_confidence,
         category_salary_by_seniority=category_salary_by_seniority,

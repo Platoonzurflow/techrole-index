@@ -60,11 +60,61 @@ export function salaryBenchmarkSourceForPoint(
   return benchmark.sources.find((source) => source.id === point.source_id);
 }
 
+export function salaryBenchmarkPointRepresentative(point: SalaryBenchmarkPoint) {
+  if (point.value != null) return point.value;
+  if (point.lower != null && point.upper != null) return (point.lower + point.upper) / 2;
+  return undefined;
+}
+
+export function salaryBenchmarkLevelPointsAreCoherent(points: SalaryBenchmarkPoint[]) {
+  const byLevel = new Map(points.map((point) => [point.seniority, point]));
+  const values = salaryLevelOrder.map((seniority) => {
+    const point = byLevel.get(seniority);
+    return point ? salaryBenchmarkPointRepresentative(point) : undefined;
+  });
+  return values.every((value): value is number => value != null)
+    && values.every((value, index) => index === 0 || value >= values[index - 1]!);
+}
+
 export function salaryBenchmarkLevelPoints(benchmark: SalaryBenchmarkSummary) {
-  return salaryLevelOrder.map((seniority) => {
-    const candidates = benchmark.points.filter((point) => point.seniority === seniority);
-    return candidates.find((point) => !point.is_fallback) ?? candidates[0];
-  }).filter((point): point is SalaryBenchmarkPoint => Boolean(point));
+  const levelPoints = benchmark.points.filter(
+    (point): point is SalaryBenchmarkPoint & { seniority: NonNullable<SalaryBenchmarkPoint["seniority"]> } => (
+      point.seniority != null && salaryBenchmarkPointRepresentative(point) != null
+    ),
+  );
+  const families = new Map<string, SalaryBenchmarkPoint[]>();
+  for (const point of levelPoints) {
+    const key = [point.source_id, point.scope, point.label, String(point.is_fallback)].join("|");
+    families.set(key, [...(families.get(key) ?? []), point]);
+  }
+  const scopeScore: Record<SalaryBenchmarkPoint["scope"], number> = {
+    exact_role: 5,
+    technology: 4,
+    related_role: 3,
+    category: 2,
+    market_level: 1,
+  };
+  const coherentFamilies = [...families.values()]
+    .filter((points) => salaryBenchmarkLevelPointsAreCoherent(points))
+    .sort((left, right) => {
+      const leftFallback = left.every((point) => point.is_fallback) ? 0 : 1;
+      const rightFallback = right.every((point) => point.is_fallback) ? 0 : 1;
+      if (leftFallback !== rightFallback) return rightFallback - leftFallback;
+      return Math.max(...right.map((point) => scopeScore[point.scope]))
+        - Math.max(...left.map((point) => scopeScore[point.scope]));
+    });
+  if (coherentFamilies[0]) {
+    const byLevel = new Map(coherentFamilies[0].map((point) => [point.seniority, point]));
+    return salaryLevelOrder.map((seniority) => byLevel.get(seniority)!);
+  }
+
+  const preferred: SalaryBenchmarkPoint[] = [];
+  for (const seniority of salaryLevelOrder) {
+    const candidates = levelPoints.filter((point) => point.seniority === seniority);
+    const point = candidates.find((candidate) => !candidate.is_fallback) ?? candidates[0];
+    if (point) preferred.push(point);
+  }
+  return salaryBenchmarkLevelPointsAreCoherent(preferred) ? preferred : [];
 }
 
 export function salaryBenchmarkLevelCoverage(items: SalaryBenchmarkCatalogItem[]) {

@@ -1,10 +1,21 @@
 "use client";
 
 import * as echarts from "echarts";
+import type { LineSeriesOption } from "echarts/charts";
 import { useEffect, useRef } from "react";
-import type { MetricPoint, OfficialOpenDataSummary } from "@/lib/types";
+import {
+  salaryBenchmarkLevelPoints,
+  salaryBenchmarkPointRepresentative,
+  salaryLevelOrder,
+} from "@/lib/salary-benchmark-data";
+import type {
+  MetricPoint,
+  OfficialOpenDataSummary,
+  SalaryBenchmarkSummary,
+} from "@/lib/types";
 
 const colors = { junior: "#2694a8", middle: "#c85a38", senior: "#8a63a7" };
+const levelLabels = { junior: "Junior", middle: "Middle", senior: "Senior" } as const;
 
 function Chart({ option, label }: { option: echarts.EChartsOption; label: string }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -27,8 +38,8 @@ function Chart({ option, label }: { option: echarts.EChartsOption; label: string
 
 function series(metrics: MetricPoint[], field: "salary_median" | "vacancy_count") {
   const dates = [...new Set(metrics.map((item) => item.date))];
-  const levelSeries = (["junior", "middle", "senior"] as const).map((level) => ({
-    name: level[0].toUpperCase() + level.slice(1),
+  const levelSeries = salaryLevelOrder.map((level) => ({
+    name: levelLabels[level],
     type: "line" as const,
     smooth: true,
     showSymbol: false,
@@ -41,19 +52,6 @@ function series(metrics: MetricPoint[], field: "salary_median" | "vacancy_count"
   return { dates, levelSeries };
 }
 
-export function SalaryChart({ metrics }: { metrics: MetricPoint[] }) {
-  const { dates, levelSeries } = series(metrics, "salary_median");
-  const option: echarts.EChartsOption = {
-    tooltip: { trigger: "axis", valueFormatter: (value) => value == null ? "Недостаточно данных" : `${new Intl.NumberFormat("ru-RU").format(Number(value))} ₽` },
-    legend: { top: 4, textStyle: { color: "#64748b" } },
-    grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
-    xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true }, axisLine: { lineStyle: { color: "#334155" } } },
-    yAxis: { type: "value", axisLabel: { color: "#64748b", formatter: (value: number) => `${Math.round(value / 1000)}k` }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
-    series: levelSeries,
-  };
-  return <Chart option={option} label="История медианной зарплаты по уровням" />;
-}
-
 export function VacancyChart({ metrics }: { metrics: MetricPoint[] }) {
   const { dates, levelSeries } = series(metrics, "vacancy_count");
   const option: echarts.EChartsOption = {
@@ -61,10 +59,10 @@ export function VacancyChart({ metrics }: { metrics: MetricPoint[] }) {
     legend: { top: 4, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
     xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true }, axisLine: { lineStyle: { color: "#334155" } } },
-    yAxis: { type: "value", axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
+    yAxis: { type: "value", minInterval: 1, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
     series: levelSeries.map((item) => ({ ...item, stack: "vacancies", areaStyle: { opacity: 0.09 } })),
   };
-  return <Chart option={option} label="История активных вакансий по уровням" />;
+  return <Chart option={option} label="Расчётный объём вакансий подготовленной витрины по уровням" />;
 }
 
 export function aggregatePublicationsByWeek(
@@ -82,14 +80,42 @@ export function aggregatePublicationsByWeek(
   return weeks;
 }
 
+export function aggregateSalaryCoverageByWeek(
+  publications: OfficialOpenDataSummary["daily_publications"],
+  completeRanges: OfficialOpenDataSummary["daily_publications"],
+) {
+  const completeByDate = new Map(completeRanges.map((item) => [item.date, item.count]));
+  const weeks: Array<{
+    label: string;
+    publications: number;
+    completeRanges: number;
+    coveragePercent: number;
+  }> = [];
+  for (let index = 0; index < publications.length; index += 7) {
+    const slice = publications.slice(index, index + 7);
+    if (!slice.length) continue;
+    const publicationCount = slice.reduce((sum, item) => sum + item.count, 0);
+    const completeRangeCount = slice.reduce(
+      (sum, item) => sum + (completeByDate.get(item.date) ?? 0),
+      0,
+    );
+    weeks.push({
+      label: `${slice[0].date} — ${slice.at(-1)?.date}`,
+      publications: publicationCount,
+      completeRanges: completeRangeCount,
+      coveragePercent: publicationCount > 0
+        ? Math.round((completeRangeCount / publicationCount) * 1000) / 10
+        : 0,
+    });
+  }
+  return weeks;
+}
+
 export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
   const weeks = aggregatePublicationsByWeek(data.daily_publications);
   const categoryWeeks = aggregatePublicationsByWeek(data.category_daily_publications);
   const option: echarts.EChartsOption = {
-    tooltip: {
-      trigger: "axis",
-      valueFormatter: (value) => `${Number(value)} публикаций`,
-    },
+    tooltip: { trigger: "axis", valueFormatter: (value) => `${Number(value)} публикаций` },
     legend: { top: 4, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
     xAxis: {
@@ -126,31 +152,156 @@ export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
   return <Chart option={option} label="Точные публикации профессии и публикации направления по неделям за 180 дней" />;
 }
 
-export function OfficialSalaryChart({ data }: { data: OfficialOpenDataSummary }) {
-  if (!data.salary_history.some((item) => item.median != null)) {
+export function SalaryCoverageChart({ data }: { data: OfficialOpenDataSummary }) {
+  const useExactScope = data.total_publications >= 20;
+  const publications = useExactScope ? data.daily_publications : data.category_daily_publications;
+  const completeRanges = useExactScope
+    ? (data.daily_complete_salary_ranges ?? [])
+    : (data.category_daily_complete_salary_ranges ?? []);
+  const weeks = aggregateSalaryCoverageByWeek(publications, completeRanges);
+  const scopeLabel = useExactScope ? "профессии" : "направления";
+
+  if (!weeks.some((item) => item.publications > 0)) {
+    return (
+      <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed border-line p-6 text-center" role="status">
+        <div><p className="font-semibold">Публикаций пока недостаточно</p><p className="mt-2 text-sm text-muted">График появится после пополнения официального набора.</p></div>
+      </div>
+    );
+  }
+
+  const option: echarts.EChartsOption = {
+    tooltip: { trigger: "axis" },
+    legend: { top: 4, textStyle: { color: "#64748b" } },
+    grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
+    xAxis: {
+      type: "category",
+      data: weeks.map((item) => item.label),
+      axisLabel: { color: "#64748b", hideOverlap: true },
+      axisLine: { lineStyle: { color: "#334155" } },
+    },
+    yAxis: [
+      {
+        type: "value",
+        minInterval: 1,
+        name: "публикации",
+        axisLabel: { color: "#64748b" },
+        splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } },
+      },
+      {
+        type: "value",
+        min: 0,
+        max: 100,
+        name: "% с полной вилкой",
+        axisLabel: { color: "#64748b", formatter: "{value}%" },
+        splitLine: { show: false },
+      },
+    ],
+    series: [
+      {
+        name: `Новые публикации ${scopeLabel}`,
+        type: "bar",
+        tooltip: { valueFormatter: (value) => `${Number(value)} публикаций` },
+        itemStyle: { color: "rgba(38,148,168,.52)", borderRadius: [3, 3, 0, 0] },
+        data: weeks.map((item) => item.publications),
+      },
+      {
+        name: "Полные RUB-вилки",
+        type: "bar",
+        tooltip: { valueFormatter: (value) => `${Number(value)} вилок` },
+        itemStyle: { color: "#c85a38", borderRadius: [3, 3, 0, 0] },
+        data: weeks.map((item) => item.completeRanges),
+      },
+      {
+        name: "Доля полных вилок",
+        type: "line",
+        tooltip: { valueFormatter: (value) => `${Number(value)}%` },
+        yAxisIndex: 1,
+        smooth: true,
+        showSymbol: false,
+        lineStyle: { width: 2.5, color: "#8a63a7" },
+        itemStyle: { color: "#8a63a7" },
+        data: weeks.map((item) => item.coveragePercent),
+      },
+    ],
+  };
+  return <Chart option={option} label={`Новые публикации ${scopeLabel}, полные RUB-вилки и их доля по неделям`} />;
+}
+
+export function OfficialSalaryChart({
+  data,
+  benchmark,
+}: {
+  data: OfficialOpenDataSummary;
+  benchmark?: SalaryBenchmarkSummary;
+}) {
+  const dates = [...new Set(
+    data.salary_history.length > 0
+      ? data.salary_history.map((item) => item.date)
+      : data.daily_publications.map((item) => item.date),
+  )];
+  const benchmarkByLevel = new Map(
+    (benchmark ? salaryBenchmarkLevelPoints(benchmark) : []).map((point) => [point.seniority, point]),
+  );
+  const observedValues = new Map(
+    salaryLevelOrder.map((level) => [
+      level,
+      new Map(
+        data.salary_history
+          .filter((item) => item.seniority === level && item.median != null)
+          .map((item) => [item.date, item.median as number]),
+      ),
+    ]),
+  );
+  const hasInversion = dates.some((date) => {
+    const junior = observedValues.get("junior")?.get(date);
+    const middle = observedValues.get("middle")?.get(date);
+    const senior = observedValues.get("senior")?.get(date);
+    return (junior != null && middle != null && junior > middle)
+      || (middle != null && senior != null && middle > senior);
+  });
+
+  const salarySeries: LineSeriesOption[] = [];
+  for (const level of salaryLevelOrder) {
+    const points = data.salary_history.filter((item) => item.seniority === level);
+    const visiblePoints = points.filter((item) => item.median != null).length;
+    if (visiblePoints >= data.salary_min_sample) {
+      const scope = points.find((item) => item.median != null)?.scope ?? points[0]?.scope ?? "profession";
+      salarySeries.push({
+        name: `${levelLabels[level]} · ${scope === "category" ? "направление" : "профессия"}`,
+        type: "line",
+        smooth: true,
+        showSymbol: visiblePoints < 4,
+        symbolSize: 7,
+        connectNulls: true,
+        lineStyle: { width: 2.5 },
+        itemStyle: { color: colors[level] },
+        data: dates.map((date) => points.find((item) => item.date === date)?.median ?? null),
+      });
+      continue;
+    }
+    const reference = benchmarkByLevel.get(level);
+    const value = reference ? salaryBenchmarkPointRepresentative(reference) : undefined;
+    if (value == null || dates.length === 0) continue;
+    salarySeries.push({
+      name: `${levelLabels[level]} · ориентир`,
+      type: "line",
+      showSymbol: false,
+      silent: true,
+      lineStyle: { width: 2, type: "dashed", opacity: 0.78 },
+      itemStyle: { color: colors[level] },
+      data: dates.map(() => value),
+    });
+  }
+  const usesReference = salarySeries.some((item) => String(item.name).endsWith("ориентир"));
+
+  if (salarySeries.length === 0) {
     return (
       <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed border-line p-6 text-center" role="status">
         <div><p className="font-semibold">Недостаточно данных для графика</p><p className="mt-2 text-sm text-muted">Нужно не менее {data.salary_min_sample} полных RUB-вилок одного уровня по профессии или её направлению.</p></div>
       </div>
     );
   }
-  const dates = [...new Set(data.salary_history.map((item) => item.date))];
-  const salarySeries = (["junior", "middle", "senior"] as const).map((level) => {
-    const points = data.salary_history.filter((item) => item.seniority === level);
-    const scope = points.find((item) => item.median != null)?.scope ?? points[0]?.scope ?? "profession";
-    const visiblePoints = points.filter((item) => item.median != null).length;
-    return {
-      name: `${level[0].toUpperCase() + level.slice(1)} · ${scope === "category" ? "направление" : "профессия"}`,
-      type: "line" as const,
-      smooth: true,
-      showSymbol: visiblePoints < 4,
-      symbolSize: 7,
-      connectNulls: true,
-      lineStyle: { width: 2.5 },
-      itemStyle: { color: colors[level] },
-      data: dates.map((date) => points.find((item) => item.date === date)?.median ?? null),
-    };
-  }).filter((item) => item.data.some((value) => value != null));
+
   const option: echarts.EChartsOption = {
     tooltip: { trigger: "axis", valueFormatter: (value) => value == null ? "Недостаточно данных" : `${new Intl.NumberFormat("ru-RU").format(Number(value))} ₽` },
     legend: { top: 4, textStyle: { color: "#64748b" } },
@@ -159,5 +310,16 @@ export function OfficialSalaryChart({ data }: { data: OfficialOpenDataSummary })
     yAxis: { type: "value", axisLabel: { color: "#64748b", formatter: (value: number) => `${Math.round(value / 1000)}k` }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
     series: salarySeries,
   };
-  return <Chart option={option} label="Накопительная медиана зарплаты по уровням за 180 дней" />;
+
+  return (
+    <div>
+      <Chart option={option} label="Накопительная медиана зарплаты по уровням за 180 дней и статические ориентиры для отсутствующих рядов" />
+      {(usesReference || hasInversion) && (
+        <div className="mt-3 space-y-2 text-sm text-muted">
+          {usesReference && <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>}
+          {hasInversion && <p>Линии наблюдений могут пересекаться: выборки уровней имеют разный состав. Значения не переставляются искусственно; для карьерного порядка используйте непротиворечивые карточки уровней выше.</p>}
+        </div>
+      )}
+    </div>
+  );
 }

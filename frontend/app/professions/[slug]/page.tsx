@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Layers3, MapPin, Radio, Wifi } from "lucide-react";
 import { Paywall } from "@/components/Paywall";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
-import { OfficialSalaryChart, PublicationChart, SalaryChart, VacancyChart } from "@/components/Charts";
+import { OfficialSalaryChart, PublicationChart, SalaryCoverageChart, VacancyChart } from "@/components/Charts";
 import { TrendBadge } from "@/components/TrendBadge";
 import { ShareActions } from "@/components/ShareActions";
 import { api, safeApi } from "@/lib/api";
@@ -56,12 +56,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const stackItems = profession.tech_stack?.flatMap((group) => group.items) ?? [];
   const metricDates = (profession.metrics ?? []).map((item) => item.date).sort();
   const temporalCoverage = metricDates.length ? `${metricDates[0]}/${metricDates.at(-1)}` : undefined;
-  const hasOfficialSalaryHistory = profession.official_open_data?.salary_history.some(
-    (item) => item.median != null,
-  ) ?? false;
   const salaryHistoryUsesCategory = profession.official_open_data?.salary_history.some(
     (item) => item.median != null && item.scope === "category",
   ) ?? false;
+  const salaryCoverageUsesCategory = (profession.official_open_data?.total_publications ?? 0) < 20;
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -133,7 +131,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         includedInDataCatalog: { "@id": `${siteUrl}/#catalog` },
         measurementTechnique: "Агрегация вакансий, медианы зарплат и сравнение соседних временных окон",
         variableMeasured: [
-          { "@type": "PropertyValue", name: "Активные вакансии", description: "Количество активных вакансий в выбранном срезе" },
+          { "@type": "PropertyValue", name: "Расчётный объём вакансий", description: "Детерминированный показатель подготовленной аналитической витрины; не текущий остаток активных вакансий" },
           { "@type": "PropertyValue", name: "Медианная зарплата", unitText: "RUB в месяц" },
           { "@type": "PropertyValue", name: "Доля удалённой работы", unitText: "%" },
           { "@type": "PropertyValue", name: "Изменение спроса", unitText: "%" },
@@ -224,36 +222,48 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
             <a className="button-secondary" href={profession.official_open_data.source_url} rel="noreferrer">Документация источника</a>
           </div>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
             <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">По направлению «{profession.category_name}»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
-            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С указанной вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
+            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С любой границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
+            <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
             <div className="rounded-2xl border border-line p-4"><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
           </div>
           <p className="mt-3 text-xs leading-5 text-muted">Первое число — только вакансии, уверенно отнесённые к этой профессии. Второе и синяя линия на графике — все классифицированные публикации профессий того же направления; это контекст рынка, который не прибавляется к точному числу.</p>
           <div className="mt-5"><PublicationChart data={profession.official_open_data} /></div>
           <p className="mt-3 text-xs text-muted">Период: {profession.official_open_data.date_from} - {profession.official_open_data.date_to}. Статус выборки: {confidenceBadge(profession.official_open_data.confidence_level).label}.</p>
-          {hasOfficialSalaryHistory ? (
-            <div className="mt-8 border-t border-line pt-8">
-              <p className="eyebrow">Динамика зарплатных вилок</p>
-              <h3 className="mt-2 text-2xl font-semibold">Медиана за 180 дней</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Каждая точка показывает медиану всех полных RUB-вилок, опубликованных с начала периода до этой даты. Для линии нужно не менее {profession.official_open_data.salary_min_sample} вилок одного уровня.{salaryHistoryUsesCategory ? ` Если точных данных профессии мало для временного ряда, линия подписана как срез направления «${profession.category_name}».` : ""}</p>
-              <div className="mt-6"><OfficialSalaryChart data={profession.official_open_data} /></div>
-            </div>
-          ) : null}
+          <div className="mt-8 border-t border-line pt-8">
+            <p className="eyebrow">Почему зарплатных точек меньше</p>
+            <h3 className="mt-2 text-2xl font-semibold">Полнота данных для медианы</h3>
+            <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Столбцы показывают новые публикации и записи с обеими границами зарплаты в RUB; линия — их долю. В медиану входят только полные вилки с распознанным уровнем.{salaryCoverageUsesCategory ? ` Для устойчивости здесь показано направление «${profession.category_name}»: точных публикаций профессии меньше 20.` : " Здесь показан точный срез профессии."}</p>
+            <div className="mt-6"><SalaryCoverageChart data={profession.official_open_data} /></div>
+          </div>
+          <div className="mt-8 border-t border-line pt-8">
+            <p className="eyebrow">Динамика зарплатных вилок</p>
+            <h3 className="mt-2 text-2xl font-semibold">Наблюдаемая медиана за 180 дней</h3>
+            <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Сплошная линия показывает накопительную медиану полных RUB-вилок от начала периода до даты. Для неё нужно не менее {profession.official_open_data.salary_min_sample} вилок одного уровня.{salaryHistoryUsesCategory ? ` Если точных данных мало, сплошная линия явно подписана как срез направления «${profession.category_name}».` : ""} Недостающий уровень дополняется только пунктирным статичным ориентиром открытого исследования и не выдаётся за динамику.</p>
+            <div className="mt-6"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} /></div>
+          </div>
         </section>
       ) : null}
 
       {profession.teaser_only || !profession.metrics ? <div className="mt-10"><Paywall title={`Метрики «${profession.name_ru}» доступны в Premium`} /></div> : (
         <>
-          <section id="market-metrics" className="mt-10 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            <article className="panel p-5"><p className="text-sm text-muted">Активные вакансии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(currentVacancies)}</p><div className="mt-4"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7 дней" /></div></article>
-            <article className="panel p-5"><p className="text-sm text-muted">Вакансии с зарплатой</p><p className="mt-2 font-mono text-3xl font-semibold">{weightedVacancies ? percent(weightedSalaryCount / weightedVacancies) : "-"}</p><p className="mt-4 text-xs text-muted">coverage · только gross-срез</p></article>
-            <article className="panel p-5"><p className="text-sm text-muted">Удалённая работа</p><p className="mt-2 font-mono text-3xl font-semibold">{latest.length ? percent(latest.reduce((sum, item) => sum + item.remote_share, 0) / latest.length) : "-"}</p><p className="mt-4 flex items-center gap-2 text-xs text-muted"><Wifi size={14} /> по активным вакансиям</p></article>
-            <article className="panel p-5"><p className="text-sm text-muted">Обновлено</p><p className="mt-2 font-mono text-xl font-semibold">{profession.updated_at ? new Intl.DateTimeFormat("ru-RU").format(new Date(profession.updated_at)) : "-"}</p><p className="mt-4 flex items-center gap-2 text-xs text-muted"><CalendarDays size={14} /> данные за выбранный период</p></article>
+          <section id="market-metrics" className="mt-10">
+            <div className="panel p-6 sm:p-8">
+              <p className="eyebrow">Подготовленная аналитическая витрина</p>
+              <h2 className="mt-2 text-2xl font-semibold">Расчётный спрос — не текущий остаток вакансий</h2>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Этот детерминированный слой нужен для сопоставления профессий и проверки поведения индекса. Он не объединяется с официальными публикациями выше и не утверждает, что указанное число вакансий открыто прямо сейчас.</p>
+            </div>
+            <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <article className="panel p-5"><p className="text-sm text-muted">Расчётный объём вакансий</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(currentVacancies)}</p><div className="mt-4"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7 дней" /></div></article>
+              <article className="panel p-5"><p className="text-sm text-muted">Полнота gross-витрины</p><p className="mt-2 font-mono text-3xl font-semibold">{weightedVacancies ? percent(weightedSalaryCount / weightedVacancies) : "-"}</p><p className="mt-4 text-xs text-muted">доля записей с расчётной зарплатой</p></article>
+              <article className="panel p-5"><p className="text-sm text-muted">Удалённая работа</p><p className="mt-2 font-mono text-3xl font-semibold">{latest.length ? percent(latest.reduce((sum, item) => sum + item.remote_share, 0) / latest.length) : "-"}</p><p className="mt-4 flex items-center gap-2 text-xs text-muted"><Wifi size={14} /> в расчётном срезе</p></article>
+              <article className="panel p-5"><p className="text-sm text-muted">Обновлено</p><p className="mt-2 font-mono text-xl font-semibold">{profession.updated_at ? new Intl.DateTimeFormat("ru-RU").format(new Date(profession.updated_at)) : "-"}</p><p className="mt-4 flex items-center gap-2 text-xs text-muted"><CalendarDays size={14} /> дата подготовленной витрины</p></article>
+            </div>
           </section>
 
-          <section className="mt-12 grid gap-5 xl:grid-cols-2"><article className="panel p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Динамика зарплаты</p><h2 className="mt-2 text-2xl font-semibold">Медиана</h2></div><div className="flex gap-2"><TrendBadge trend={profession.salary_trends?.["7"]} label="7д" /><TrendBadge trend={profession.salary_trends?.["30"]} label="30д" /><TrendBadge trend={profession.salary_trends?.["90"]} label="90д" /></div></div><SalaryChart metrics={profession.metrics} /></article><article className="panel p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Динамика спроса</p><h2 className="mt-2 text-2xl font-semibold">Активные вакансии</h2></div><div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div></div><VacancyChart metrics={profession.metrics} /></article></section>
+          <section className="panel mt-12 p-5"><div className="flex flex-wrap items-center justify-between gap-3"><div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Сопоставимый ряд Junior, Middle и Senior внутри подготовленной витрины. Для наблюдаемой зарплатной динамики используйте единый официальный график выше.</p></div><div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div></div><VacancyChart metrics={profession.metrics} /></section>
 
           <section className="mt-12 grid gap-5 lg:grid-cols-2">
             <article id="score-breakdown" className="panel p-6">
@@ -282,10 +292,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <article id="market-skills" className="panel p-6">
               <p className="eyebrow">Рынок</p>
               <h2 className="mt-2 text-2xl font-semibold">Навыки и регионы</h2>
-              <p className="mt-3 text-sm leading-6 text-muted">Число рядом с навыком — в скольких сохранённых вакансиях этой профессии он указан. Число рядом с регионом — сколько активных вакансий было в последнем подготовленном срезе. Это не рейтинг навыков и не число всех вакансий в регионе.</p>
+              <p className="mt-3 text-sm leading-6 text-muted">Число рядом с навыком — в скольких записях подготовленной витрины этой профессии он указан. Число рядом с регионом — расчётный объём последнего подготовленного среза. Это не рейтинг навыков и не текущий остаток вакансий в регионе.</p>
               <h3 className="mt-6 text-sm font-semibold">Упоминания навыков</h3>
               <div className="mt-3 flex flex-wrap gap-2">{profession.skills?.map((item) => <span key={item.name} className="badge">{item.name} · {item.count}</span>)}</div>
-              <h3 className="mt-8 text-sm font-semibold">Активные вакансии в срезе</h3>
+              <h3 className="mt-8 text-sm font-semibold">Расчётный объём по регионам</h3>
               <div className="mt-3 grid gap-3">{profession.regions?.map((item) => <div key={item.name} className="flex items-center justify-between border-b border-line pb-3"><span className="flex items-center gap-2"><MapPin size={15} className="text-muted" />{item.name}</span><strong className="font-mono">{item.vacancy_count}</strong></div>)}</div>
             </article>
           </section>

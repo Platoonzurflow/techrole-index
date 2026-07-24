@@ -50,6 +50,40 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
 });
 
+test("profession charts separate publication volume, salary completeness, and prepared demand", async ({ page }) => {
+  await page.goto("/professions/python-developer");
+  await expect(page.getByRole("heading", { name: "Полнота данных для медианы" })).toBeVisible();
+  await expect(page.locator(
+    '#official-open-data [role="img"][aria-label*="полные RUB-вилки"]',
+  )).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Наблюдаемая медиана за 180 дней" })).toBeVisible();
+  await expect(page.getByRole("heading", {
+    name: "Расчётный спрос — не текущий остаток вакансий",
+  })).toBeVisible();
+  await expect(page.getByRole("img", {
+    name: "Расчётный объём вакансий подготовленной витрины по уровням",
+  })).toBeVisible();
+  await expect(page.getByRole("img", { name: "История медианной зарплаты по уровням" }))
+    .toHaveCount(0);
+});
+
+test("grade cards stay coherent while observed salary inversions remain explained", async ({ page }) => {
+  await page.goto("/professions/dotnet-developer");
+  const gradeSection = page.getByRole("heading", {
+    name: "Зарплата Junior, Middle и Senior",
+  }).locator("xpath=parent::div");
+  await expect(gradeSection).toContainText("100 000 ₽ — 130 000 ₽");
+  await expect(gradeSection).toContainText("230 000 ₽ — 270 000 ₽");
+  await expect(gradeSection).toContainText("370 000 ₽ — 380 000 ₽");
+  await expect(page.getByRole("heading", { name: "Полнота данных для медианы" })).toBeVisible();
+
+  await page.goto("/professions/firmware-engineer");
+  await expect(page.getByText("Линии наблюдений могут пересекаться", { exact: false }))
+    .toBeVisible();
+  await expect(page.getByText("Значения не переставляются искусственно", { exact: false }))
+    .toBeVisible();
+});
+
 test("weekly report and legal pages are publication-ready", async ({ page }) => {
   await page.goto("/reports/weekly");
   await expect(page.getByRole("heading", { level: 1, name: "Еженедельный отчёт рынка IT" })).toBeVisible();

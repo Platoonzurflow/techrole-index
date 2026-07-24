@@ -102,9 +102,15 @@ class OfficialOpenDataSummary(BaseModel):
     confidence_level: str
     last_ingested_at: datetime | None = None
     daily_publications: list[PublicationPoint]
+    complete_salary_range_count: int = 0
+    daily_complete_salary_ranges: list[PublicationPoint] = Field(default_factory=list)
     category_total_publications: int = 0
     category_daily_publications: list[PublicationPoint] = Field(default_factory=list)
     category_salary_disclosed_count: int = 0
+    category_complete_salary_range_count: int = 0
+    category_daily_complete_salary_ranges: list[PublicationPoint] = Field(
+        default_factory=list
+    )
     category_remote_count: int = 0
     category_confidence_level: str = "insufficient"
     category_salary_by_seniority: list[OfficialSalarySlice] = Field(default_factory=list)

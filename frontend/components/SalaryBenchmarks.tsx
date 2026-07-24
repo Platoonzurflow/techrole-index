@@ -126,7 +126,7 @@ export function SalaryBenchmarks({
       {levels.length ? (
         <div className="mt-8">
           <h3 className="text-lg font-semibold">Зарплата Junior, Middle и Senior</h3>
-          <p className="mt-2 text-sm leading-6 text-muted">Для каждого уровня показано одно проверяемое значение. Медиана полных вилок за 180 дней используется при выборке от {official?.salary_min_sample ?? 3}, если последовательность Junior → Middle → Senior не противоречит сама себе. При пропуске или перевёрнутой градации берётся единый уровневый срез открытого исследования.</p>
+          <p className="mt-2 text-sm leading-6 text-muted">Для каждого уровня показано одно проверяемое значение. Медиана полных вилок за 180 дней используется при выборке от {official?.salary_min_sample ?? 3}, если последовательность Junior → Middle → Senior не противоречит сама себе. При пропуске или перевёрнутой градации выбирается один полный непротиворечивый набор одного исследования: точечные данные разных срезов не смешиваются.</p>
           {official ? (
             <SalaryBySeniority official={official} benchmark={data} />
           ) : (

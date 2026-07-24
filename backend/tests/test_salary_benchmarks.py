@@ -118,6 +118,30 @@ def test_small_samples_and_unknown_tax_status_remain_visible() -> None:
     assert source.tax_status == "unknown"
 
 
+def test_every_role_has_one_complete_coherent_grade_fallback_family() -> None:
+    categories = {slug: category for slug, _, _, category, _ in PROFESSIONS}
+    for slug, category in categories.items():
+        parsed = SalaryBenchmarkSummary.model_validate(salary_benchmark_for(slug, category))
+        fallback_levels = [
+            point
+            for point in parsed.points
+            if point.is_fallback and point.scope == "market_level"
+        ]
+        assert [point.seniority for point in fallback_levels] == [
+            "junior",
+            "middle",
+            "senior",
+        ]
+        representatives: list[float] = []
+        for point in fallback_levels:
+            if point.value is not None:
+                representatives.append(point.value)
+            else:
+                assert point.lower is not None and point.upper is not None
+                representatives.append((point.lower + point.upper) / 2)
+        assert representatives == sorted(representatives)
+
+
 def test_sources_use_https_and_have_methodology() -> None:
     for source in SOURCES.values():
         assert source["url"].startswith("https://")

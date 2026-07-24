@@ -5,6 +5,8 @@ import {
   primarySalaryBenchmarkPoint,
   salaryBenchmarkCoverage,
   salaryBenchmarkLevelCoverage,
+  salaryBenchmarkLevelPoints,
+  salaryBenchmarkPointRepresentative,
 } from "@/lib/salary-benchmark-data";
 import type { SalaryBenchmarkCatalogItem } from "@/lib/types";
 
@@ -88,6 +90,54 @@ describe("salary benchmark dataset", () => {
     };
     expect(salaryBenchmarkLevelCoverage([withLevels]))
       .toEqual({ complete_roles: 1, points: 3 });
+  });
+
+  it("uses one coherent grade family when role-specific points cross", () => {
+    const benchmark = {
+      ...item.benchmark,
+      points: [
+        {
+          source_id: "role-source",
+          scope: "technology" as const,
+          label: ".NET · Middle",
+          geography: "russia" as const,
+          metric: "median" as const,
+          value: 315000,
+          seniority: "middle" as const,
+          is_fallback: false,
+        },
+        {
+          source_id: "role-source",
+          scope: "technology" as const,
+          label: ".NET · Senior",
+          geography: "russia" as const,
+          metric: "median" as const,
+          value: 311000,
+          seniority: "senior" as const,
+          is_fallback: false,
+        },
+        ...([
+          ["junior", 80000, 120000],
+          ["middle", 170000, 230000],
+          ["senior", 270000, 350000],
+        ] as const).map(([seniority, lower, upper]) => ({
+          source_id: "developer-market",
+          scope: "market_level" as const,
+          label: "Разработчики всех стеков",
+          geography: "russia" as const,
+          metric: "range" as const,
+          lower,
+          upper,
+          seniority,
+          is_fallback: true,
+        })),
+      ],
+    };
+
+    const selected = salaryBenchmarkLevelPoints(benchmark);
+    expect(selected.map((point) => point.seniority)).toEqual(["junior", "middle", "senior"]);
+    expect(selected.every((point) => point.source_id === "developer-market")).toBe(true);
+    expect(selected.map(salaryBenchmarkPointRepresentative)).toEqual([100000, 200000, 310000]);
   });
 
   it("neutralizes spreadsheet formulas in text cells", () => {

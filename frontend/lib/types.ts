@@ -66,9 +66,13 @@ export interface OfficialOpenDataSummary {
   confidence_level: "insufficient" | "low" | "medium" | "high";
   last_ingested_at?: string;
   daily_publications: Array<{ date: string; count: number }>;
+  complete_salary_range_count?: number;
+  daily_complete_salary_ranges?: Array<{ date: string; count: number }>;
   category_total_publications: number;
   category_daily_publications: Array<{ date: string; count: number }>;
   category_salary_disclosed_count?: number;
+  category_complete_salary_range_count?: number;
+  category_daily_complete_salary_ranges?: Array<{ date: string; count: number }>;
   category_remote_count?: number;
   category_confidence_level?: "insufficient" | "low" | "medium" | "high";
   category_salary_by_seniority?: OfficialSalarySlice[];
