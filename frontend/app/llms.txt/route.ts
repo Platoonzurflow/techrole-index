@@ -47,8 +47,8 @@ TechRole Index - русскоязычный сервис аналитики IT-�
 - [RSS-лента](${siteUrl}/feed.xml): обновления публичных страниц и официальных выборок.
 - [Исследование рынка](${siteUrl}/research): динамический обзор 180-дневного слоя с агрегатами и топом профессий.
 - [Машиночитаемый отчёт](${siteUrl}/research.json): те же агрегаты без Premium-полей в JSON.
-- [Методические разборы](${siteUrl}/insights): двенадцать самостоятельных материалов о метриках, temporal semantics, seniority, score, access control, discoverability и ETL; у каждого есть CSL-JSON, BibTeX и RIS.
-- [JSON-индекс разборов](${siteUrl}/insights.json): полный текст и ссылки на основания для машинного чтения.
+- [Исследования и разборы](${siteUrl}/insights): ${insights.length} самостоятельных материалов, включая датированные исследования на собственном открытом наборе; у каждого есть CSL-JSON, BibTeX и RIS.
+- [JSON-индекс исследований](${siteUrl}/insights.json): полный текст, снимки ключевых чисел и ссылки на основания для машинного чтения.
 - [Как цитировать](${siteUrl}/citation): рекомендуемая запись, обязательный контекст и ссылки на CSL-JSON, BibTeX, RIS и Data Package.
 - [CSL-JSON](${siteUrl}/citation.json): стандартные библиографические метаданные для автоматического импорта.
 - [Data Package](${siteUrl}/datapackage.json): перечень открытых машиночитаемых ресурсов и provenance.

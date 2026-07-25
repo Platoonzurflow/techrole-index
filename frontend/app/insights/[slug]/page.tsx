@@ -50,7 +50,7 @@ export default async function InsightPage({ params }: { params: Promise<{ slug: 
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "TechArticle",
+        "@type": article.kind === "research" ? "Report" : "TechArticle",
         headline: article.title,
         description: article.description,
         url: canonicalUrl,
@@ -61,14 +61,21 @@ export default async function InsightPage({ params }: { params: Promise<{ slug: 
         author: { "@id": `${siteUrl}/#organization` },
         publisher: { "@id": `${siteUrl}/#organization` },
         keywords: article.keywords.join(", "),
+        genre: article.kind === "research" ? "Исследование рынка" : "Методический разбор",
         proficiencyLevel: "Beginner",
         citation: article.references.map((reference) => reference.href.startsWith("http") ? reference.href : `${siteUrl}${reference.href}`),
+        ...(article.snapshot ? {
+          temporalCoverage: article.snapshot.period,
+          isBasedOn: `${siteUrl}/open-data-daily`,
+          variableMeasured: article.snapshot.metrics.map((metric) => metric.label),
+          measurementTechnique: "Агрегация классифицированных публикаций по UTC-дате создания",
+        } : {}),
       },
       {
         "@type": "BreadcrumbList",
         itemListElement: [
           { "@type": "ListItem", position: 1, name: "Главная", item: siteUrl },
-          { "@type": "ListItem", position: 2, name: "Разборы", item: `${siteUrl}/insights` },
+          { "@type": "ListItem", position: 2, name: "Исследования", item: `${siteUrl}/insights` },
           { "@type": "ListItem", position: 3, name: article.title, item: canonicalUrl },
         ],
       },
@@ -78,7 +85,7 @@ export default async function InsightPage({ params }: { params: Promise<{ slug: 
   return (
     <article className="shell py-12 lg:py-16">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
-      <nav className="flex flex-wrap gap-2 text-sm text-muted" aria-label="Хлебные крошки"><Link href="/">Главная</Link><span>/</span><Link href="/insights">Разборы</Link><span>/</span><span aria-current="page">{article.kicker}</span></nav>
+      <nav className="flex flex-wrap gap-2 text-sm text-muted" aria-label="Хлебные крошки"><Link href="/">Главная</Link><span>/</span><Link href="/insights">Исследования</Link><span>/</span><span aria-current="page">{article.kicker}</span></nav>
       <header className="mt-8 max-w-4xl">
         <p className="eyebrow">{article.kicker}</p>
         <h1 className="mt-3 text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl">{article.title}</h1>
@@ -89,6 +96,31 @@ export default async function InsightPage({ params }: { params: Promise<{ slug: 
       <div className="mt-10 grid gap-8 xl:grid-cols-[minmax(0,1fr)_18rem] xl:items-start">
         <div className="space-y-10">
           <p className="border-l-4 border-accent pl-5 text-lg leading-8">{article.introduction}</p>
+          {article.snapshot ? (
+            <section aria-labelledby={`${article.slug}-snapshot`}>
+              <div className="flex flex-wrap items-end justify-between gap-3">
+                <div><p className="eyebrow">Ключевые числа</p><h2 id={`${article.slug}-snapshot`} className="mt-2 text-2xl font-extrabold">Снимок недели</h2></div>
+                <p className="text-sm text-muted">{article.snapshot.period.replace("/", " — ")}</p>
+              </div>
+              <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                {article.snapshot.metrics.map((metric) => (
+                  <article id={metric.id} key={metric.id} className="panel p-5">
+                    <p className="text-sm font-bold uppercase tracking-wide text-muted">{metric.label}</p>
+                    <p className="mt-2 text-3xl font-extrabold tracking-tight">{metric.value}</p>
+                    <p className="mt-2 text-sm leading-6 text-muted">{metric.detail}</p>
+                  </article>
+                ))}
+              </div>
+              <div className="table-wrap mt-5 shadow-none">
+                <table className="data-table">
+                  <caption className="sr-only">{article.snapshot.table.caption}</caption>
+                  <thead><tr>{article.snapshot.table.columns.map((column) => <th key={column}>{column}</th>)}</tr></thead>
+                  <tbody>{article.snapshot.table.rows.map((row) => <tr key={row.slug}>{row.cells.map((cell, index) => <td key={`${row.slug}-${article.snapshot!.table.columns[index]}`} className={index === 0 ? "font-semibold" : "font-mono"}>{index === 0 ? <Link className="text-accent" href={`/professions/${row.slug}`}>{cell}</Link> : cell}</td>)}</tr>)}</tbody>
+                </table>
+              </div>
+              <p className="mt-3 text-xs leading-5 text-muted">Окно сравнения: {article.snapshot.comparisonPeriod.replace("/", " — ")}. Снимок данных: <time dateTime={article.snapshot.dataModifiedAt}>{article.snapshot.dataModifiedAt}</time>.</p>
+            </section>
+          ) : null}
           {article.sections.map((section, index) => (
             <section key={section.heading} aria-labelledby={`${article.slug}-section-${index + 1}`}>
               <h2 id={`${article.slug}-section-${index + 1}`} className="text-2xl font-extrabold">{section.heading}</h2>
@@ -113,7 +145,7 @@ export default async function InsightPage({ params }: { params: Promise<{ slug: 
         <aside className="panel p-5 xl:sticky xl:top-24" aria-label="Источники материала">
           <h2 className="font-extrabold">Проверить основание</h2>
           <div className="mt-4 grid gap-3">{article.references.map((reference) => reference.href.startsWith("http") ? <a key={reference.href} href={reference.href} rel="noreferrer" className="text-sm font-semibold text-accent">{reference.label} ↗</a> : <Link key={reference.href} href={reference.href} className="text-sm font-semibold text-accent">{reference.label} →</Link>)}</div>
-          <Link href="/insights" className="button-secondary mt-6 w-full">Все разборы</Link>
+          <Link href="/insights" className="button-secondary mt-6 w-full">Все исследования</Link>
         </aside>
       </div>
     </article>

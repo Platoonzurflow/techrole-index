@@ -87,11 +87,13 @@ export async function GET(request: Request) {
     editorial_insights_data_url: `${siteUrl}/insights.json`,
     editorial_insights: insights.map((article) => ({
       slug: article.slug,
+      kind: article.kind ?? "methodology",
       title: article.title,
       description: article.description,
       canonical_url: `${siteUrl}/insights/${article.slug}`,
       citation_urls: insightCitationUrls(article, siteUrl),
       date_modified: article.updatedAt,
+      period: article.snapshot?.period ?? null,
     })),
     interpretation_rules: {
       insufficient_data_is_not_zero: true,

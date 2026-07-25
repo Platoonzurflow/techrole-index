@@ -3,6 +3,7 @@ import { insightBibtex, insightCitationUrls, insightCsl, insightRis } from "@/li
 import { insights } from "@/lib/insights";
 
 const article = insights.find((item) => item.slug === "llm-friendly-open-text-dataset-citation")!;
+const research = insights.find((item) => item.kind === "research")!;
 const siteUrl = "https://techrole.example";
 
 describe("article citation metadata", () => {
@@ -30,5 +31,11 @@ describe("article citation metadata", () => {
       bibtex: `${siteUrl}/insight-citations/${article.slug}.bib`,
       ris: `${siteUrl}/insight-citations/${article.slug}.ris`,
     });
+  });
+
+  it("exports the weekly research as a report", () => {
+    expect(insightCsl(research, siteUrl).type).toBe("report");
+    expect(insightBibtex(research, siteUrl)).toContain("@techreport{");
+    expect(insightRis(research, siteUrl)).toContain("TY  - RPRT");
   });
 });

@@ -4,6 +4,7 @@ const representativeRoutes = [
   "/",
   "/professions",
   "/professions/python-developer",
+  "/insights/it-vacancy-publications-week-2026-07-18-2026-07-24",
   "/insights/median-vs-average-salary",
   "/data-status",
   "/open-data-daily",

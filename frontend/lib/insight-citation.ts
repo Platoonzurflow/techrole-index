@@ -15,12 +15,12 @@ export function insightCitationUrls(article: InsightArticle, siteUrl: string) {
 export function insightCsl(article: InsightArticle, siteUrl: string) {
   const dateParts = article.publishedAt.split("-").map(Number);
   return {
-    type: "webpage",
+    type: article.kind === "research" ? "report" : "webpage",
     id: `techrole-index-insight-${article.slug}`,
     title: article.title,
     author: [{ literal: "TechRole Index" }],
     publisher: "TechRole Index",
-    "container-title": "TechRole Index: методические разборы",
+    "container-title": article.kind === "research" ? "TechRole Index: исследования рынка" : "TechRole Index: методические разборы",
     issued: { "date-parts": [dateParts] },
     URL: insightCanonicalUrl(article, siteUrl),
     language: "ru-RU",
@@ -34,7 +34,8 @@ function bibtex(value: string) {
 }
 
 export function insightBibtex(article: InsightArticle, siteUrl: string) {
-  return `@online{techrole_index_${article.slug.replaceAll("-", "_")},
+  const entryType = article.kind === "research" ? "techreport" : "online";
+  return `@${entryType}{techrole_index_${article.slug.replaceAll("-", "_")},
   author = {{TechRole Index}},
   title = {${bibtex(article.title)}},
   year = {${article.publishedAt.slice(0, 4)}},
@@ -51,7 +52,7 @@ function ris(value: string) {
 
 export function insightRis(article: InsightArticle, siteUrl: string) {
   return [
-    "TY  - ELEC",
+    article.kind === "research" ? "TY  - RPRT" : "TY  - ELEC",
     `TI  - ${ris(article.title)}`,
     "AU  - TechRole Index",
     `PY  - ${article.publishedAt.slice(0, 4)}`,

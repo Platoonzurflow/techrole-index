@@ -91,8 +91,8 @@ DCAT 3 каталог открытых данных: ${siteUrl}/catalog.jsonld
 RSS обновлений: ${siteUrl}/feed.xml
 Исследование рынка: ${siteUrl}/research
 Машиночитаемый отчёт: ${siteUrl}/research.json
-Методические разборы: ${siteUrl}/insights
-JSON-индекс разборов: ${siteUrl}/insights.json
+Исследования и разборы: ${siteUrl}/insights
+JSON-индекс исследований: ${siteUrl}/insights.json
 Как цитировать: ${siteUrl}/citation
 CSL-JSON: ${siteUrl}/citation.json
 BibTeX: ${siteUrl}/citation.bib
@@ -116,7 +116,7 @@ Data Package: ${siteUrl}/datapackage.json
 
 ${sourceLines || "- Статус источников временно недоступен."}
 
-## Методические разборы
+## Исследования и методические разборы
 
 ${insightLines}
 

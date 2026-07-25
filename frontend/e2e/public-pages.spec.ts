@@ -449,6 +449,32 @@ test("mobile navigation keeps account reachable without horizontal page overflow
   await page.goto("/");
   const mobileNavigation = page.getByRole("navigation", { name: "Мобильная навигация" });
   await expect(mobileNavigation.getByRole("link", { name: "Кабинет" })).toBeVisible();
+  await expect(mobileNavigation.getByRole("link", { name: "Исследования" })).toHaveAttribute("href", "/insights");
+  const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
+  expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client + 1);
+});
+
+test("weekly research is answer-first, sourced and responsive", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/insights/it-vacancy-publications-week-2026-07-18-2026-07-24");
+
+  await expect(page.getByRole("heading", { level: 1, name: /71 публикация IT-вакансий/ })).toBeVisible();
+  await expect(page.locator("#week-publications")).toContainText("71");
+  await expect(page.locator("#week-change")).toContainText("−48,2%");
+  await expect(page.getByRole("table")).toContainText("Системный администратор");
+  await expect(page.getByRole("link", { name: "JSON со строками снимка" })).toHaveAttribute("href", "/open-data-daily.json");
+  await expect(page.getByRole("link", { name: "CSL-JSON" })).toHaveAttribute("href", /\.csl\.json$/);
+  const schemas = (await page.locator('script[type="application/ld+json"]').allTextContents()).flatMap((text) => {
+    const parsed = JSON.parse(text);
+    return parsed["@graph"] ?? [parsed];
+  });
+  expect(schemas).toEqual(expect.arrayContaining([
+    expect.objectContaining({
+      "@type": "Report",
+      temporalCoverage: "2026-07-18/2026-07-24",
+      isBasedOn: expect.stringContaining("/open-data-daily"),
+    }),
+  ]));
   const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client + 1);
 });
@@ -569,6 +595,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
     "/ai-index.json", "/open-data.json", "/feed.xml", "/sitemap.xml", "/robots.txt",
     "/citation", "/citation.json", "/citation.bib", "/citation.ris", "/datapackage.json", "/catalog.jsonld",
     "/research", "/research.json", "/insights", "/insights.json",
+    "/insights/it-vacancy-publications-week-2026-07-18-2026-07-24",
     "/insights/median-vs-average-salary", "/insights/what-180-days-of-publications-means",
     "/insights/seniority-title-vs-experience-signals", "/insights/zero-matches-for-narrow-roles",
     "/insights/profession-index-0-100-not-a-promise", "/insights/server-side-paywall-ssr-json-ld",
@@ -728,9 +755,31 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(dcatNotModified.status()).toBe(304);
 
   const insightIndex = await (await request.get("/insights.json")).json();
-  expect(insightIndex.articles).toHaveLength(12);
+  expect(insightIndex.articles).toHaveLength(13);
   expect(insightIndex.articles.every((article: { canonical_url: string }) => article.canonical_url.includes("/insights/"))).toBe(true);
   expect(insightIndex.articles.every((article: { citation_urls: { csl_json: string } }) => article.citation_urls.csl_json.endsWith(".csl.json"))).toBe(true);
+
+  const weeklyResearch = insightIndex.articles.find((article: { kind?: string }) => article.kind === "research");
+  expect(weeklyResearch).toMatchObject({
+    slug: "it-vacancy-publications-week-2026-07-18-2026-07-24",
+    publishedAt: "2026-07-25",
+    snapshot: {
+      period: "2026-07-18/2026-07-24",
+      comparisonPeriod: "2026-07-11/2026-07-17",
+    },
+  });
+  expect(weeklyResearch.snapshot.metrics).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: "week-publications", value: "71" }),
+    expect.objectContaining({ id: "week-change", value: "−48,2%" }),
+  ]));
+
+  const researchCitation = await (await request.get("/insight-citations/it-vacancy-publications-week-2026-07-18-2026-07-24.csl.json")).json();
+  expect(researchCitation.type).toBe("report");
+  expect(researchCitation.URL).toContain("/insights/it-vacancy-publications-week-2026-07-18-2026-07-24");
+  const researchBib = await (await request.get("/insight-citations/it-vacancy-publications-week-2026-07-18-2026-07-24.bib")).text();
+  const researchRis = await (await request.get("/insight-citations/it-vacancy-publications-week-2026-07-18-2026-07-24.ris")).text();
+  expect(researchBib).toContain("@techreport{techrole_index_it_vacancy_publications_week_2026_07_18_2026_07_24");
+  expect(researchRis).toContain("TY  - RPRT");
 
   const articleCitation = await (await request.get("/insight-citations/llm-friendly-open-text-dataset-citation.csl.json")).json();
   expect(articleCitation.type).toBe("webpage");

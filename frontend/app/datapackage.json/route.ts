@@ -35,7 +35,7 @@ export async function GET() {
       { name: "ai-entity-index", path: `${siteUrl}/ai-index.json`, format: "json", mediatype: "application/json", description: "Канонические сущности и правила интерпретации." },
       { name: "llm-public-context", path: `${siteUrl}/llms-full.txt`, format: "txt", mediatype: "text/plain", description: "Полный открытый текстовый контекст без Premium-полей." },
       { name: "research-report", path: `${siteUrl}/research.json`, format: "json", mediatype: "application/json", description: "Агрегаты 180-дневного слоя и топ профессий." },
-      { name: "editorial-insights", path: `${siteUrl}/insights.json`, format: "json", mediatype: "application/json", description: "Двенадцать методических разборов с каноническими URL, ссылками на основания и per-article CSL-JSON/BibTeX/RIS." },
+      { name: "editorial-insights", path: `${siteUrl}/insights.json`, format: "json", mediatype: "application/json", description: "Датированные исследования и методические разборы с каноническими URL, снимками чисел, основаниями и per-article CSL-JSON/BibTeX/RIS." },
     ],
   }, {
     headers: {

@@ -5,8 +5,8 @@ import { conditionalResponse } from "@/lib/conditional-response";
 export function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const body = JSON.stringify({
-    schema_version: "1.1",
-    name: "TechRole Index: методические разборы",
+    schema_version: "1.2",
+    name: "TechRole Index: исследования и методические разборы",
     canonical_url: `${siteUrl}/insights`,
     language: "ru-RU",
     citation_guidance_url: `${siteUrl}/citation`,

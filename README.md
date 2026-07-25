@@ -4,7 +4,7 @@
 [![Secret scan](https://github.com/Platoonzurflow/techrole-index/actions/workflows/secret-scan.yml/badge.svg)](https://github.com/Platoonzurflow/techrole-index/actions/workflows/secret-scan.yml)
 [![Public preview](https://github.com/Platoonzurflow/techrole-index/actions/workflows/public-preview.yml/badge.svg)](https://github.com/Platoonzurflow/techrole-index/actions/workflows/public-preview.yml)
 
-[Открыть сайт](https://techrole.ru) · [Daily dataset](https://techrole.ru/open-data-daily) · [Как цитировать](https://techrole.ru/citation) · [RFC 9264 Linkset](https://techrole.ru/.well-known/linkset.json)
+[Открыть сайт](https://techrole.ru) · [Исследования](https://techrole.ru/insights) · [Daily dataset](https://techrole.ru/open-data-daily) · [Как цитировать](https://techrole.ru/citation) · [RFC 9264 Linkset](https://techrole.ru/.well-known/linkset.json)
 
 Полный контекст текущего состояния, история работ и план продолжения для нового чата находятся в [`HANDOFF.md`](HANDOFF.md). Описание публикуемого набора, ограничений и правил атрибуции вынесено в [`DATASET_CARD.md`](DATASET_CARD.md).
 
@@ -49,7 +49,7 @@ docker compose up --build
 - техподдержка: <http://localhost:3000/support>;
 - статус сервиса: <http://localhost:3000/status>;
 - статус и происхождение данных: <http://localhost:3000/data-status>, <http://localhost:3000/data-status.json>;
-- методические разборы: <http://localhost:3000/insights>, <http://localhost:3000/insights.json>; каждая Article page публикует собственные CSL-JSON, BibTeX и RIS через ссылки `/cite/*`;
+- датированные исследования и методические разборы: <http://localhost:3000/insights>, <http://localhost:3000/insights.json>; каждый материал публикует стабильный canonical URL и собственные CSL-JSON, BibTeX и RIS через `/insight-citations/<slug>.*`;
 - answer-first и машиночитаемые материалы: <http://localhost:3000/answers>, <http://localhost:3000/answers.json>, <http://localhost:3000/open-data-daily>, <http://localhost:3000/open-data-daily.json>, <http://localhost:3000/open-data-daily.csv>, <http://localhost:3000/open-data-daily.csv-metadata.json>, <http://localhost:3000/open-data-daily.schema.json>, <http://localhost:3000/open-data-daily.croissant.json>, <http://localhost:3000/catalog.jsonld>, <http://localhost:3000/.well-known/linkset.json>, <http://localhost:3000/llms.txt>, <http://localhost:3000/.well-known/llms.txt>, <http://localhost:3000/llms-full.txt>, <http://localhost:3000/ai-index.json>, <http://localhost:3000/open-data.json>, <http://localhost:3000/open-data.csv>, <http://localhost:3000/feed.xml>;
 - цитирование и переносимые метаданные: <http://localhost:3000/citation>, <http://localhost:3000/citation.json>, <http://localhost:3000/citation.bib>, <http://localhost:3000/citation.ris>, <http://localhost:3000/datapackage.json>.
 
