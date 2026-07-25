@@ -110,7 +110,7 @@ export default function OfferPage() {
 
         <Section title="Реквизиты Исполнителя">
           <dl className="grid gap-2 sm:grid-cols-[minmax(12rem,auto)_1fr]">
-            <dt className="font-semibold text-foreground">ФИО исполнителя</dt><dd>{legal.sellerName}</dd>
+            <dt className="font-semibold text-foreground">ФИО исполнителя</dt><dd data-testid="seller-full-name">{legal.sellerName}</dd>
             <dt className="font-semibold text-foreground">ИНН</dt><dd>{legal.sellerInn}</dd>
             <dt className="font-semibold text-foreground">ОГРН/ОГРНИП</dt><dd>Не применяется для самозанятого без статуса ИП</dd>
             <dt className="font-semibold text-foreground">Адрес или регион</dt><dd>{legal.sellerAddress}</dd>

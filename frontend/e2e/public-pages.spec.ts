@@ -145,10 +145,23 @@ test("weekly report and legal pages are publication-ready", async ({ page }) => 
   await page.goto("/reports/weekly");
   await expect(page.getByRole("heading", { level: 1, name: "Еженедельный отчёт рынка IT" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Подписаться на RSS" })).toHaveAttribute("href", "/feed.xml");
+
+  await page.goto("/legal/offer");
+  const sellerName = (await page.getByTestId("seller-full-name").textContent())?.trim() ?? "";
+  expect(sellerName.length).toBeGreaterThan(0);
+
+  const sellerNameExposure = { privacy: false, consent: false };
   await page.goto("/legal/privacy");
+  sellerNameExposure.privacy = (await page.locator("main").innerText()).includes(sellerName);
   await expect(page.locator("main")).not.toContainText("ЗАПОЛНИТЬ");
   await expect(page.locator("main")).not.toContainText("ОПЕРАТОРУ");
   await expect(page.locator("main")).not.toContainText("проверяется владельцем");
+  await expect(page.getByRole("link", { name: "публичной оферте" }))
+    .toHaveAttribute("href", "/legal/offer");
+
+  await page.goto("/legal/consent");
+  sellerNameExposure.consent = (await page.locator("main").innerText()).includes(sellerName);
+  expect(sellerNameExposure).toEqual({ privacy: false, consent: false });
 });
 
 test("public calculator median is exact, sourced, and limitation-labeled", async ({ page }) => {
