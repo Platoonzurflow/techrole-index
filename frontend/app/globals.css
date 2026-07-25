@@ -808,14 +808,39 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .job-section-heading { align-items: start; }
   .support-button { bottom: max(.8rem, env(safe-area-inset-bottom)); right: max(.8rem, env(safe-area-inset-right)); }
   .compare-builder-action .button-primary { width: 100%; }
-  .market-showcase { border-radius: 1.35rem; }
-  .market-stage { border-radius: 1.1rem; }
+  .profession-page { overflow-wrap: anywhere; }
+  .profession-page .profession-hero { border-radius: 1.35rem .7rem 1.35rem 1.35rem; }
+  .profession-page .profession-hero > .panel { width: 100%; min-width: 0; }
+  .profession-page .panel { padding-inline: 1rem; }
+  .profession-toc {
+    flex-wrap: nowrap;
+    gap: .4rem;
+    margin-inline: -.5rem;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+  .profession-toc::-webkit-scrollbar { display: none; }
+  .profession-toc a { flex: none; white-space: nowrap; }
+  .market-showcase { border-radius: 1.35rem; padding-inline: .8rem; }
+  .market-showcase > .flex .button-secondary { width: 100%; }
+  .market-stage { border-radius: 1.1rem; padding-inline: .75rem; }
+  .market-stage-copy h3, .market-showcase h2 { text-wrap: balance; }
+  .chart-shell { min-width: 0; }
   .chart-toolbar { align-items: flex-start; flex-direction: column; }
   .chart-periods { width: 100%; }
   .chart-periods button { flex: 1; padding-inline: .4rem; }
   .chart-kpis { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .chart-kpis > span { min-width: 0; }
+  .chart-kpis > span { min-width: 0; padding-inline: .5rem; }
+  .chart-kpis > span:last-child:nth-child(odd) { grid-column: 1 / -1; }
+  .profession-page .data-table { min-width: 620px; }
   .observation-period { align-items: flex-start; flex-wrap: wrap; }
+}
+
+@media (max-width: 359px) {
+  .site-header .shell { gap: .75rem; }
+  .site-header .brand-label { display: none; }
+  .site-header .theme-toggle-button { width: 2.75rem; height: 2.75rem; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -63,12 +63,10 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.locator("#observation-period")).toBeVisible();
 });
 
-test("profession charts separate publication volume, salary completeness, and prepared demand", async ({ page }) => {
+test("profession charts keep salary, publication volume, and prepared demand distinct", async ({ page }) => {
   await page.goto("/professions/python-developer");
-  await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toBeVisible();
-  await expect(page.getByTestId("salary-coverage-visualization").locator(
-    '[role="img"][aria-label*="полные RUB-вилки"], [role="status"]',
-  )).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
+  await expect(page.locator("#salary-coverage")).toHaveCount(0);
   await expect(page.getByRole("heading", { name: "Как менялась наблюдаемая зарплата" })).toBeVisible();
   await expect(page.getByText("Подготовленная аналитическая витрина", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", {
@@ -79,6 +77,56 @@ test("profession charts separate publication volume, salary completeness, and pr
   })).toBeVisible();
   await expect(page.getByRole("img", { name: "История медианной зарплаты по уровням" }))
     .toHaveCount(0);
+});
+
+test("profession card stays readable on a narrow phone", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 720 });
+  await page.goto("/professions/dotnet-developer");
+
+  await expect(page.locator("#salary-coverage")).toHaveCount(0);
+  for (const selector of [
+    "#tech-stack",
+    "#salary-benchmark",
+    "#salary-history",
+    "#publication-history",
+    "#prepared-vacancy-history",
+    "#score-breakdown",
+    "#market-skills",
+  ]) {
+    const section = page.locator(selector);
+    await section.scrollIntoViewIfNeeded();
+    await expect(section).toBeVisible();
+  }
+
+  const layout = await page.evaluate(() => {
+    const viewport = document.documentElement.clientWidth;
+    const selectors = [
+      "#tech-stack",
+      "#salary-benchmark",
+      "#salary-history",
+      "#publication-history",
+      "#prepared-vacancy-history",
+      "#score-breakdown",
+      "#market-skills",
+    ];
+    return {
+      viewport,
+      pageWidth: document.documentElement.scrollWidth,
+      sectionsFit: selectors.every((selector) => {
+        const rect = document.querySelector(selector)?.getBoundingClientRect();
+        return rect != null && rect.left >= -1 && rect.right <= viewport + 1;
+      }),
+      chartsFit: [...document.querySelectorAll(".chart-shell")].every((node) => {
+        const rect = node.getBoundingClientRect();
+        return rect.width > 0 && rect.left >= -1 && rect.right <= viewport + 1;
+      }),
+      tocScrollable: getComputedStyle(document.querySelector(".profession-toc")!).overflowX === "auto",
+    };
+  });
+  expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewport + 1);
+  expect(layout.sectionsFit).toBe(true);
+  expect(layout.chartsFit).toBe(true);
+  expect(layout.tocScrollable).toBe(true);
 });
 
 test("profession structured data cites only visible public datasets", async ({ page }) => {
@@ -132,7 +180,7 @@ test("grade cards stay coherent while observed salary inversions remain explaine
   await expect(gradeSection).toContainText("100 000 ₽ — 130 000 ₽");
   await expect(gradeSection).toContainText("230 000 ₽ — 270 000 ₽");
   await expect(gradeSection).toContainText("370 000 ₽ — 380 000 ₽");
-  await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
 
   await page.goto("/professions/firmware-engineer");
   await expect(page.getByText("Линии наблюдений могут пересекаться", { exact: false }))

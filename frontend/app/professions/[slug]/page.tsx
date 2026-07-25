@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Layers3, MapPin, Radio, Wifi } from "lucide-react";
 import { Paywall } from "@/components/Paywall";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
-import { OfficialSalaryChart, PublicationChart, SalaryCoverageChart, VacancyChart } from "@/components/Charts";
+import { OfficialSalaryChart, PublicationChart, VacancyChart } from "@/components/Charts";
 import { TrendBadge } from "@/components/TrendBadge";
 import { ShareActions } from "@/components/ShareActions";
 import { api, safeApi } from "@/lib/api";
@@ -130,7 +130,6 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const salaryHistoryUsesMarket = profession.official_open_data?.salary_history.some(
     (item) => item.average != null && item.scope === "market",
   ) ?? false;
-  const salaryCoverageUsesCategory = (profession.official_open_data?.total_publications ?? 0) < 20;
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -287,14 +286,6 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
               <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Если точный ряд слишком редкий, график автоматически показывает направление и подписывает выбранный охват. Публикации за период не равны числу вакансий, одновременно активных сегодня.</p>
             </div>
             <div className="mt-5"><PublicationChart data={profession.official_open_data} /></div>
-          </article>
-          <article id="salary-coverage" className="market-stage mt-5 scroll-mt-24">
-            <div className="market-stage-copy">
-              <p className="eyebrow">Качество зарплатных данных</p>
-              <h3 className="mt-2 text-2xl font-semibold">Доля публикаций с полной зарплатной вилкой</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Столбцы показывают новые публикации и записи с обеими границами зарплаты в RUB; линия — долю полных вилок. В медиану входят только полные вилки с распознанным уровнем.{salaryCoverageUsesCategory ? ` Для устойчивости показано направление «${profession.category_name}»: точных публикаций профессии меньше 20.` : " Здесь показан точный срез профессии."}</p>
-            </div>
-            <div className="mt-5" data-testid="salary-coverage-visualization"><SalaryCoverageChart data={profession.official_open_data} /></div>
           </article>
           <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
             <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>

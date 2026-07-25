@@ -64,7 +64,7 @@ export function VacancyChart({ metrics }: { metrics: MetricPoint[] }) {
   const { dates, levelSeries } = series(metrics, "vacancy_count");
   const option: echarts.EChartsOption = {
     tooltip: { trigger: "axis" },
-    legend: { top: 4, textStyle: { color: "#64748b" } },
+    legend: { type: "scroll", top: 4, left: 8, right: 8, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
     xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true }, axisLine: { lineStyle: { color: "#334155" } } },
     yAxis: { type: "value", minInterval: 1, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
@@ -88,37 +88,6 @@ export function aggregatePublicationsByWeek(
   return weeks;
 }
 
-export function aggregateSalaryCoverageByWeek(
-  publications: OfficialOpenDataSummary["daily_publications"],
-  completeRanges: OfficialOpenDataSummary["daily_publications"],
-) {
-  const completeByDate = new Map(completeRanges.map((item) => [item.date, item.count]));
-  const weeks: Array<{
-    label: string;
-    publications: number;
-    completeRanges: number;
-    coveragePercent: number;
-  }> = [];
-  for (let index = 0; index < publications.length; index += 7) {
-    const slice = publications.slice(index, index + 7);
-    if (!slice.length) continue;
-    const publicationCount = slice.reduce((sum, item) => sum + item.count, 0);
-    const completeRangeCount = slice.reduce(
-      (sum, item) => sum + (completeByDate.get(item.date) ?? 0),
-      0,
-    );
-    weeks.push({
-      label: `${slice[0].date} — ${slice.at(-1)?.date}`,
-      publications: publicationCount,
-      completeRanges: completeRangeCount,
-      coveragePercent: publicationCount > 0
-        ? Math.round((completeRangeCount / publicationCount) * 1000) / 10
-        : 0,
-    });
-  }
-  return weeks;
-}
-
 function rollingAverage(values: number[], windowSize = 4) {
   return values.map((_, index) => {
     const slice = values.slice(Math.max(0, index - windowSize + 1), index + 1);
@@ -137,7 +106,7 @@ export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
   const average = weeks.length ? Math.round((total / weeks.length) * 10) / 10 : 0;
   const option: echarts.EChartsOption = {
     tooltip: { trigger: "axis", valueFormatter: (value) => `${Number(value)} публикаций` },
-    legend: { top: 4, textStyle: { color: "#64748b" } },
+    legend: { type: "scroll", top: 4, left: 8, right: 8, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
     xAxis: {
       type: "category",
@@ -185,95 +154,6 @@ export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
         <span><strong>{average.toLocaleString("ru-RU")}</strong><small>в среднем за неделю</small></span>
       </div>
       <Chart option={option} label={`Новые публикации: ${scopeLabel}, по неделям за 180 дней`} heightClass="h-[22rem]" />
-    </div>
-  );
-}
-
-export function SalaryCoverageChart({ data }: { data: OfficialOpenDataSummary }) {
-  const useExactScope = data.total_publications >= 20;
-  const publications = useExactScope ? data.daily_publications : data.category_daily_publications;
-  const completeRanges = useExactScope
-    ? (data.daily_complete_salary_ranges ?? [])
-    : (data.category_daily_complete_salary_ranges ?? []);
-  const weeks = aggregateSalaryCoverageByWeek(publications, completeRanges);
-  const scopeLabel = useExactScope ? "профессии" : "направления";
-
-  if (!weeks.some((item) => item.publications > 0)) {
-    return (
-      <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed border-line p-6 text-center" role="status">
-        <div><p className="font-semibold">Публикаций пока недостаточно</p><p className="mt-2 text-sm text-muted">График появится после пополнения официального набора.</p></div>
-      </div>
-    );
-  }
-
-  const option: echarts.EChartsOption = {
-    tooltip: { trigger: "axis" },
-    legend: { top: 4, textStyle: { color: "#64748b" } },
-    grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
-    xAxis: {
-      type: "category",
-      data: weeks.map((item) => item.label),
-      axisLabel: { color: "#64748b", hideOverlap: true },
-      axisLine: { lineStyle: { color: "#334155" } },
-    },
-    yAxis: [
-      {
-        type: "value",
-        minInterval: 1,
-        name: "публикации",
-        axisLabel: { color: "#64748b" },
-        splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } },
-      },
-      {
-        type: "value",
-        min: 0,
-        max: 100,
-        name: "% с полной вилкой",
-        axisLabel: { color: "#64748b", formatter: "{value}%" },
-        splitLine: { show: false },
-      },
-    ],
-    series: [
-      {
-        name: `Новые публикации ${scopeLabel}`,
-        type: "bar",
-        tooltip: { valueFormatter: (value) => `${Number(value)} публикаций` },
-        itemStyle: { color: "rgba(38,148,168,.52)", borderRadius: [3, 3, 0, 0] },
-        data: weeks.map((item) => item.publications),
-      },
-      {
-        name: "Полные RUB-вилки",
-        type: "bar",
-        tooltip: { valueFormatter: (value) => `${Number(value)} вилок` },
-        itemStyle: { color: "#c85a38", borderRadius: [3, 3, 0, 0] },
-        data: weeks.map((item) => item.completeRanges),
-      },
-      {
-        name: "Доля полных вилок",
-        type: "line",
-        tooltip: { valueFormatter: (value) => `${Number(value)}%` },
-        yAxisIndex: 1,
-        smooth: true,
-        showSymbol: false,
-        lineStyle: { width: 2.5, color: "#8a63a7" },
-        itemStyle: { color: "#8a63a7" },
-        data: weeks.map((item) => item.coveragePercent),
-      },
-    ],
-  };
-  const totalComplete = weeks.reduce((sum, item) => sum + item.completeRanges, 0);
-  const totalPublications = weeks.reduce((sum, item) => sum + item.publications, 0);
-  const coverage = totalPublications
-    ? Math.round((totalComplete / totalPublications) * 1000) / 10
-    : 0;
-  return (
-    <div>
-      <div className="chart-kpis">
-        <span><strong>{useExactScope ? "точная профессия" : "направление"}</strong><small>выбранный охват</small></span>
-        <span><strong>{totalComplete.toLocaleString("ru-RU")}</strong><small>полных RUB-вилок</small></span>
-        <span><strong>{coverage}%</strong><small>полнота за период</small></span>
-      </div>
-      <Chart option={option} label={`Новые публикации ${scopeLabel}, полные RUB-вилки и их доля по неделям`} heightClass="h-[22rem]" />
     </div>
   );
 }
@@ -378,7 +258,7 @@ export function OfficialSalaryChart({
 
   const option: echarts.EChartsOption = {
     tooltip: { trigger: "axis", valueFormatter: (value) => value == null ? "Недостаточно данных" : `${new Intl.NumberFormat("ru-RU").format(Number(value))} ₽` },
-    legend: { top: 4, textStyle: { color: "#64748b" } },
+    legend: { type: "scroll", top: 4, left: 8, right: 8, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 26, top: 48, bottom: 10, containLabel: true },
     xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true }, axisLine: { lineStyle: { color: "#334155" } } },
     yAxis: { type: "value", axisLabel: { color: "#64748b", formatter: (value: number) => `${Math.round(value / 1000)}k` }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },

@@ -20,7 +20,7 @@ export function Header() {
           <span className="brand-mark grid size-10 place-items-center rounded-lg bg-accent text-white">
             <BarChart3 size={19} aria-hidden="true" />
           </span>
-          <span>TechRole <span className="text-accent">Index</span></span>
+          <span className="brand-label">TechRole <span className="text-accent">Index</span></span>
         </Link>
         <nav className="hidden flex-1 items-center justify-center gap-1 xl:flex" aria-label="Основная навигация">
           {links.map(([label, href]) => <Link key={href} href={href} className="nav-link whitespace-nowrap">{label}</Link>)}
