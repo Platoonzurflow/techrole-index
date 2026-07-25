@@ -42,12 +42,18 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
   await expect(page.getByText("данные по технологии", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("salary-median-showcase").getByRole("img")).toBeVisible();
+  await expect(page.getByText("Относительно максимума", { exact: true })).toBeVisible();
+  await expect(page.getByText("Для каждого уровня показано одно проверяемое значение", { exact: false })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 4, name: "Junior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 4, name: "Middle" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 4, name: "Senior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { name: "Категорийный fallback" })).toHaveCount(0);
   await expect(page.getByText("сохранены для проверки", { exact: false })).toHaveCount(0);
-  await expect(page.getByText("в исследовании n=45 226", { exact: false })).toBeVisible();
+  const salaryShowcase = page.getByTestId("salary-median-showcase");
+  await expect(salaryShowcase).toContainText("Медиана · Россия");
+  await expect(salaryShowcase).not.toContainText("Выборка");
+  await expect(salaryShowcase).not.toContainText("Налоговый статус");
   await expect(page.getByRole("button", { name: "Поделиться" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
   await expect(page.locator("#salary-benchmark")).toBeVisible();
@@ -110,12 +116,16 @@ test("profession structured data cites only visible public datasets", async ({ p
 test("grade cards stay coherent while observed salary inversions remain explained", async ({ page }) => {
   await page.goto("/professions/dotnet-developer");
   const benchmarkSection = page.locator("#salary-benchmark");
-  await expect(benchmarkSection).toContainText("Источник");
-  await expect(benchmarkSection).toContainText("Период");
-  await expect(benchmarkSection).toContainText("Выборка");
-  await expect(benchmarkSection).toContainText("Налоговый статус");
-  await expect(benchmarkSection).toContainText("Что измеряется");
-  await expect(benchmarkSection).toContainText("Опубликовано");
+  const salaryShowcase = page.getByTestId("salary-median-showcase");
+  await expect(salaryShowcase).toContainText("C#");
+  await expect(salaryShowcase).toContainText("данные по технологии");
+  await expect(salaryShowcase).toContainText("Относительно максимума");
+  await expect(salaryShowcase).not.toContainText("Источник");
+  await expect(salaryShowcase).not.toContainText("Выборка");
+  await expect(salaryShowcase).not.toContainText("Налоговый статус");
+  await expect(benchmarkSection).not.toContainText(
+    "Для каждого уровня показано одно проверяемое значение",
+  );
   const gradeSection = page.getByRole("heading", {
     name: "Зарплата Junior, Middle и Senior",
   }).locator("xpath=parent::div");

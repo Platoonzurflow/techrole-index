@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSalaryBenchmarkCsv,
+  headlineSalaryBenchmarkMaximum,
+  headlineSalaryBenchmarkPoint,
   latestSalaryBenchmarkDate,
   primarySalaryBenchmarkPoint,
   salaryBenchmarkCoverage,
@@ -66,6 +68,43 @@ describe("salary benchmark dataset", () => {
     expect(salaryBenchmarkCoverage([item])).toEqual({ direct: 1, related: 0, category: 0 });
     expect(latestSalaryBenchmarkDate([item])).toBe("2026-07-21");
     expect(primarySalaryBenchmarkPoint(item).value).toBe(240000);
+  });
+
+  it("selects one technology median and compares it with the largest headline median", () => {
+    const technologyItem: SalaryBenchmarkCatalogItem = {
+      ...item,
+      slug: "dotnet-developer",
+      benchmark: {
+        ...item.benchmark,
+        points: [
+          ...item.benchmark.points,
+          {
+            source_id: "source-1",
+            scope: "technology",
+            label: "C#",
+            geography: "russia",
+            metric: "median",
+            value: 250000,
+            is_fallback: false,
+          },
+        ],
+      },
+    };
+    const maximumItem: SalaryBenchmarkCatalogItem = {
+      ...item,
+      slug: "mlops-engineer",
+      benchmark: {
+        ...item.benchmark,
+        points: [{
+          ...item.benchmark.points[0],
+          label: "MLOps-инженер",
+          value: 351666,
+        }],
+      },
+    };
+
+    expect(headlineSalaryBenchmarkPoint(technologyItem.benchmark)?.label).toBe("C#");
+    expect(headlineSalaryBenchmarkMaximum([technologyItem, maximumItem])).toBe(351666);
   });
 
   it("counts complete grade coverage", () => {

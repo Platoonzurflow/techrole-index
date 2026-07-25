@@ -8,7 +8,13 @@ import { TrendBadge } from "@/components/TrendBadge";
 import { ShareActions } from "@/components/ShareActions";
 import { api, safeApi } from "@/lib/api";
 import { compact, percent } from "@/lib/format";
-import type { MetricPoint, ProfessionDetail, ProfessionSummary } from "@/lib/types";
+import { headlineSalaryBenchmarkMaximum } from "@/lib/salary-benchmark-data";
+import type {
+  MetricPoint,
+  ProfessionDetail,
+  ProfessionSummary,
+  SalaryBenchmarkCatalogItem,
+} from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -105,8 +111,12 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const { slug } = await params;
   let profession: ProfessionDetail;
   try { profession = await api<ProfessionDetail>(`/professions/${slug}?days=180`); } catch { return <div className="shell py-20"><p className="eyebrow">Профессия</p><h1 className="mt-3 text-3xl font-semibold">Страница временно не загрузилась</h1><p className="mt-3 max-w-xl text-muted">Попробуйте обновить страницу через минуту. Каталог и методология остаются доступны, даже если отдельный срез сейчас пересчитывается.</p><div className="mt-6 flex flex-wrap gap-3"><Link href="/professions" className="button-primary">Вернуться в каталог</Link><Link href="/status" className="button-secondary">Проверить статус</Link></div></div>; }
-  const catalog = await safeApi<ProfessionSummary[]>(`/professions?category=${profession.category_slug}`, []);
+  const [catalog, salaryBenchmarkCatalog] = await Promise.all([
+    safeApi<ProfessionSummary[]>(`/professions?category=${profession.category_slug}`, []),
+    safeApi<SalaryBenchmarkCatalogItem[]>("/salary-benchmarks", []),
+  ]);
   const related = catalog.filter((item) => item.slug !== profession.slug).slice(0, 4);
+  const salaryBenchmarkMaximum = headlineSalaryBenchmarkMaximum(salaryBenchmarkCatalog);
   const latest = latestByLevel(profession.metrics ?? []);
   const currentVacancies = latest.reduce((sum, item) => sum + item.vacancy_count, 0);
   const weightedSalaryCount = latest.reduce((sum, item) => sum + item.salary_count, 0);
@@ -237,7 +247,13 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
 
       <TechStack profession={profession} />
 
-      {profession.salary_benchmark ? <SalaryBenchmarks data={profession.salary_benchmark} official={profession.official_open_data} /> : null}
+      {profession.salary_benchmark ? (
+        <SalaryBenchmarks
+          data={profession.salary_benchmark}
+          official={profession.official_open_data}
+          comparisonMaximum={salaryBenchmarkMaximum}
+        />
+      ) : null}
 
       {profession.official_open_data ? (
         <section id="official-open-data" className="market-showcase mt-10 p-5 sm:p-8" aria-labelledby="official-open-data-title">

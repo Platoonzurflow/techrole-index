@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProfessionCard } from "@/components/ProfessionCard";
 import { TrendBadge } from "@/components/TrendBadge";
@@ -217,12 +217,13 @@ describe("analytics components", () => {
     expect(screen.getByText("Premium включён для reader@example.com.")).toBeVisible();
   });
 
-  it("shows the exact benchmark without a separate category fallback block", () => {
+  it("shows one technology median with a comparison ring and no extra facts", () => {
     render(<SalaryBenchmarks data={{
       coverage: "direct",
       methodology_note: "Слои не смешиваются.",
       points: [
         { source_id: "habr", scope: "exact_role", label: "Инженер по данным", geography: "russia", metric: "median", value: 240000, p10: 100000, p90: 413000, is_fallback: false },
+        { source_id: "habr", scope: "technology", label: "C#", geography: "russia", metric: "median", value: 250000, is_fallback: false },
         { source_id: "habr", scope: "category", label: "Аналитика", geography: "russia", metric: "median", value: 194000, is_fallback: true },
         { source_id: "habr", scope: "category", label: "Аналитика", geography: "moscow", metric: "median", value: 220000, is_fallback: true },
         { source_id: "habr", scope: "category", label: "Аналитика", geography: "saint_petersburg", metric: "median", value: 180000, is_fallback: true },
@@ -241,15 +242,22 @@ describe("analytics components", () => {
         income_type: "salary_plus_bonus",
         methodology_note: "Фактические доходы.",
       }],
-    }} />);
+    }} comparisonMaximum={351666} />);
 
     expect(screen.getByText("есть прямой срез")).toBeInTheDocument();
-    expect(screen.getByText("точная профессия")).toBeInTheDocument();
+    const showcase = screen.getByTestId("salary-median-showcase");
+    expect(within(showcase).getByText("C#")).toBeInTheDocument();
+    expect(within(showcase).getByText("данные по технологии")).toBeInTheDocument();
+    expect(within(showcase).getByText("250 000 ₽")).toBeInTheDocument();
+    expect(within(showcase).getByText("71%")).toBeInTheDocument();
+    expect(within(showcase).getByRole("img")).toHaveAccessibleName(
+      /C#: медиана 250\s000\s₽, 71% от максимальной медианы 351\s666\s₽ в выборке TechRole Index/,
+    );
+    expect(within(showcase).queryByText("Источник")).not.toBeInTheDocument();
+    expect(within(showcase).queryByText("Выборка")).not.toBeInTheDocument();
+    expect(within(showcase).queryByText("Налоговый статус")).not.toBeInTheDocument();
     expect(screen.queryByText("Категорийный fallback")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/n=45[\s\u00a0]226/)).toHaveLength(2);
-    expect(screen.getByText("Что измеряется")).toBeInTheDocument();
-    expect(screen.getByText("оклад и премия")).toBeInTheDocument();
-    expect(screen.getByText("Опубликовано")).toBeInTheDocument();
+    expect(screen.getAllByText(/n=45[\s\u00a0]226/)).toHaveLength(1);
     expect(screen.getByRole("link", { name: /Источник/ })).toHaveAttribute(
       "href",
       "https://habr.com/ru/specials/1060148/",

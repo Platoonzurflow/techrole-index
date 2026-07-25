@@ -66,6 +66,38 @@ export function salaryBenchmarkPointRepresentative(point: SalaryBenchmarkPoint) 
   return undefined;
 }
 
+const headlineSalaryScopeOrder: SalaryBenchmarkPoint["scope"][] = [
+  "technology",
+  "exact_role",
+  "related_role",
+  "category",
+  "market_level",
+];
+
+export function headlineSalaryBenchmarkPoint(benchmark: SalaryBenchmarkSummary) {
+  const candidates = benchmark.points.filter(
+    (point) => (
+      point.seniority == null
+      && point.geography === "russia"
+      && point.metric === "median"
+      && point.value != null
+    ),
+  );
+  for (const scope of headlineSalaryScopeOrder) {
+    const scoped = candidates.filter((point) => point.scope === scope);
+    const point = scoped.find((candidate) => !candidate.is_fallback) ?? scoped[0];
+    if (point) return point;
+  }
+  return undefined;
+}
+
+export function headlineSalaryBenchmarkMaximum(items: SalaryBenchmarkCatalogItem[]) {
+  const values = items
+    .map((item) => headlineSalaryBenchmarkPoint(item.benchmark)?.value)
+    .filter((value): value is number => value != null);
+  return values.length ? Math.max(...values) : undefined;
+}
+
 export function salaryBenchmarkLevelPointsAreCoherent(points: SalaryBenchmarkPoint[]) {
   const byLevel = new Map(points.map((point) => [point.seniority, point]));
   const values = salaryLevelOrder.map((seniority) => {

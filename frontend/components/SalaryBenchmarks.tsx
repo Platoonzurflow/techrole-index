@@ -2,6 +2,7 @@ import { ExternalLink } from "lucide-react";
 
 import { rub } from "@/lib/format";
 import {
+  headlineSalaryBenchmarkPoint,
   salaryBenchmarkLevelPoints,
   salaryBenchmarkSourceForPoint,
   salaryLevelOrder,
@@ -9,7 +10,6 @@ import {
 import type {
   OfficialOpenDataSummary,
   SalaryBenchmarkPoint,
-  SalaryBenchmarkSource,
   SalaryBenchmarkSummary,
 } from "@/lib/types";
 
@@ -66,25 +66,12 @@ function taxLabel(value: "gross" | "net" | "unknown") {
   return "gross/net не указан";
 }
 
-function BenchmarkCard({
-  point,
-  source,
-  featured = false,
-}: {
-  point: SalaryBenchmarkPoint;
-  source?: SalaryBenchmarkSource;
-  featured?: boolean;
-}) {
+function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
   const fragment = `salary-reference-${point.source_id}-${point.scope}-${point.geography}-${point.seniority ?? "all"}`;
-  const sample = point.sample_size != null
-    ? `n=${point.sample_size.toLocaleString("ru-RU")}`
-    : source?.total_sample_size
-      ? `в исследовании n=${source.total_sample_size.toLocaleString("ru-RU")}`
-      : "n не опубликован";
   return (
     <article
       id={fragment}
-      className={`scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5 ${featured ? "lg:grid lg:grid-cols-[minmax(0,.8fr)_minmax(0,1.2fr)] lg:gap-8 lg:p-6" : ""}`}
+      className="scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5"
     >
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -96,27 +83,77 @@ function BenchmarkCard({
         {point.seniority ? <p className="mt-2 text-xs text-muted">Срез: {point.label}</p> : null}
       </div>
       <div>
-        {featured && source ? (
-          <dl className="mt-5 grid gap-x-6 gap-y-4 border-t border-line pt-5 text-sm sm:grid-cols-2 lg:mt-0 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-            <div>
-              <dt className="text-muted">Источник</dt>
-              <dd className="mt-1 font-medium"><a className="link" href={`#salary-source-${source.id}`}>{source.name}</a></dd>
-            </div>
-            <div><dt className="text-muted">Период</dt><dd className="mt-1 font-medium">{source.period}</dd></div>
-            <div><dt className="text-muted">Выборка</dt><dd className="mt-1 font-mono">{sample}</dd></div>
-            <div><dt className="text-muted">Налоговый статус</dt><dd className="mt-1">{taxLabel(source.tax_status)}</dd></div>
-            <div><dt className="text-muted">Что измеряется</dt><dd className="mt-1">{source.income_type === "salary_plus_bonus" ? "оклад и премия" : "зарплата"}</dd></div>
-            <div><dt className="text-muted">Опубликовано</dt><dd className="mt-1">{new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeZone: "UTC" }).format(new Date(`${source.published_at}T00:00:00Z`))}</dd></div>
-          </dl>
-        ) : null}
         {point.p10 != null && point.p90 != null ? (
           <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-line pt-4 text-sm">
             <div><dt className="text-muted">P10</dt><dd className="mt-1 font-mono">{rub(point.p10)}</dd></div>
             <div><dt className="text-muted">P90</dt><dd className="mt-1 font-mono">{rub(point.p90)}</dd></div>
           </dl>
         ) : null}
-        {!featured && point.sample_size != null ? <p className="mt-4 text-xs text-muted">Выборка: n={point.sample_size}</p> : null}
+        {point.sample_size != null ? <p className="mt-4 text-xs text-muted">Выборка: n={point.sample_size}</p> : null}
         {point.note ? <p className="mt-3 text-xs leading-5 text-muted">{point.note}</p> : null}
+      </div>
+    </article>
+  );
+}
+
+function SalaryMedianShowcase({
+  point,
+  maximum,
+}: {
+  point: SalaryBenchmarkPoint;
+  maximum: number;
+}) {
+  const value = point.value ?? 0;
+  const percentage = maximum > 0
+    ? Math.min(100, Math.max(0, Math.round((value / maximum) * 100)))
+    : 0;
+  const accessibleLabel = `${point.label}: медиана ${rub(value)}, ${percentage}% от максимальной медианы ${rub(maximum)} в выборке TechRole Index`;
+
+  return (
+    <article
+      id={`salary-reference-${point.source_id}-${point.scope}-${point.geography}-all`}
+      data-testid="salary-median-showcase"
+      className="mt-6 overflow-hidden rounded-3xl border border-line bg-[rgb(var(--panel-rgb)/.55)]"
+    >
+      <div className="grid lg:grid-cols-2">
+        <div className="flex min-h-72 flex-col justify-center p-6 sm:p-8 lg:p-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h3 className="text-xl font-semibold sm:text-2xl">{point.label}</h3>
+            <span className="badge">{scopeLabels[point.scope]}</span>
+          </div>
+          <p className="mt-10 text-sm text-muted">Медиана · {geographyLabels[point.geography]}</p>
+          <p className="mt-2 font-mono text-4xl font-semibold tracking-tight sm:text-5xl">
+            {rub(value)}
+          </p>
+        </div>
+
+        <div className="relative flex min-h-72 flex-col items-center justify-center overflow-hidden border-t border-line bg-[radial-gradient(circle_at_50%_45%,rgb(var(--accent-rgb)/.14),transparent_62%)] p-6 text-center lg:border-l lg:border-t-0">
+          <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full border-[34px] border-[rgb(var(--accent-rgb)/.07)]" />
+          <p className="eyebrow">Относительно максимума</p>
+          <div className="relative mt-4 size-48 sm:size-52" role="img" aria-label={accessibleLabel}>
+            <svg className="size-full -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="49" fill="none" stroke="var(--line)" strokeWidth="10" />
+              <circle
+                cx="60"
+                cy="60"
+                r="49"
+                fill="none"
+                pathLength="100"
+                stroke="var(--accent)"
+                strokeDasharray={`${percentage} ${100 - percentage}`}
+                strokeLinecap="round"
+                strokeWidth="10"
+              />
+            </svg>
+            <div className="absolute inset-0 grid place-content-center">
+              <strong className="font-mono text-4xl font-semibold">{percentage}%</strong>
+              <span className="mt-1 text-xs text-muted">от максимума</span>
+            </div>
+          </div>
+          <p className="mt-4 text-sm text-muted">
+            Максимальная медиана в выборке: <span className="font-mono font-semibold text-foreground">{rub(maximum)}</span>
+          </p>
+        </div>
       </div>
     </article>
   );
@@ -125,16 +162,13 @@ function BenchmarkCard({
 export function SalaryBenchmarks({
   data,
   official,
+  comparisonMaximum,
 }: {
   data: SalaryBenchmarkSummary;
   official?: OfficialOpenDataSummary;
+  comparisonMaximum?: number;
 }) {
-  const national = data.points.filter(
-    (point) => !point.is_fallback && point.seniority == null && point.geography === "russia",
-  );
-  const regional = data.points.filter(
-    (point) => !point.is_fallback && point.seniority == null && point.geography !== "russia",
-  );
+  const headline = headlineSalaryBenchmarkPoint(data);
   const levels = salaryBenchmarkLevelPoints(data);
 
   return (
@@ -148,25 +182,20 @@ export function SalaryBenchmarks({
         <span className="badge confidence-medium">{coverageLabels[data.coverage]}</span>
       </div>
 
-      {national.length ? (
-        <div className="mt-6 grid gap-4">{national.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.label}`} point={point} source={salaryBenchmarkSourceForPoint(data, point)} featured />)}</div>
-      ) : null}
-
-      {regional.length ? (
-        <div className="mt-8">
-          <h3 className="text-lg font-semibold">По регионам для профессии</h3>
-          <div className="mt-4 grid gap-4 md:grid-cols-3">{regional.map((point) => <BenchmarkCard key={`${point.source_id}-${point.label}-${point.geography}`} point={point} source={salaryBenchmarkSourceForPoint(data, point)} />)}</div>
-        </div>
+      {headline ? (
+        <SalaryMedianShowcase
+          point={headline}
+          maximum={Math.max(comparisonMaximum ?? headline.value ?? 0, headline.value ?? 0)}
+        />
       ) : null}
 
       {levels.length ? (
         <div className="mt-8">
           <h3 className="text-lg font-semibold">Зарплата Junior, Middle и Senior</h3>
-          <p className="mt-2 text-sm leading-6 text-muted">Для каждого уровня показано одно проверяемое значение. Медиана полных вилок за 180 дней используется при выборке от {official?.salary_min_sample ?? 3}, если последовательность Junior → Middle → Senior не противоречит сама себе. При пропуске или перевёрнутой градации выбирается один полный непротиворечивый набор одного исследования: точечные данные разных срезов не смешиваются.</p>
           {official ? (
             <SalaryBySeniority official={official} benchmark={data} />
           ) : (
-            <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} source={salaryBenchmarkSourceForPoint(data, point)} />)}</div>
+            <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
           )}
         </div>
       ) : null}

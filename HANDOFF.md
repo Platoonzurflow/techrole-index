@@ -702,3 +702,10 @@ Profession pages have dynamic OG images, native share/copy-citation controls, an
 - Ключевые зарплатные уровни, счётчики наблюдений, графики и период получили стабильные HTML-фрагменты; URL официального Dataset в JSON-LD теперь ведёт прямо на видимый блок `#official-open-data`.
 - Release `c9958f2b` is deployed on the Selectel VDS. Migration `0010` is current, all 50 active profession scores were recomputed for `v1.1.0`, production services are healthy, Robokassa is still `live`, and IndexNow accepted all 88 canonical sitemap URLs.
 - Release `9f247037` is deployed on the Selectel VDS. Salary history now filters only its dynamic midpoint rows against the existing cited benchmark, keeps the benchmark cards and raw/publication layers unchanged, and uses the compact visible label «медиана с ограничениями» with scope shown only when a row exists. `/admin` has a searchable Free/Premium switch backed by non-expiring `admin_override`; switching off revokes only manual grants and cannot cancel a `payment:*` entitlement. CI and Secret scan passed, all production services are healthy, Robokassa remains `live`, and IndexNow accepted all 88 canonical sitemap URLs again.
+
+## Salary-orientation UI handoff (2026-07-25)
+
+- Верхний блок фактических доходов показывает одну национальную медиану: сначала технологический срез, затем точную/смежную роль и только при отсутствии — явно подписанное направление. Дополнительные национальные и региональные карточки из этого первого блока убраны.
+- Правая половина — доступная SVG-кольцевая диаграмма доли от максимальной headline-медианы по всем 50 профессиям. Максимум вычисляется из текущего серверного salary catalog, а не зашит в интерфейс.
+- Карточки Junior/Middle/Senior, их выбор источника и значения не изменены. Удалён только заданный владельцем поясняющий абзац.
+- Регрессии покрывают приоритет технологии, расчёт максимума, отсутствие реквизитов в headline-карточке, доступное имя диаграммы, desktop/mobile и светлую/тёмную темы.
