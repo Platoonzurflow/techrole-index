@@ -3,13 +3,14 @@ message: "If you use TechRole Index, cite the dataset and keep the methodology a
 title: "TechRole Index: analytics of IT professions and public vacancy publications"
 type: dataset
 version: 0.1.0
+doi: "10.5281/zenodo.21559744"
 authors:
   - name: "TechRole Index"
     email: "sqldevelopermoscow@yandex.com"
 abstract: "A Russian-language catalog of 50 IT professions with transparent methodology, public entity metadata, classified vacancy publications, and sample-aware salary slices."
 date-released: 2026-07-21
 repository-code: "https://github.com/Platoonzurflow/techrole-index"
-url: "https://win-702hpohbtiv.tail044b19.ts.net"
+url: "https://techrole.ru"
 keywords:
   - IT professions
   - labor market
@@ -23,3 +24,4 @@ preferred-citation:
   authors:
     - name: "TechRole Index"
   year: 2026
+  doi: "10.5281/zenodo.21559744"
