@@ -37,23 +37,23 @@ def test_direct_distribution_keeps_percentiles_and_tax_status() -> None:
 
 
 def test_related_scopes_are_not_presented_as_exact() -> None:
-    analytics_engineer = SalaryBenchmarkSummary.model_validate(
-        salary_benchmark_for("analytics-engineer", "data-ai")
+    ai_engineer = SalaryBenchmarkSummary.model_validate(
+        salary_benchmark_for("ai-engineer", "data-ai")
     )
-    sap = SalaryBenchmarkSummary.model_validate(
-        salary_benchmark_for("sap-developer", "specialized")
+    erp = SalaryBenchmarkSummary.model_validate(
+        salary_benchmark_for("erp-specialist", "specialized")
     )
 
-    assert analytics_engineer.coverage == "related"
-    assert not any(point.scope == "exact_role" for point in analytics_engineer.points)
-    assert sap.coverage == "related"
-    assert not any(point.scope == "exact_role" for point in sap.points)
+    assert ai_engineer.coverage == "related"
+    assert not any(point.scope == "exact_role" for point in ai_engineer.points)
+    assert erp.coverage == "related"
+    assert not any(point.scope == "exact_role" for point in erp.points)
 
 
-def test_related_calculator_medians_cover_nlp_and_sap_without_relabelling() -> None:
+def test_related_calculator_medians_cover_ai_and_erp_without_relabelling() -> None:
     expected = {
-        "nlp-engineer": ("data-ai", 230083, "ML разработчик"),
-        "sap-developer": ("specialized", 147500, "ERP-программист"),
+        "ai-engineer": ("data-ai", 230083, "ML разработчик"),
+        "erp-specialist": ("specialized", 147500, "ERP-программист"),
     }
 
     for slug, (category, median, label) in expected.items():
@@ -80,7 +80,6 @@ def test_public_calculator_medians_expand_exact_role_coverage_without_hidden_val
         "computer-vision-engineer": 172500,
         "information-security-specialist": 168036,
         "security-engineer": 207333,
-        "soc-analyst": 146000,
         "penetration-tester": 170833,
     }
     categories = {slug: category for slug, _, _, category, _ in PROFESSIONS}
@@ -106,9 +105,9 @@ def test_salary_coverage_counts_are_versioned() -> None:
         salary_benchmark_for(slug, category)["coverage"]
         for slug, _, _, category, _ in PROFESSIONS
     ]
-    assert coverage.count("direct") == 37
-    assert coverage.count("related") == 13
-    assert coverage.count("category") == 0
+    assert coverage.count("direct") == 34
+    assert coverage.count("related") == 14
+    assert coverage.count("category") == 2
 
 
 def test_small_samples_and_unknown_tax_status_remain_visible() -> None:
@@ -159,9 +158,14 @@ def test_salary_benchmark_catalog_exports_every_profession() -> None:
 
     assert len(catalog) == 50
     assert len({item["slug"] for item in catalog}) == 50
-    assert {item["benchmark"]["coverage"] for item in catalog} == {"direct", "related"}
-    assert sum(item["benchmark"]["coverage"] == "direct" for item in catalog) == 37
-    assert sum(item["benchmark"]["coverage"] == "related" for item in catalog) == 13
+    assert {item["benchmark"]["coverage"] for item in catalog} == {
+        "direct",
+        "related",
+        "category",
+    }
+    assert sum(item["benchmark"]["coverage"] == "direct" for item in catalog) == 34
+    assert sum(item["benchmark"]["coverage"] == "related" for item in catalog) == 14
+    assert sum(item["benchmark"]["coverage"] == "category" for item in catalog) == 2
     assert all(item["benchmark"]["points"] for item in catalog)
     assert all(item["benchmark"]["sources"] for item in catalog)
     assert all(

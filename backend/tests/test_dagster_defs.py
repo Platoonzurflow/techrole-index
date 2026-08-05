@@ -28,6 +28,7 @@ def test_dagster_midnight_moscow_schedule_is_enabled() -> None:
         "enrich_classified_hh_vacancies",
         "materialize_observed_publication_metrics",
         "materialize_hh_publication_metrics",
+        "refresh_hh_profession_metric_windows",
         "notify_search_engines",
     }
 

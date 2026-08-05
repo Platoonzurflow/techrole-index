@@ -71,3 +71,24 @@ def test_explicit_title_alias_has_priority_over_conflicting_skills():
 
     assert result.profession_slug == "python-developer"
     assert result.reasons[0] == "алиас: python developer"
+
+
+def test_high_signal_profession_aliases_are_specific_and_excludable():
+    classifier = RuleBasedClassifier(
+        {
+            "technical-support-specialist": ["специалист технической поддержки"],
+            "product-manager": ["product manager"],
+            "1c-analyst": ["системный аналитик 1с"],
+            "qa-engineer": ["qa engineer"],
+        },
+        {"qa-engineer": [r"электрооборудован"]},
+    )
+
+    assert (
+        classifier.classify("Специалист технической поддержки L2").profession_slug
+        == "technical-support-specialist"
+    )
+    assert classifier.classify("Senior Product Manager").profession_slug == "product-manager"
+    assert classifier.classify("Системный аналитик 1С ERP").profession_slug == "1c-analyst"
+    assert classifier.classify("QA Engineer").profession_slug == "qa-engineer"
+    assert classifier.classify("QA Engineer электрооборудования").profession_slug is None

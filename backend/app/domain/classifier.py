@@ -43,7 +43,12 @@ GENERIC_SOFTWARE_TITLE = re.compile(
 
 SKILL_ROLE_PATTERNS: dict[str, tuple[str, ...]] = {
     "computer-vision-engineer": (r"\bopencv\b", r"\bcomputer\s+vision\b"),
-    "nlp-engineer": (r"\bnlp\b", r"computational\s+linguist"),
+    "ai-engineer": (
+        r"\bnlp\b",
+        r"computational\s+linguist",
+        r"\bllm\b",
+        r"\bgenerative\s+ai\b",
+    ),
     "mlops-engineer": (r"\bmlops\b",),
     "machine-learning-engineer": (
         r"\bpytorch\b",
@@ -51,15 +56,19 @@ SKILL_ROLE_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bscikit[- ]learn\b",
         r"\bml[- ]фреймворк",
     ),
-    "analytics-engineer": (r"\bdbt\b",),
-    "data-engineer": (r"\bapache\s+airflow\b", r"\bapache\s+spark\b", r"\betl\b"),
+    "data-engineer": (
+        r"\bapache\s+airflow\b",
+        r"\bapache\s+spark\b",
+        r"\betl\b",
+        r"\bdbt\b",
+    ),
     "react-native-developer": (r"\breact\s+native\b",),
     "flutter-developer": (r"\bflutter\b", r"\bdart\b"),
     "android-developer": (r"\bandroid\b",),
     "ios-developer": (r"\bios\b", r"\bswift\b", r"\bobjective-c\b"),
     "unity-developer": (r"\bunity\b",),
-    "unreal-engine-developer": (r"\bunreal\s+engine\b",),
-    "sap-developer": (r"\babap\b", r"\bsap\b"),
+    "game-developer": (r"\bunreal\s+engine\b",),
+    "erp-specialist": (r"\babap\b", r"\bsap\b"),
     "1c-developer": (r"(?:^|\s)1[сc](?:\s|$)", r"\b1[сc]:предприятие\b"),
     "dotnet-developer": (r"\.net\b", r"\basp\.net\b", r"c#"),
     "cpp-developer": (r"c\+\+",),
@@ -67,8 +76,8 @@ SKILL_ROLE_PATTERNS: dict[str, tuple[str, ...]] = {
     "python-developer": (r"\bpython\b", r"\bпитон\b"),
     "go-developer": (r"\bgolang\b",),
     "php-developer": (r"\bphp\b",),
-    "ruby-developer": (r"\bruby\b", r"\bruby\s+on\s+rails\b"),
-    "javascript-typescript-developer": (r"\bjavascript\b", r"\btypescript\b"),
+    "backend-developer": (r"\bruby\b", r"\bruby\s+on\s+rails\b"),
+    "frontend-developer": (r"\bjavascript\b", r"\btypescript\b"),
     "embedded-developer": (
         r"\bмикроконтроллер",
         r"\bmicrocontroller\b",
@@ -107,7 +116,7 @@ def classify_seniority(
 
 
 class RuleBasedClassifier:
-    version = "rules-v2"
+    version = "rules-v3"
 
     def __init__(
         self, aliases: dict[str, list[str]], exclusions: dict[str, list[str]] | None = None
@@ -135,7 +144,7 @@ class RuleBasedClassifier:
         # Prefer a more specific role when its expected base technology also matched.
         if "computer-vision-engineer" in matches:
             matches -= {"cpp-developer", "python-developer", "machine-learning-engineer"}
-        if "nlp-engineer" in matches:
+        if "ai-engineer" in matches:
             matches -= {"python-developer", "machine-learning-engineer"}
         if "mlops-engineer" in matches:
             matches -= {"python-developer", "go-developer", "machine-learning-engineer"}

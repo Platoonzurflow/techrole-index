@@ -397,6 +397,22 @@ def test_free_history_is_capped_and_ranking_is_teaser():
     detail = client.get("/api/v1/professions/role-1?days=180").json()
     assert detail["history_days"] == 30
     assert len(detail["metrics"]) == 90
+    metric_dates = sorted({date.fromisoformat(item["date"]) for item in detail["metrics"]})
+    assert len(metric_dates) == 30
+    assert metric_dates[-1] - metric_dates[0] == timedelta(days=29)
+    for source_key in ("official_open_data", "hh_market_data"):
+        source = detail.get(source_key)
+        if source is None:
+            continue
+        cutoff = date.fromisoformat(source["date_to"]) - timedelta(days=29)
+        for history_key in (
+            "daily_publications",
+            "daily_complete_salary_ranges",
+            "category_daily_publications",
+            "category_daily_complete_salary_ranges",
+            "salary_history",
+        ):
+            assert all(date.fromisoformat(item["date"]) >= cutoff for item in source[history_key])
     ranking = client.get("/api/v1/ranking").json()
     assert len(ranking) == 3
     assert ranking[0]["weekly_change_percent"] == 0

@@ -22,6 +22,7 @@ from app.providers.email import (
 )
 from app.services.currency_rates import snapshot_configured_currency_rates
 from app.services.hh_detail_enrichment import enrich_hh_vacancy_details
+from app.services.hh_profession_metrics import refresh_hh_profession_metrics
 from app.services.indexnow import submit_indexnow
 from app.services.open_data_ingestion import ingest_hh_data, ingest_trudvsem_open_data
 from app.services.publication_metrics import refresh_observed_publication_metrics
@@ -305,6 +306,23 @@ def materialize_hh_publication_metrics(
     return result
 
 
+@op(name="refresh_hh_profession_metric_windows")
+def refresh_hh_profession_metric_windows(context, materialization_result: dict) -> dict:
+    if materialization_result.get("status") != "success":
+        return {"status": "skipped", "reason": "materialization_not_complete"}
+    try:
+        with SessionLocal() as db:
+            result = refresh_hh_profession_metrics(db).to_dict()
+    except Exception as exc:
+        context.log.exception("HH profession metric window refresh failed")
+        raise Failure(
+            description="HH profession metric window refresh failed",
+            metadata={"status": "failed", "error": type(exc).__name__},
+        ) from exc
+    context.log.info(json.dumps(result, ensure_ascii=False, default=str))
+    return result
+
+
 @op(name="notify_search_engines")
 def notify_search_engines(context, materialization_result: dict) -> dict:
     if materialization_result.get("status") != "success":
@@ -328,7 +346,10 @@ def nightly_market_pipeline():
     materialization_result = materialize_observed_publication_metrics(ingestion_result)
     hh_ingestion_result = collect_and_classify_hh_vacancies()
     hh_enrichment_result = enrich_classified_hh_vacancies(hh_ingestion_result)
-    materialize_hh_publication_metrics(hh_ingestion_result, hh_enrichment_result)
+    hh_materialization_result = materialize_hh_publication_metrics(
+        hh_ingestion_result, hh_enrichment_result
+    )
+    refresh_hh_profession_metric_windows(hh_materialization_result)
     notify_search_engines(materialization_result)
 
 

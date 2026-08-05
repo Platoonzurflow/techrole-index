@@ -711,6 +711,38 @@ def _hh_market_summary(
     )
 
 
+def _truncate_market_history(
+    summary: OfficialOpenDataSummary | None,
+    *,
+    days: int,
+) -> OfficialOpenDataSummary | None:
+    """Keep public aggregates intact while enforcing the history entitlement."""
+    if summary is None:
+        return None
+    cutoff = summary.date_to - timedelta(days=days - 1)
+    return summary.model_copy(
+        update={
+            "daily_publications": [
+                item for item in summary.daily_publications if item.date >= cutoff
+            ],
+            "daily_complete_salary_ranges": [
+                item for item in summary.daily_complete_salary_ranges if item.date >= cutoff
+            ],
+            "category_daily_publications": [
+                item for item in summary.category_daily_publications if item.date >= cutoff
+            ],
+            "category_daily_complete_salary_ranges": [
+                item
+                for item in summary.category_daily_complete_salary_ranges
+                if item.date >= cutoff
+            ],
+            "salary_history": [
+                item for item in summary.salary_history if item.date >= cutoff
+            ],
+        }
+    )
+
+
 def _hh_market_enrichment_summary(
     db: Session,
     profession_id: int,
@@ -1119,17 +1151,24 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
         raise HTTPException(status_code=404, detail="Профессия не найдена")
     profession, category, score, scoring_version = row
     premium = has_premium(db, user)
+    history_days = min(days, 180 if premium else 30)
     summary = _summary(profession, category, score, premium)
     tech_stack = tech_stack_for(profession.slug)
-    official_open_data = _official_open_data_summary(
-        db,
-        profession.id,
-        include_category_context=True,
+    official_open_data = _truncate_market_history(
+        _official_open_data_summary(
+            db,
+            profession.id,
+            include_category_context=True,
+        ),
+        days=history_days,
     )
-    hh_market_data = _hh_market_summary(
-        db,
-        profession.id,
-        include_category_context=False,
+    hh_market_data = _truncate_market_history(
+        _hh_market_summary(
+            db,
+            profession.id,
+            include_category_context=False,
+        ),
+        days=history_days,
     )
     salary_benchmark = SalaryBenchmarkSummary.model_validate(
         salary_benchmark_for(profession.slug, category.slug)
@@ -1143,7 +1182,6 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
             salary_benchmark=salary_benchmark,
         )
 
-    history_days = min(days, 180 if premium else 30)
     national_id = db.scalar(select(Region.id).where(Region.code == "ru"))
     max_date = db.scalar(
         select(func.max(ProfessionMetricDaily.metric_date)).where(

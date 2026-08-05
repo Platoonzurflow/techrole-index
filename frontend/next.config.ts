@@ -6,6 +6,19 @@ const scriptSource = process.env.NODE_ENV === "development"
   ? "script-src 'self' 'unsafe-inline' 'unsafe-eval'"
   : "script-src 'self' 'unsafe-inline'";
 
+const professionRedirects = {
+  "cloud-engineer": "devops-engineer",
+  "sap-developer": "erp-specialist",
+  "firmware-engineer": "embedded-developer",
+  "unreal-engine-developer": "game-developer",
+  "javascript-typescript-developer": "frontend-developer",
+  "soc-analyst": "information-security-specialist",
+  "analytics-engineer": "data-engineer",
+  "nlp-engineer": "ai-engineer",
+  "postgresql-dba": "database-administrator",
+  "ruby-developer": "backend-developer",
+} as const;
+
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR ?? ".next",
   allowedDevOrigins: ["127.0.0.1", "localhost", "frontend"],
@@ -14,6 +27,11 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   async redirects() {
     return [
+      ...Object.entries(professionRedirects).map(([source, destination]) => ({
+        source: `/professions/${source}`,
+        destination: `/professions/${destination}`,
+        permanent: true,
+      })),
       {
         source: "/insights/:slug/cite/csl-json",
         destination: "/insight-citations/:slug.csl.json",

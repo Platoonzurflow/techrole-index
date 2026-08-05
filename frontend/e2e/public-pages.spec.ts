@@ -36,9 +36,9 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await page.goto("/professions/python-developer");
   await expect(page.getByRole("heading", { level: 1, name: "Python-разработчик" })).toBeVisible();
   await expect(page.getByText("n=", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Зарплата и поток вакансий за 180 дней" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Зарплата и динамика рынка" })).toBeVisible();
   await expect(page.getByText("Это не историческое число одновременно активных вакансий", { exact: false })).toBeVisible();
-  await expect(page.getByText("gross/net не определён", { exact: false }).first()).toBeVisible();
+  await expect(page.getByText("gross/net источником не определён", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
   await expect(page.getByText("данные по технологии", { exact: true }).first()).toBeVisible();
@@ -63,7 +63,7 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.locator("#observation-period")).toBeVisible();
 });
 
-test("profession charts keep salary, publication volume, and prepared demand distinct", async ({ page }) => {
+test("free profession page exposes only the 30-day main chart", async ({ page }) => {
   await page.goto("/professions/python-developer");
   await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
   await expect(page.locator("#salary-coverage")).toHaveCount(0);
@@ -74,7 +74,14 @@ test("profession charts keep salary, publication volume, and prepared demand dis
   })).toHaveCount(0);
   await expect(page.getByRole("img", {
     name: "Расчётный объём вакансий подготовленной витрины по уровням",
-  })).toBeVisible();
+  })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "30 дней" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "90 дней — доступно в Premium" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "180 дней — доступно в Premium" })).toBeDisabled();
+  await expect(page.getByText("Расширенный ряд вакансий — в Premium", { exact: true })).toBeVisible();
+  await expect(page.locator("#publication-history")).toHaveCount(0);
+  await expect(page.getByText("Слои, которые нельзя смешивать", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("Продолжить исследование", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("img", { name: "История медианной зарплаты по уровням" }))
     .toHaveCount(0);
 });
@@ -88,7 +95,6 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
     "#tech-stack",
     "#salary-benchmark",
     "#salary-history",
-    "#publication-history",
     "#prepared-vacancy-history",
     "#score-breakdown",
     "#market-skills",
@@ -104,7 +110,6 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
       "#tech-stack",
       "#salary-benchmark",
       "#salary-history",
-      "#publication-history",
       "#prepared-vacancy-history",
       "#score-breakdown",
       "#market-skills",
@@ -183,7 +188,7 @@ test("grade cards stay coherent while observed salary inversions remain explaine
   await expect(gradeSection).toContainText("370 000 ₽ — 380 000 ₽");
   await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
 
-  await page.goto("/professions/firmware-engineer");
+  await page.goto("/professions/it-project-manager");
   await expect(page.locator("#official-open-data").getByText("Линии наблюдений могут пересекаться", { exact: false }))
     .toBeVisible();
   await expect(page.locator("#official-open-data").getByText("Значения не переставляются искусственно", { exact: false }))
@@ -223,9 +228,9 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await expect(source.locator("xpath=ancestor::article"))
     .toContainText("gross/net не указан");
 
-  await page.goto("/professions/soc-analyst");
+  await page.goto("/professions/information-security-specialist");
   const salaryHistory = page.locator("#salary-history");
-  await expect(page.getByText("146 000 ₽", { exact: true })).toBeVisible();
+  await expect(page.getByText("168 036 ₽", { exact: true })).toBeVisible();
   await expect(salaryHistory).toContainText("среднее за 30 дней с ограничениями");
   await expect(salaryHistory).not.toContainText("Junior от");
   await expect(salaryHistory).not.toContainText("Middle от");
@@ -557,7 +562,7 @@ test("salary benchmark dataset is complete, downloadable, and limitation-labeled
   expect(payload.current_market_claim).toBe(false);
   expect(payload.profession_count).toBe(50);
   expect(payload.seniority_coverage).toEqual({ complete_roles: 50, points: 150 });
-  expect(payload.coverage).toEqual({ direct: 37, related: 13, category: 0 });
+  expect(payload.coverage).toEqual({ direct: 34, related: 14, category: 2 });
   expect(payload.dataset).toHaveLength(50);
   expect(payload.dataset.every((item: Record<string, unknown>) =>
     JSON.stringify(Object.keys(item).sort()) === JSON.stringify([
@@ -808,9 +813,9 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(officialLayer.window_start_at).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(officialLayer.window_end_at_exclusive).toMatch(/T00:00:00(?:Z|\+00:00)$/);
   expect(salaryLayer.profession_count).toBe(50);
-  expect(salaryLayer.direct_professions).toBe(37);
-  expect(salaryLayer.related_professions).toBe(13);
-  expect(salaryLayer.category_only_professions).toBe(0);
+  expect(salaryLayer.direct_professions).toBe(34);
+  expect(salaryLayer.related_professions).toBe(14);
+  expect(salaryLayer.category_only_professions).toBe(2);
   expect(salaryLayer.latest_total_sample_size).toBe(45226);
 
   const openDataCsv = await (await request.get("/open-data.csv")).text();

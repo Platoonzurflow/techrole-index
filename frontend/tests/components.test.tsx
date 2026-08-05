@@ -652,11 +652,11 @@ describe("analytics components", () => {
       {
         ...shared,
         id: 2,
-        slug: "analytics-engineer",
-        name_ru: "Analytics Engineer",
-        name_en: "Analytics Engineer",
-        category_slug: "data-ai",
-        category_name: "Data & AI",
+        slug: "ux-ui-designer",
+        name_ru: "UX/UI-дизайнер",
+        name_en: "UX/UI Designer",
+        category_slug: "specialized",
+        category_name: "Специализированная разработка",
         salary_benchmark: {
           coverage: "category" as const,
           points: [

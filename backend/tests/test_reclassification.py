@@ -117,7 +117,7 @@ def test_reclassification_uses_static_aliases_and_skills_without_touching_ai() -
         )
 
         result = reclassify_rule_managed_vacancies(db)
-        assert result.classifier_version == "rules-v2"
+        assert result.classifier_version == "rules-v3"
         assert result.evaluated == 2
         assert result.classified_before == 0
         assert result.classified_after == 2

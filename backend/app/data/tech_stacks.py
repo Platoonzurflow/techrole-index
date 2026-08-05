@@ -49,15 +49,15 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Фреймворки", ("Laravel", "Symfony", "Yii")),
         ("Инструменты", ("MySQL", "PostgreSQL", "Redis", "Docker")),
     ),
-    "ruby-developer": (
-        ("Языки", ("Ruby", "SQL", "JavaScript")),
-        ("Фреймворки", ("Ruby on Rails", "RSpec", "Sidekiq")),
-        ("Инструменты", ("PostgreSQL", "Redis", "Docker", "Git")),
+    "technical-writer": (
+        ("Документация", ("Docs as Code", "API Reference", "User Guide", "Release Notes")),
+        ("Форматы", ("Markdown", "OpenAPI", "AsciiDoc", "XML")),
+        ("Инструменты", ("Git", "Confluence", "Swagger", "Vale")),
     ),
-    "javascript-typescript-developer": (
-        ("Языки", ("JavaScript", "TypeScript", "HTML", "CSS")),
-        ("Платформы", ("Node.js", "React", "Next.js", "NestJS")),
-        ("Инструменты", ("npm/pnpm", "Vite", "Jest", "Git")),
+    "qa-engineer": (
+        ("Тестирование", ("Тест-дизайн", "API testing", "SQL", "DevTools")),
+        ("Инструменты", ("Postman", "Swagger", "Charles", "TestRail")),
+        ("Автоматизация", ("Playwright", "Selenium", "Pytest", "CI/CD")),
     ),
     "android-developer": (
         ("Языки", ("Kotlin", "Java")),
@@ -119,10 +119,10 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Оборудование", ("Cisco IOS", "Juniper", "MikroTik")),
         ("Инструменты", ("Wireshark", "Ansible", "Zabbix", "NetBox")),
     ),
-    "cloud-engineer": (
-        ("Облака", ("AWS", "Azure", "Yandex Cloud", "GCP")),
-        ("Инфраструктура", ("Terraform", "Kubernetes", "Docker")),
-        ("Инструменты", ("CloudFormation", "Ansible", "Prometheus", "GitLab CI")),
+    "technical-support-specialist": (
+        ("Поддержка", ("Service Desk", "Help Desk", "SLA", "ITIL")),
+        ("Системы", ("Windows", "Linux", "Active Directory", "TCP/IP")),
+        ("Инструменты", ("Jira Service Management", "Confluence", "SQL", "Remote Desktop")),
     ),
     "data-analyst": (
         ("Языки", ("SQL", "Python", "DAX")),
@@ -154,20 +154,20 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Обработка данных", ("Apache Spark", "Kafka", "Airflow", "dbt")),
         ("Хранилища", ("ClickHouse", "PostgreSQL", "S3", "Hadoop")),
     ),
-    "analytics-engineer": (
-        ("Языки", ("SQL", "Python", "Jinja")),
-        ("Трансформации", ("dbt", "Airflow", "Dagster")),
-        ("Хранилища", ("ClickHouse", "BigQuery", "Snowflake", "PostgreSQL")),
+    "ux-ui-designer": (
+        ("Проектирование", ("User Flow", "Wireframes", "Prototyping", "Design System")),
+        ("Исследования", ("CustDev", "Usability Testing", "CJM", "Jobs To Be Done")),
+        ("Инструменты", ("Figma", "FigJam", "Miro", "Adobe Creative Cloud")),
     ),
     "database-administrator": (
         ("СУБД", ("PostgreSQL", "Oracle", "MS SQL", "MySQL")),
         ("Администрирование", ("Backup/restore", "Replication", "Performance tuning")),
         ("Инструменты", ("Linux", "Ansible", "Prometheus", "Grafana")),
     ),
-    "postgresql-dba": (
-        ("СУБД", ("PostgreSQL", "Patroni", "PgBouncer")),
-        ("Диагностика", ("pg_stat_statements", "EXPLAIN", "pgBadger")),
-        ("Инструменты", ("Linux", "Ansible", "Prometheus", "WAL-G")),
+    "erp-specialist": (
+        ("Платформы", ("1С:Предприятие", "SAP S/4HANA", "SAP ERP", "ERP")),
+        ("Анализ", ("Бизнес-процессы", "Функциональные требования", "Интеграции", "Миграция данных")),
+        ("Инструменты", ("SQL", "BPMN", "Jira", "Confluence")),
     ),
     "data-scientist": (
         ("Языки", ("Python", "SQL", "R")),
@@ -184,10 +184,10 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Инфраструктура", ("Kubernetes", "Docker", "Terraform", "Helm")),
         ("Наблюдаемость", ("Prometheus", "Grafana", "Evidently", "OpenTelemetry")),
     ),
-    "nlp-engineer": (
-        ("Языки", ("Python", "SQL", "C++")),
-        ("NLP", ("Transformers", "PyTorch", "spaCy", "SentencePiece")),
-        ("Инструменты", ("Hugging Face", "MLflow", "FastAPI", "Docker")),
+    "ai-engineer": (
+        ("Языки", ("Python", "SQL", "TypeScript")),
+        ("AI", ("LLM", "Transformers", "RAG", "PyTorch")),
+        ("Инструменты", ("Hugging Face", "Vector DB", "FastAPI", "Docker")),
     ),
     "computer-vision-engineer": (
         ("Языки", ("Python", "C++", "CUDA")),
@@ -204,10 +204,10 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Инструменты", ("SIEM", "EDR", "WAF", "Vault")),
         ("Автоматизация", ("Python", "Bash", "Terraform", "Kubernetes")),
     ),
-    "soc-analyst": (
-        ("Мониторинг", ("SIEM", "EDR", "IDS/IPS", "SOAR")),
-        ("Анализ", ("MITRE ATT&CK", "Threat Intelligence", "YARA", "Sigma")),
-        ("Инструменты", ("Splunk", "ELK", "Wireshark", "VirusTotal")),
+    "system-engineer": (
+        ("Системы", ("Linux", "Windows Server", "Active Directory", "Virtualization")),
+        ("Интеграция", ("TCP/IP", "DNS", "Storage", "Backup")),
+        ("Инструменты", ("Ansible", "PowerShell", "Zabbix", "Git")),
     ),
     "penetration-tester": (
         ("Инструменты", ("Burp Suite", "Nmap", "Metasploit", "Wireshark")),
@@ -224,30 +224,30 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Движок", ("Unity", "URP/HDRP", "DOTS", "Addressables")),
         ("Инструменты", ("Rider", "Git LFS", "Blender", "Unity Profiler")),
     ),
-    "unreal-engine-developer": (
-        ("Языки", ("C++", "Blueprints", "HLSL")),
-        ("Движок", ("Unreal Engine", "Niagara", "Gameplay Ability System")),
-        ("Инструменты", ("Visual Studio", "Perforce", "Blender", "Unreal Insights")),
+    "1c-analyst": (
+        ("Платформа", ("1С:Предприятие 8", "1С:ERP", "1С:ЗУП", "1С:Документооборот")),
+        ("Анализ", ("Бизнес-процессы", "Функциональные требования", "СКД", "Интеграции")),
+        ("Инструменты", ("BPMN", "SQL", "Confluence", "Jira")),
     ),
     "embedded-developer": (
         ("Языки", ("C", "C++", "Python", "Assembly")),
         ("Платформы", ("ARM", "STM32", "ESP32", "FreeRTOS")),
         ("Инструменты", ("CMake", "GDB", "JTAG", "Oscilloscope")),
     ),
-    "firmware-engineer": (
-        ("Языки", ("C", "C++", "Assembly", "Python")),
-        ("Микроконтроллеры", ("STM32", "ARM Cortex", "AVR", "ESP32")),
-        ("Инструменты", ("FreeRTOS", "JTAG", "Logic analyzer", "Git")),
+    "it-project-manager": (
+        ("Управление", ("Agile", "Scrum", "Kanban", "Waterfall")),
+        ("Планирование", ("Roadmap", "Backlog", "Risk Management", "Budget")),
+        ("Инструменты", ("Jira", "Confluence", "Miro", "MS Project")),
     ),
     "1c-developer": (
         ("Платформа", ("1С:Предприятие 8", "БСП", "СКД")),
         ("Языки и запросы", ("Встроенный язык 1С", "Язык запросов 1С", "SQL")),
         ("Интеграции", ("HTTP-сервисы", "OData", "XML/JSON", "Git")),
     ),
-    "sap-developer": (
-        ("Языки", ("ABAP", "SQLScript", "JavaScript")),
-        ("Платформа", ("SAP S/4HANA", "SAP BTP", "SAP Fiori")),
-        ("Инструменты", ("CDS Views", "OData", "HANA", "Eclipse ADT")),
+    "product-manager": (
+        ("Продукт", ("Product Discovery", "Roadmap", "Jobs To Be Done", "CustDev")),
+        ("Аналитика", ("Unit Economics", "A/B-тесты", "SQL", "Product Metrics")),
+        ("Инструменты", ("Jira", "Confluence", "Miro", "Figma")),
     ),
     "solution-architect": (
         ("Архитектура", ("C4", "UML", "DDD", "Event-driven architecture")),

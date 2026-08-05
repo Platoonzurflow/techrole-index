@@ -65,9 +65,11 @@ Demand проходит `log1p`, salary/growth ограничиваются по
 
 ## Classification
 
-Unicode/whitespace normalization → alias dictionary → regex → exclusion rules → experience → RU/EN seniority markers → confidence. В `rules-v2` признаки технологий применяются только к обобщённым software-заголовкам: результат принимается, если после подавления более специфичных ролей остался ровно один однозначный сигнал. Явный алиас заголовка всегда приоритетнее skills, а неоднозначность приводит к abstention. Lead/principal/architect исключаются из автоматического Senior. Optional AI применяется только после низкой уверенности rule-based результата и получает верхний confidence 0.79.
+Unicode/whitespace normalization → alias dictionary → regex → exclusion rules → experience → RU/EN seniority markers → confidence. В `rules-v3` признаки технологий применяются только к обобщённым software-заголовкам: результат принимается, если после подавления более специфичных ролей остался ровно один однозначный сигнал. Явный алиас заголовка всегда приоритетнее skills, а неоднозначность приводит к abstention. Слишком узкие технологические роли объединены с устойчивой базовой профессией: Analytics Engineer/dbt с Data Engineer, PostgreSQL DBA с DBA, Cloud Engineer с DevOps, Firmware с Embedded, Unreal с Game Developer, SOC с информационной безопасностью, NLP/LLM с AI Engineer, Ruby с Backend, JavaScript/TypeScript с Frontend, SAP/ABAP с ERP. Lead/principal/architect исключаются из автоматического Senior. Optional AI применяется только после низкой уверенности rule-based результата и получает верхний confidence 0.79.
 
 Повторная классификация меняет только строки без решения или с `rules-*`; AI- и ручные решения не перезаписываются. Команда сначала поддерживает dry-run, затем использует тот же детерминированный классификатор при применении.
+
+Для индекса `v1.2.0` строится собственный 30-дневный rolling-ряд каждой профессии из её точных HH-вакансий. Уровень сначала определяется по заголовку, а при отсутствии явного маркера — по коду опыта HH; вакансии направления в роль не подмешиваются. Бесплатный API физически ограничивает временные массивы 30 днями. На странице этот основной зарплатный график доступен всем, но кнопки 90/180 дней недоступны без Premium; остальные временные графики показываются только Premium-пользователям.
 
 ## Ограничения
 

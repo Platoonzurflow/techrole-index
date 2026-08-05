@@ -62,17 +62,17 @@ HABR_CALCULATOR_PUBLIC_MEDIANS = {
 # Public calculator medians for a broader neighbouring specialization. They
 # improve context without being relabelled as an exact profession match.
 HABR_CALCULATOR_RELATED_MEDIANS = {
-    "nlp-engineer": (
+    "ai-engineer": (
         "ml-engineer",
         "ML разработчик",
         230083,
-        "NLP входит в задачи ML-разработки, но источник публикует более широкий ML-срез.",
+        "AI-инженерия входит в задачи ML-разработки, но источник публикует более широкий ML-срез.",
     ),
-    "sap-developer": (
+    "erp-specialist": (
         "erp",
         "ERP-программист",
         147500,
-        "SAP относится к ERP-системам, но источник объединяет разные ERP-платформы.",
+        "Источник объединяет разные ERP-платформы и технические роли, а не только консультантов.",
     ),
 }
 
@@ -199,9 +199,9 @@ ROSSTAT_DATABASE_NETWORK_SLUGS = {
     "platform-engineer",
     "system-administrator",
     "network-engineer",
-    "cloud-engineer",
     "database-administrator",
-    "postgresql-dba",
+    "technical-support-specialist",
+    "system-engineer",
 }
 
 
@@ -249,13 +249,11 @@ CATEGORY_BENCHMARKS = {
 
 DATA_AI_CATEGORY = {
     "data-engineer": "analytics",
-    "analytics-engineer": "analytics",
     "database-administrator": "infrastructure",
-    "postgresql-dba": "infrastructure",
     "data-scientist": "analytics",
     "machine-learning-engineer": "development",
     "mlops-engineer": "development",
-    "nlp-engineer": "development",
+    "ai-engineer": "development",
     "computer-vision-engineer": "development",
 }
 
@@ -263,13 +261,29 @@ DATA_AI_CATEGORY = {
 # source label, P10, median, P90, scope, mapping note
 ROLE_DISTRIBUTIONS = {
     "data-engineer": ("Инженер по данным", 100000, 240000, 413000, "exact_role", None),
-    "analytics-engineer": (
-        "Инженер по данным",
+    "product-manager": (
+        "Продуктовый аналитик",
         100000,
-        240000,
-        413000,
+        230000,
+        399000,
         "related_role",
-        "Ориентир смежной роли Data Engineer; отдельного среза Analytics Engineer нет.",
+        "Ориентир смежной продуктовой роли; отдельного среза Product Manager нет.",
+    ),
+    "it-project-manager": (
+        "Бизнес-аналитик",
+        75000,
+        168000,
+        307000,
+        "related_role",
+        "Ориентир смежной проектной роли; отдельного среза IT Project Manager нет.",
+    ),
+    "1c-analyst": (
+        "Бизнес-аналитик",
+        75000,
+        168000,
+        307000,
+        "related_role",
+        "Ориентир смежной аналитической роли; источник не выделяет аналитиков 1С.",
     ),
     "product-analyst": (
         "Продуктовый аналитик",
@@ -295,6 +309,14 @@ ROLE_DISTRIBUTIONS = {
         100000,
         220000,
         379000,
+        "exact_role",
+        None,
+    ),
+    "qa-engineer": (
+        "Инженер по обеспечению качества",
+        86000,
+        190000,
+        334000,
         "exact_role",
         None,
     ),
@@ -356,6 +378,22 @@ ROLE_DISTRIBUTIONS = {
         240000,
         "exact_role",
         None,
+    ),
+    "technical-support-specialist": (
+        "Системный администратор",
+        60000,
+        120000,
+        240000,
+        "related_role",
+        "Ориентир смежной инфраструктурной роли; отдельного среза технической поддержки нет.",
+    ),
+    "system-engineer": (
+        "Системный администратор",
+        60000,
+        120000,
+        240000,
+        "related_role",
+        "Ориентир смежной инфраструктурной роли; отдельного среза системных инженеров нет.",
     ),
 }
 
@@ -705,19 +743,14 @@ DEVELOPER_MARKET_LEVEL_SLUGS = {
     "dotnet-developer",
     "cpp-developer",
     "php-developer",
-    "ruby-developer",
-    "javascript-typescript-developer",
     "android-developer",
     "ios-developer",
     "flutter-developer",
     "react-native-developer",
     "game-developer",
     "unity-developer",
-    "unreal-engine-developer",
     "embedded-developer",
-    "firmware-engineer",
     "1c-developer",
-    "sap-developer",
     "solution-architect",
 }
 

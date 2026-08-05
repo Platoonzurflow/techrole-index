@@ -664,22 +664,11 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   position: relative;
   z-index: 1;
   display: grid;
-  grid-template-columns: minmax(17rem, .8fr) minmax(22rem, 1.2fr);
+  grid-template-columns: minmax(0, .8fr) minmax(0, 1.2fr);
   align-items: center;
   gap: clamp(1rem, 3vw, 2.5rem);
 }
 .employer-donut { position: relative; min-width: 0; }
-.employer-donut-center {
-  position: absolute;
-  pointer-events: none;
-  inset: 50% auto auto 50%;
-  display: grid;
-  place-items: center;
-  transform: translate(-50%, -50%);
-  text-align: center;
-}
-.employer-donut-center strong { font-family: var(--font-mono), monospace; font-size: clamp(1.65rem, 4vw, 2.4rem); line-height: 1; }
-.employer-donut-center span { margin-top: .35rem; color: var(--muted); font-size: .72rem; font-weight: 800; letter-spacing: .08em; text-transform: uppercase; }
 .employer-leaderboard { display: grid; gap: .6rem; }
 .employer-leaderboard li {
   display: grid;
@@ -743,6 +732,8 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   transition: color .2s ease, background-color .2s ease, box-shadow .2s ease;
 }
 .chart-periods button:hover { color: var(--ink); }
+.chart-periods button:disabled { cursor: not-allowed; opacity: .48; }
+.chart-periods button:disabled:hover { color: var(--muted); }
 .chart-periods button.is-active {
   background: var(--ink);
   color: var(--panel);
@@ -832,6 +823,8 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .cinematic-copy { max-width: 56rem; }
   .career-scene { min-height: 540px; }
   .market-pulse-copy { max-width: 48rem; }
+  .employer-dashboard { grid-template-columns: 1fr; }
+  .employer-donut { max-width: 24rem; margin-inline: auto; width: 100%; }
 }
 
 @media (max-width: 639px) {

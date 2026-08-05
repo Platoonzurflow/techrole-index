@@ -27,7 +27,7 @@
       "id": "analytics_dbt_middle",
       "title": "Разработчик аналитических витрин, middle",
       "description": "dbt, SQL, тесты качества, семантические модели, документация метрик",
-      "expected_slugs": ["analytics-engineer"],
+      "expected_slugs": ["data-engineer"],
       "expected_seniorities": ["middle"]
     },
     {
@@ -41,7 +41,7 @@
       "id": "nlp_intern",
       "title": "Стажёр по обработке естественного языка",
       "description": "Transformers, токенизация, классификация текстов, named entity recognition",
-      "expected_slugs": ["nlp-engineer"],
+      "expected_slugs": ["ai-engineer"],
       "expected_seniorities": ["junior"]
     },
     {
@@ -62,7 +62,7 @@
       "id": "soc_middle",
       "title": "Специалист центра мониторинга, middle",
       "description": "SIEM, разбор событий безопасности, triage инцидентов, SOC L2",
-      "expected_slugs": ["soc-analyst"],
+      "expected_slugs": ["information-security-specialist"],
       "expected_seniorities": ["middle"]
     },
     {
@@ -83,14 +83,14 @@
       "id": "postgres_middle",
       "title": "Администратор корпоративного PostgreSQL, middle",
       "description": "PostgreSQL, репликация, PITR, pgBackRest, EXPLAIN, настройка запросов",
-      "expected_slugs": ["postgresql-dba"],
+      "expected_slugs": ["database-administrator"],
       "expected_seniorities": ["middle"]
     },
     {
       "id": "firmware_middle",
       "title": "Инженер программного обеспечения микроконтроллеров, middle",
       "description": "C, STM32, загрузчик, RTOS, JTAG, разработка микропрограмм",
-      "expected_slugs": ["firmware-engineer"],
+      "expected_slugs": ["embedded-developer"],
       "expected_seniorities": ["middle"]
     },
     {

@@ -7,7 +7,6 @@ const links = [
   ["Профессии", "/professions"],
   ["Рейтинг", "/top"],
   ["Сравнение", "/compare"],
-  ["Компании", "/companies"],
   ["Исследования", "/insights"],
   ["Методология", "/methodology"],
   ["Личное ведение", "/mentorship"],

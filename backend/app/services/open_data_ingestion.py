@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.data.catalog import ALIASES_BY_PROFESSION
+from app.data.catalog import ALIASES_BY_PROFESSION, EXCLUSIONS_BY_PROFESSION
 from app.domain.classifier import RuleBasedClassifier
 from app.models import (
     IngestionRun,
@@ -112,6 +112,7 @@ def build_rule_classifier(
             exclusions[slug].append(alias.exclude_pattern)
     for slug, profession in professions.items():
         aliases[slug].extend(ALIASES_BY_PROFESSION.get(slug, ()))
+        exclusions[slug].extend(EXCLUSIONS_BY_PROFESSION.get(slug, ()))
         aliases[slug].extend((profession.name_ru, profession.name_en))
     return RuleBasedClassifier(aliases, exclusions), professions
 

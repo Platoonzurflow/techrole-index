@@ -92,10 +92,6 @@ export function HhEmployerDashboard({
           label="Распределение вакансий между пятью ведущими работодателями и другими компаниями"
           heightClass="h-[21rem]"
         />
-        <div className="employer-donut-center" aria-hidden="true">
-          <strong>{data.employer_vacancy_count.toLocaleString("ru-RU")}</strong>
-          <span>вакансий</span>
-        </div>
       </div>
       <ol className="employer-leaderboard" aria-label="Топ работодателей">
         {companies.map((item, index) => {
@@ -251,11 +247,15 @@ export function PublicationChart({
 export function OfficialSalaryChart({
   data,
   benchmark,
+  maxPeriodDays = 180,
 }: {
   data: OfficialOpenDataSummary;
   benchmark?: SalaryBenchmarkSummary;
+  maxPeriodDays?: number;
 }) {
-  const [periodDays, setPeriodDays] = useState<30 | 90 | 180>(180);
+  const allowedMax = maxPeriodDays >= 180 ? 180 : maxPeriodDays >= 90 ? 90 : 30;
+  const [periodDays, setPeriodDays] = useState<30 | 90 | 180>(allowedMax);
+  const visiblePeriodDays = Math.min(periodDays, allowedMax) as 30 | 90 | 180;
   const allDates = [...new Set(
     data.salary_history.length > 0
       ? data.salary_history.map((item) => item.date)
@@ -265,9 +265,9 @@ export function OfficialSalaryChart({
     const latestDate = allDates.at(-1);
     if (!latestDate) return [];
     const cutoff = new Date(`${latestDate}T00:00:00Z`);
-    cutoff.setUTCDate(cutoff.getUTCDate() - periodDays + 1);
+    cutoff.setUTCDate(cutoff.getUTCDate() - visiblePeriodDays + 1);
     return allDates.filter((date) => new Date(`${date}T00:00:00Z`) >= cutoff);
-  }, [allDates, periodDays]);
+  }, [allDates, visiblePeriodDays]);
   const benchmarkByLevel = new Map(
     (benchmark ? salaryBenchmarkLevelPoints(benchmark) : []).map((point) => [point.seniority, point]),
   );
@@ -372,11 +372,14 @@ export function OfficialSalaryChart({
             <button
               key={days}
               type="button"
-              className={periodDays === days ? "is-active" : ""}
-              aria-pressed={periodDays === days}
+              className={visiblePeriodDays === days ? "is-active" : ""}
+              aria-pressed={visiblePeriodDays === days}
+              aria-label={days > allowedMax ? `${days} дней — доступно в Premium` : `${days} дней`}
+              disabled={days > allowedMax}
+              title={days > allowedMax ? "Доступно в Premium" : undefined}
               onClick={() => setPeriodDays(days)}
             >
-              {days} дней
+              {days} дней{days > allowedMax ? " · Premium" : ""}
             </button>
           ))}
         </div>
@@ -392,7 +395,7 @@ export function OfficialSalaryChart({
           ))}
         </div>
       ) : null}
-      <Chart option={option} label={`Скользящее среднее зарплаты за ${data.salary_history_window_days ?? 30} дней с ограничениями по уровням; видимый период ${periodDays} дней`} heightClass="h-[25rem]" />
+      <Chart option={option} label={`Скользящее среднее зарплаты за ${data.salary_history_window_days ?? 30} дней с ограничениями по уровням; видимый период ${visiblePeriodDays} дней`} heightClass="h-[25rem]" />
       {usesReference && (
         <div className="mt-3 space-y-2 text-sm text-muted">
           <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>

@@ -1,0 +1,83 @@
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
+
+from sqlalchemy import create_engine, select
+from sqlalchemy.orm import Session
+
+from app.models import (
+    Base,
+    Profession,
+    ProfessionCategory,
+    ProfessionMetricDaily,
+    Region,
+    SeniorityLevel,
+    Vacancy,
+    VacancySource,
+)
+from app.services.hh_profession_metrics import refresh_hh_profession_metrics
+
+
+def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
+    engine = create_engine("sqlite://")
+    Base.metadata.create_all(engine)
+    now = datetime(2026, 8, 5, 12, tzinfo=timezone.utc)
+    with Session(engine) as db:
+        category = ProfessionCategory(slug="quality", name_ru="Тестирование")
+        national = Region(code="ru", name_ru="Россия")
+        moscow = Region(code="msk", name_ru="Москва")
+        middle = SeniorityLevel(code="middle", name_ru="Middle", sort_order=2)
+        source = VacancySource(
+            code="hh_api", name="HH API", provider_type="HhApiProvider", enabled=True
+        )
+        db.add_all([category, national, moscow, middle, source])
+        db.flush()
+        profession = Profession(
+            slug="qa-engineer",
+            name_ru="QA-инженер",
+            name_en="QA Engineer",
+            description="",
+            category_id=category.id,
+        )
+        db.add(profession)
+        db.flush()
+        for index in range(3):
+            db.add(
+                Vacancy(
+                    source_id=source.id,
+                    external_id=f"qa-{index}",
+                    title="QA Engineer",
+                    region_id=moscow.id,
+                    currency="RUB",
+                    salary_gross=True,
+                    salary_from=Decimal("100000"),
+                    salary_to=Decimal("200000"),
+                    published_at=now - timedelta(days=index),
+                    first_seen_at=now,
+                    last_seen_at=now,
+                    is_remote=index == 0,
+                    profession_id=profession.id,
+                    seniority_id=middle.id,
+                )
+            )
+        db.commit()
+
+        result = refresh_hh_profession_metrics(
+            db, rolling_window_days=30, history_days=10
+        )
+        latest = db.scalar(
+            select(ProfessionMetricDaily).where(
+                ProfessionMetricDaily.metric_date == now.date(),
+                ProfessionMetricDaily.profession_id == profession.id,
+                ProfessionMetricDaily.region_id == national.id,
+            )
+        )
+
+        assert result.profession_count == 1
+        assert result.vacancy_count == 3
+        assert result.metric_rows == 6
+        assert latest is not None
+        assert latest.vacancy_count == 3
+        assert latest.salary_count == 3
+        assert latest.salary_median == Decimal("150000")
+        assert latest.remote_share == Decimal("0.33333")
+    engine.dispose()
