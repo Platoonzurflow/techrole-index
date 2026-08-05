@@ -1129,7 +1129,7 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
     hh_market_data = _hh_market_summary(
         db,
         profession.id,
-        include_category_context=True,
+        include_category_context=False,
     )
     salary_benchmark = SalaryBenchmarkSummary.model_validate(
         salary_benchmark_for(profession.slug, category.slug)

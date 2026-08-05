@@ -284,7 +284,7 @@ def test_reference_bootstrap_reuses_scoring_version_created_by_migration() -> No
     Base.metadata.create_all(engine)
     with Session(engine) as db:
         existing = ScoringVersion(
-            version="v1.1.0",
+            version="v1.2.0",
             weights={"legacy": 1.0},
             description="migration placeholder",
             is_active=True,

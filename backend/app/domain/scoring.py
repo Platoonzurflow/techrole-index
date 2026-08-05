@@ -9,7 +9,7 @@ DEFAULT_WEIGHTS = {
     "remote_share": 0.10,
     "data_quality": 0.10,
 }
-SCORING_VERSION = "v1.1.0"
+SCORING_VERSION = "v1.2.0"
 
 
 @dataclass(frozen=True)

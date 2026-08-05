@@ -8,12 +8,12 @@ export const metadata: Metadata = {
 };
 
 const components = [
-  ["Спрос", "30%", "Percentile rank логарифма расчётного объёма подготовленной витрины"],
-  ["Уровень зарплаты", "25%", "Percentile rank winsorized медианы"],
-  ["Рост спроса", "20%", "Percentile rank изменения спроса с ограничением экстремумов"],
-  ["Доступность для начинающих", "10%", "Доля Junior, нормированная к 35%"],
-  ["Удалённая работа", "10%", "Доля удалённых записей подготовленной витрины"],
-  ["Стабильность и качество", "5%", "Coverage зарплат и размер выборки"],
+  ["Спрос", "28%", "Percentile rank логарифма собственных HH-публикаций профессии"],
+  ["Уровень зарплаты", "24%", "Percentile rank собственной gross RUB-медианы при n≥5"],
+  ["Рост спроса", "16%", "Собственные последние 7 дней против предыдущих 7"],
+  ["Доступность для начинающих", "12%", "Собственная доля noExperience, нормированная к 35%"],
+  ["Удалённая работа", "10%", "Собственная доля удалённых HH-вакансий"],
+  ["Стабильность и качество", "10%", "Собственные coverage зарплат и размер выборки"],
 ];
 
 const faq = [
@@ -41,7 +41,7 @@ export default function MethodologyPage() {
   return (
     <article className="shell py-12">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema).replace(/</g, "\\u003c") }} />
-      <p className="eyebrow">Версия scoring v1.0.0</p>
+      <p className="eyebrow">Версия scoring v1.2.0</p>
       <h1 className="mt-3 text-4xl font-bold">Как считаются показатели</h1>
       <p className="mt-5 max-w-3xl text-lg leading-8 text-muted">Индекс помогает сравнить профессии по одинаковым правилам. На результат влияют спрос, зарплата, динамика, доля Junior-вакансий, удалённая работа и полнота данных. На странице каждой профессии показан вклад каждого фактора в итоговые 100 баллов.</p>
       <div className="mt-10 grid gap-6 lg:grid-cols-[1fr_.8fr]">
@@ -67,7 +67,7 @@ export default function MethodologyPage() {
       </div>
       <section className="mt-8 panel p-6">
         <h2 className="text-2xl font-semibold">Формула итоговой оценки</h2>
-        <p className="mt-3 text-muted">Количество вакансий логарифмируется, денежные и growth-экстремумы ограничиваются 5/95 перцентилями, затем признаки переводятся в percentile rank среди активных профессий. Итог ограничивается диапазоном 0-100.</p>
+        <p className="mt-3 text-muted">Каждая профессия использует только свои классифицированные HH-вакансии: спрос, 14-дневную динамику, долю noExperience, удалённость и полноту зарплат. Собственная gross RUB-медиана входит при пяти полных вилках; при меньшем n зарплатный компонент получает нейтральную медиану достаточных peer-выборок, а качество данных остаётся низким. Категорийные строки в оценку не подставляются. Количество вакансий логарифмируется, денежные и growth-экстремумы ограничиваются 5/95 перцентилями, затем признаки переводятся в percentile rank среди активных профессий.</p>
         <div className="mt-6 table-wrap shadow-none">
           <table className="data-table"><thead><tr><th>Компонент</th><th>Вес</th><th>Нормализация</th></tr></thead><tbody>{components.map(([name, weight, method]) => <tr key={name}><td className="font-semibold">{name}</td><td className="font-mono">{weight}</td><td className="text-muted">{method}</td></tr>)}</tbody></table>
         </div>
@@ -80,7 +80,7 @@ export default function MethodologyPage() {
       </section>
       <section className="mt-8 rounded-2xl border border-amber-400/35 bg-amber-400/5 p-6">
         <h2 className="text-xl font-semibold">Источники и условия</h2>
-        <p className="mt-3 leading-7 text-muted">Исторические метрики строятся воспроизводимо: для записей сохраняются источник, дата загрузки и правила классификации. Открытый API «Работы России» используется для официальных публикаций; зарплатные срезы проходят проверку валюты, периода и полноты вилки. HTML-скрейпинг и обход ограничений источников не применяются.</p>
+        <p className="mt-3 leading-7 text-muted">Исторические метрики строятся воспроизводимо: для записей сохраняются источник, дата загрузки и правила классификации. Открытый API «Работы России» используется для отдельного слоя официальных публикаций; одобренное приложение HH — для отдельного поискового снимка, подробных фасетов и индекса v1.2.0. Зарплатные срезы проходят проверку валюты, периода, gross/net и полноты вилки. HTML-скрейпинг и обход ограничений источников не применяются.</p>
         <Link href="/sources" className="mt-4 inline-block font-semibold text-accent">Подробнее об источниках →</Link>
       </section>
       <section id="faq" className="mt-8 scroll-mt-24">

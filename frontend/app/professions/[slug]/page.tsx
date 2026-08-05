@@ -96,7 +96,7 @@ function DataLayers({ profession }: { profession: ProfessionDetail }) {
         </article>
         <article className="rounded-2xl border border-line p-5">
           <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Подготовленная витрина</h3>{(() => { const badge = confidenceBadge(profession.data_confidence); return <span className={badge.className}>{badge.label}</span>; })()}</div>
-          <p className="mt-3 text-sm leading-6 text-muted">Показатели спроса, gross-зарплат и индекса рассчитаны в детерминированной витрине{profession.updated_at ? ` на дату ${profession.updated_at}` : ""}. Эта дата не является подтверждением текущего состояния рынка.</p>
+          <p className="mt-3 text-sm leading-6 text-muted">Расчётный ряд спроса и gross-зарплат подготовлен в отдельной детерминированной витрине{profession.updated_at ? ` на дату ${profession.updated_at}` : ""}. Индекс {profession.scoring_version ?? ""} пересчитан из собственных HH-наблюдений этой профессии и не заимствует показатели направления. Ни одна из дат не является обещанием текущего состояния рынка.</p>
         </article>
         <article className="rounded-2xl border border-line p-5">
           <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Публичные зарплатные исследования</h3><span className={confidenceBadge(profession.salary_benchmark?.coverage === "direct" ? "high" : profession.salary_benchmark?.coverage === "related" ? "medium" : "low").className}>{profession.salary_benchmark?.coverage === "direct" ? "точный срез" : profession.salary_benchmark?.coverage === "related" ? "смежный срез" : "ориентир"}</span></div>
@@ -434,7 +434,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           </article>
           <article className="market-stage mt-5">
             <div className="market-stage-copy"><p className="eyebrow">Поток публикаций</p><h3 className="mt-2 text-2xl font-semibold">Новые вакансии по неделям</h3><p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Поиск выполнен по названию профессии и алиасам. Совпадения дедуплицированы по идентификатору вакансии.</p></div>
-            <div className="mt-5"><PublicationChart data={profession.hh_market_data} /></div>
+            <div className="mt-5"><PublicationChart data={profession.hh_market_data} minimumExactPublications={5} /></div>
           </article>
           <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
             <p>Это официальный поисковый снимок, а не полная копия базы HH. Глубина одной поисковой выдачи ограничена 2 000 результатами. Исходные тексты, контакты и адреса не публикуются; названия работодателей показываются только в агрегированном топ-5, остальные объединены в «Другие компании».</p>
@@ -468,7 +468,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <article id="score-breakdown" className="panel p-6">
               <p className="eyebrow">Индекс {profession.scoring_version}</p>
               <h2 className="mt-2 text-2xl font-semibold">За что начислены баллы</h2>
-              <p className="mt-3 text-sm leading-6 text-muted">У каждого фактора есть оценка от 0 до 100 и вес. Справа показан его реальный вклад в итоговый индекс.</p>
+              <p className="mt-3 text-sm leading-6 text-muted">У каждого фактора есть оценка от 0 до 100 и вес. В версии v1.2.0 спрос, динамика, junior-доступность, удалённость и качество взяты только из HH-вакансий этой профессии; собственная gross RUB-медиана входит при n≥5. Справа показан реальный вклад фактора.</p>
               <div className="mt-6 grid gap-5">
                 {Object.entries(profession.score_breakdown ?? {}).map(([key, value]) => {
                   const weight = profession.score_weights?.[key] ?? 0;

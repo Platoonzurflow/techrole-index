@@ -174,13 +174,24 @@ function rollingAverage(values: number[], windowSize = 4) {
   });
 }
 
-export function PublicationChart({ data }: { data: OfficialOpenDataSummary }) {
-  const useExactScope = data.total_publications >= 20;
+export function PublicationChart({
+  data,
+  minimumExactPublications = 20,
+}: {
+  data: OfficialOpenDataSummary;
+  minimumExactPublications?: number;
+}) {
+  const hasCategoryContext = data.category_daily_publications.length > 0;
+  const useExactScope = data.total_publications >= minimumExactPublications || !hasCategoryContext;
   const weeks = aggregatePublicationsByWeek(
     useExactScope ? data.daily_publications : data.category_daily_publications,
   );
   const values = weeks.map((item) => item.count);
-  const scopeLabel = useExactScope ? "точная профессия" : "направление";
+  const scopeLabel = useExactScope
+    ? data.total_publications >= minimumExactPublications
+      ? "точная профессия"
+      : "точная профессия · малая выборка"
+    : "направление";
   const total = values.reduce((sum, value) => sum + value, 0);
   const average = weeks.length ? Math.round((total / weeks.length) * 10) / 10 : 0;
   const option: echarts.EChartsOption = {

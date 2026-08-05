@@ -124,8 +124,9 @@ def _seed_sources_and_scoring(
         select(ScoringVersion).where(ScoringVersion.version == SCORING_VERSION)
     )
     scoring_description = (
-        "Карьерный индекс: prepared demand/growth/access/remote, "
-        "публичный salary benchmark и повышенный вес качества; METHODOLOGY.md."
+        "Карьерный индекс: собственные HH-наблюдения каждой профессии для спроса, "
+        "динамики, junior-доступности, удалённости и качества; собственная gross RUB "
+        "медиана от n>=5, иначе нейтральная peer-медиана; METHODOLOGY.md."
     )
     if scoring is None:
         scoring = ScoringVersion(
