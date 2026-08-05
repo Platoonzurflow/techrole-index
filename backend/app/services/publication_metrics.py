@@ -199,13 +199,15 @@ def _portable_refresh(
         )
         grouped[key].append((vacancy, SalaryInput(lower=lower, upper=upper, gross=gross)))
 
-    existing_rows = db.scalars(
-        select(ObservedPublicationMetricDaily).where(
-            ObservedPublicationMetricDaily.source_id == source.id,
+    existing_statement = select(ObservedPublicationMetricDaily).where(
+        ObservedPublicationMetricDaily.source_id == source.id,
+    )
+    if match_run_id is None:
+        existing_statement = existing_statement.where(
             ObservedPublicationMetricDaily.metric_date >= date_from,
             ObservedPublicationMetricDaily.metric_date <= date_to,
         )
-    ).all()
+    existing_rows = db.scalars(existing_statement).all()
     existing = {
         (
             row.metric_date,
@@ -327,14 +329,16 @@ def _postgres_refresh(
             "match_run_id": match_run_id,
         },
     ).mappings().one()
-    deleted = db.execute(
-        delete(ObservedPublicationMetricDaily).where(
-            ObservedPublicationMetricDaily.source_id == source.id,
+    stale_statement = delete(ObservedPublicationMetricDaily).where(
+        ObservedPublicationMetricDaily.source_id == source.id,
+        ObservedPublicationMetricDaily.transform_run_id != run_id,
+    )
+    if match_run_id is None:
+        stale_statement = stale_statement.where(
             ObservedPublicationMetricDaily.metric_date >= date_from,
             ObservedPublicationMetricDaily.metric_date <= date_to,
-            ObservedPublicationMetricDaily.transform_run_id != run_id,
         )
-    )
+    deleted = db.execute(stale_statement)
     transformed = db.scalars(
         select(ObservedPublicationMetricDaily).where(
             ObservedPublicationMetricDaily.source_id == source.id,
@@ -410,7 +414,13 @@ def refresh_observed_publication_metrics(
             ObservedPublicationMetricDaily.source_id == source.id
         )
     )
-    if date_from is not None:
+    if match_run_id is not None:
+        # Query matches describe one complete HH search snapshot. Rebuild its full
+        # observed range so vacancies that disappeared from the newest successful
+        # run cannot survive as stale daily export rows.
+        start = earliest
+        end = latest
+    elif date_from is not None:
         start = max(date_from, earliest)
     elif last_materialized is not None:
         start = max(earliest, last_materialized - timedelta(days=overlap_days - 1))
