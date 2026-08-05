@@ -601,6 +601,8 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 .chart-panel { overflow: hidden; }
 .chart-panel::before { content: ""; position: absolute; inset: 0 0 auto; height: 3px; background: linear-gradient(90deg, var(--accent), var(--accent-2), transparent 70%); }
 .chart-shell { animation: chart-arrive .7s .15s ease both; }
+.chart-interactive { touch-action: pan-y; }
+.mobile-card-rail { min-width: 0; }
 .market-showcase {
   position: relative;
   isolation: isolate;
@@ -859,27 +861,132 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .job-section-heading { align-items: start; }
   .support-button { bottom: max(.8rem, env(safe-area-inset-bottom)); right: max(.8rem, env(safe-area-inset-right)); }
   .compare-builder-action .button-primary { width: 100%; }
-  .profession-page { overflow-wrap: anywhere; }
-  .profession-page .profession-hero { border-radius: 1.35rem .7rem 1.35rem 1.35rem; }
+  .profession-page { overflow-wrap: anywhere; padding-top: 1.2rem; padding-bottom: 2rem; }
+  .profession-breadcrumb { display: none; }
+  .profession-page .mt-12, .profession-page .mt-10 { margin-top: 1.35rem; }
+  .profession-page .mt-8, .profession-page .mt-7 { margin-top: 1rem; }
+  .profession-page .mt-6, .profession-page .mt-5 { margin-top: .85rem; }
+  .profession-page .profession-hero { gap: 1rem; margin-top: .5rem; border-radius: 1.35rem .7rem 1.35rem 1.35rem; padding: 1rem; }
   .profession-page .profession-hero > .panel { width: 100%; min-width: 0; }
   .profession-page .panel { padding-inline: 1rem; }
+  .profession-hero h1 { margin-top: .55rem; font-size: 2rem; line-height: 1.05; }
+  .profession-hero .profession-description { margin-top: .75rem; line-height: 1.5; }
+  .mobile-clamp {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .profession-score-card { min-width: 0; padding: .75rem; }
+  .profession-score-ring { width: 3.5rem; height: 3.5rem; }
+  .profession-score-ring strong { font-size: 1.15rem; }
+  .profession-share { margin-top: .85rem; }
+  .profession-page h2, .market-showcase h2 { font-size: 1.45rem; line-height: 1.15; }
+  .market-stage-copy h3 { font-size: 1.25rem; }
   .profession-toc {
+    position: sticky;
+    top: .3rem;
+    z-index: 20;
     flex-wrap: nowrap;
     gap: .4rem;
     margin-inline: -.5rem;
     overflow-x: auto;
     overscroll-behavior-inline: contain;
+    border: 1px solid rgb(var(--line-rgb) / .8);
+    border-radius: .9rem;
+    padding: .35rem;
+    background: rgb(var(--panel-rgb) / .92);
+    backdrop-filter: blur(14px);
     scrollbar-width: none;
   }
   .profession-toc::-webkit-scrollbar { display: none; }
-  .profession-toc a { flex: none; white-space: nowrap; }
-  .market-showcase { border-radius: 1.35rem; padding-inline: .8rem; }
+  .profession-toc a { flex: none; padding: .35rem .65rem; white-space: nowrap; font-size: .72rem; }
+  .mobile-card-rail {
+    display: flex !important;
+    gap: .65rem;
+    margin-inline: -.25rem;
+    overflow-x: auto;
+    padding: .1rem .25rem .65rem;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none;
+  }
+  .mobile-card-rail::-webkit-scrollbar { display: none; }
+  .mobile-card-rail > * { flex: 0 0 min(82vw, 20rem); scroll-snap-align: start; }
+  .tech-stack-card, .salary-level-card, .salary-source-card { padding: 1rem; }
+  .salary-headline-showcase { margin-top: 1rem; border-radius: 1.1rem; }
+  .salary-headline-grid { grid-template-columns: minmax(0, 1.15fr) minmax(0, .85fr); }
+  .salary-headline-copy, .salary-headline-visual { min-height: 11rem; padding: .8rem; }
+  .salary-headline-visual { border-top: 0; border-left: 1px solid var(--line); }
+  .salary-headline-copy h3 { font-size: 1rem; }
+  .salary-headline-copy > p:nth-last-child(2) { margin-top: 1.2rem; }
+  .salary-headline-copy > p:last-child { font-size: 1.55rem; line-height: 1.05; }
+  .salary-headline-visual .eyebrow { font-size: .55rem; }
+  .salary-headline-ring { width: 7.25rem; height: 7.25rem; margin-top: .35rem; }
+  .salary-headline-ring strong { font-size: 1.6rem; }
+  .salary-headline-visual > p:last-child { display: none; }
+  .salary-level-grid { margin-top: .85rem; }
+  .salary-level-card dl { margin-top: .8rem; gap: .45rem; padding-top: .7rem; }
+  .salary-level-card > p.mt-5 { margin-top: .75rem; }
+  .salary-level-card > p:last-child, .salary-source-card > p:last-child {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .salary-source-grid { margin-top: 1rem; }
+  .salary-source-card .button-secondary { min-height: 2.3rem; padding-inline: .7rem; font-size: .72rem; }
+  .market-showcase { border-radius: 1.35rem; padding-block: 1rem; padding-inline: .8rem; }
   .market-showcase > .flex .button-secondary { width: 100%; }
-  .market-stage { border-radius: 1.1rem; padding-inline: .75rem; }
+  .compact-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: .45rem; }
+  .market-showcase-stats > div { min-height: 4.65rem; border-radius: .8rem; padding: .65rem; }
+  .market-showcase-stats p.text-3xl { margin-top: .35rem; font-size: 1.45rem; }
+  .market-stage { border-radius: 1.1rem; padding: .8rem .75rem; }
   .market-stage-copy h3, .market-showcase h2 { text-wrap: balance; }
+  .salary-main-stage .chart-shell { height: 16.5rem !important; }
+  .secondary-chart-grid .chart-shell, .prepared-chart-panel .chart-shell { height: 15.5rem !important; }
+  .chart-toolbar { gap: .55rem; margin-bottom: .45rem; }
+  .chart-toolbar > span { display: none; }
+  .chart-periods button { min-height: 2rem; font-size: .68rem; }
+  .chart-kpis { gap: .25rem; margin-bottom: .2rem; }
+  .chart-kpis > span { padding: .3rem .4rem; }
+  .chart-kpis strong { font-size: .68rem; }
+  .chart-kpis small { font-size: .6rem; }
+  .chart-explanation {
+    display: -webkit-box;
+    overflow: hidden;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+  .market-footnote { display: none; }
   .employer-dashboard { grid-template-columns: 1fr; }
-  .employer-donut { max-width: 24rem; margin-inline: auto; width: 100%; }
-  .hh-facet-grid { grid-template-columns: 1fr; }
+  .employer-donut { max-width: 14rem; margin-inline: auto; width: 100%; }
+  .employer-donut .chart-shell { height: 12.5rem !important; }
+  .employer-leaderboard { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .4rem; }
+  .employer-leaderboard li { grid-template-columns: 1.7rem minmax(0, 1fr) auto; gap: .35rem; min-height: 3.25rem; border-radius: .7rem; padding: .4rem; }
+  .employer-rank { width: 1.65rem; height: 1.65rem; border-radius: .5rem; font-size: .72rem; }
+  .employer-leaderboard li > span:nth-child(2) { gap: .3rem; }
+  .employer-leaderboard li > span:nth-child(2) > strong { font-size: .68rem; }
+  .employer-value strong { font-size: .75rem; }
+  .employer-value small { font-size: .55rem; }
+  .employer-bar { height: .2rem; }
+  .hh-facet-grid { display: flex; gap: .65rem; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; }
+  .hh-facet-grid::-webkit-scrollbar { display: none; }
+  .hh-facet-card { flex: 0 0 min(82vw, 20rem); scroll-snap-align: start; padding: .8rem; }
+  .mobile-chip-rail { flex-wrap: nowrap !important; overflow-x: auto; padding-bottom: .4rem; scrollbar-width: none; }
+  .mobile-chip-rail::-webkit-scrollbar { display: none; }
+  .mobile-chip-rail > * { flex: none; }
+  .market-region-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .45rem; }
+  .market-region-grid > div { min-width: 0; border: 1px solid var(--line); border-radius: .7rem; padding: .5rem; }
+  .market-region-grid span { min-width: 0; font-size: .72rem; }
+  .market-region-grid svg { display: none; }
+  .market-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .5rem; }
+  .market-metric-grid .panel { padding: .75rem; }
+  .market-metric-grid .text-3xl { font-size: 1.45rem; }
+  .score-breakdown-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .85rem .65rem; }
+  .score-factor { min-width: 0; }
+  .score-factor .text-sm { display: grid; gap: .2rem; }
+  .score-factor .text-sm strong { font-size: .68rem; }
+  .score-factor-note { display: none; }
   .chart-shell { min-width: 0; }
   .chart-toolbar { align-items: flex-start; flex-direction: column; }
   .chart-periods { width: 100%; }
@@ -888,7 +995,11 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .chart-kpis > span { min-width: 0; padding-inline: .5rem; }
   .chart-kpis > span:last-child:nth-child(odd) { grid-column: 1 / -1; }
   .profession-page .data-table { min-width: 620px; }
-  .observation-period { align-items: flex-start; flex-wrap: wrap; }
+  .observation-period { align-items: flex-start; flex-wrap: wrap; margin-top: 1.35rem; padding: .7rem .15rem; }
+  .site-footer-grid { grid-template-columns: 1fr 1fr; gap: 1.1rem; padding-block: 1.8rem; }
+  .site-footer-brand { grid-column: 1 / -1; }
+  .site-footer-links { display: flex !important; flex-wrap: wrap; align-content: start; gap: .45rem .7rem !important; }
+  .site-footer-links a { font-size: .7rem; }
 }
 
 @media (max-width: 359px) {

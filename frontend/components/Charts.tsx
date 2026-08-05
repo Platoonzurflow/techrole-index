@@ -19,6 +19,13 @@ const colors = { junior: "#2694a8", middle: "#c85a38", senior: "#8a63a7" };
 const levelLabels = { junior: "Junior", middle: "Middle", senior: "Senior" } as const;
 const employerColors = ["#ff5b62", "#2694a8", "#f2b84b", "#8a63a7", "#3d9b73", "#8b95a7"];
 
+function shortDateLabel(value: string) {
+  const date = value.slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? `${date.slice(8, 10)}.${date.slice(5, 7)}`
+    : value;
+}
+
 function Chart({
   option,
   label,
@@ -31,19 +38,56 @@ function Chart({
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!ref.current) return;
-    const chart = echarts.init(ref.current, undefined, { renderer: "canvas" });
+    const chart = echarts.init(ref.current, undefined, {
+      renderer: "canvas",
+      devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
+    });
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const compactOption: echarts.EChartsOption = {
+      ...(option.legend ? {
+        legend: {
+          top: 0,
+          left: 4,
+          right: 4,
+          itemWidth: 11,
+          itemHeight: 7,
+          itemGap: 9,
+          textStyle: { color: "#64748b", fontSize: 10 },
+        },
+      } : {}),
+      ...(option.grid ? { grid: { left: 2, right: 7, top: 42, bottom: 2, containLabel: true } } : {}),
+      ...(option.xAxis ? { xAxis: { axisLabel: { fontSize: 9, margin: 8, hideOverlap: true }, axisTick: { show: false } } } : {}),
+      ...(option.yAxis ? { yAxis: { axisLabel: { fontSize: 9, margin: 6 }, axisTick: { show: false } } } : {}),
+    };
     chart.setOption({
       ...option,
+      tooltip: typeof option.tooltip === "object" && !Array.isArray(option.tooltip)
+        ? {
+            ...option.tooltip,
+            confine: true,
+            borderColor: "rgba(100,116,139,.22)",
+            borderWidth: 1,
+            extraCssText: "max-width:min(82vw,320px);border-radius:12px;box-shadow:0 14px 35px rgba(15,23,42,.18);",
+          }
+        : option.tooltip,
+      media: [
+        ...(option.media ?? []),
+        {
+          query: { maxWidth: 520 },
+          option: compactOption,
+        },
+      ],
       animation: !reducedMotion,
       animationDuration: reducedMotion ? 0 : 850,
       animationEasing: "cubicOut",
     });
     const resize = () => chart.resize();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(resize);
+    observer?.observe(ref.current);
     window.addEventListener("resize", resize);
-    return () => { window.removeEventListener("resize", resize); chart.dispose(); };
+    return () => { observer?.disconnect(); window.removeEventListener("resize", resize); chart.dispose(); };
   }, [option]);
-  return <div ref={ref} className={`chart-shell w-full ${heightClass}`} role="img" aria-label={label} />;
+  return <div ref={ref} className={`chart-shell chart-interactive w-full ${heightClass}`} role="img" aria-label={label} />;
 }
 
 export function HhEmployerDashboard({
@@ -141,7 +185,7 @@ export function VacancyChart({ metrics }: { metrics: MetricPoint[] }) {
     tooltip: { trigger: "axis" },
     legend: { type: "scroll", top: 4, left: 8, right: 8, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 16, top: 48, bottom: 10, containLabel: true },
-    xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true }, axisLine: { lineStyle: { color: "#334155" } } },
+    xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true, formatter: shortDateLabel }, axisLine: { lineStyle: { color: "#334155" } } },
     yAxis: { type: "value", minInterval: 1, axisLabel: { color: "#64748b" }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
     series: levelSeries.map((item) => ({ ...item, stack: "vacancies", areaStyle: { opacity: 0.09 } })),
   };
@@ -197,7 +241,7 @@ export function PublicationChart({
     xAxis: {
       type: "category",
       data: weeks.map((item) => item.label),
-      axisLabel: { color: "#64748b", hideOverlap: true },
+      axisLabel: { color: "#64748b", hideOverlap: true, formatter: shortDateLabel },
       axisLine: { lineStyle: { color: "#334155" } },
     },
     yAxis: {
@@ -350,7 +394,7 @@ export function OfficialSalaryChart({
     tooltip: { trigger: "axis", valueFormatter: (value) => value == null ? "Недостаточно данных" : `${new Intl.NumberFormat("ru-RU").format(Number(value))} ₽` },
     legend: { type: "scroll", top: 4, left: 8, right: 8, textStyle: { color: "#64748b" } },
     grid: { left: 10, right: 26, top: 48, bottom: 10, containLabel: true },
-    xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true }, axisLine: { lineStyle: { color: "#334155" } } },
+    xAxis: { type: "category", data: dates, axisLabel: { color: "#64748b", hideOverlap: true, formatter: shortDateLabel }, axisLine: { lineStyle: { color: "#334155" } } },
     yAxis: { type: "value", axisLabel: { color: "#64748b", formatter: (value: number) => `${Math.round(value / 1000)}k` }, splitLine: { lineStyle: { color: "rgba(100,116,139,.16)" } } },
     series: salarySeries,
   };
@@ -397,11 +441,11 @@ export function OfficialSalaryChart({
       ) : null}
       <Chart option={option} label={`Скользящее среднее зарплаты за ${data.salary_history_window_days ?? 30} дней с ограничениями по уровням; видимый период ${visiblePeriodDays} дней`} heightClass="h-[25rem]" />
       {usesReference && (
-        <div className="mt-3 space-y-2 text-sm text-muted">
+        <div className="chart-explanation mt-3 space-y-2 text-sm text-muted">
           <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>
         </div>
       )}
-      <p className="mt-3 text-sm text-muted">{hasInversion ? "В текущем периоде есть пересечение. " : ""}Линии наблюдений могут пересекаться, потому что выборки уровней имеют разный состав. Значения не переставляются искусственно; для карьерного порядка используйте непротиворечивые карточки уровней выше.</p>
+      <p className="chart-explanation mt-3 text-sm text-muted">{hasInversion ? "В текущем периоде есть пересечение. " : ""}Линии наблюдений могут пересекаться, потому что выборки уровней имеют разный состав. Значения не переставляются искусственно; для карьерного порядка используйте непротиворечивые карточки уровней выше.</p>
     </div>
   );
 }

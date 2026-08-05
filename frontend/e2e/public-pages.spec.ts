@@ -117,6 +117,7 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
     return {
       viewport,
       pageWidth: document.documentElement.scrollWidth,
+      pageHeight: document.documentElement.scrollHeight,
       sectionsFit: selectors.every((selector) => {
         const rect = document.querySelector(selector)?.getBoundingClientRect();
         return rect != null && rect.left >= -1 && rect.right <= viewport + 1;
@@ -126,12 +127,27 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
         return rect.width > 0 && rect.left >= -1 && rect.right <= viewport + 1;
       }),
       tocScrollable: getComputedStyle(document.querySelector(".profession-toc")!).overflowX === "auto",
+      statColumns: getComputedStyle(document.querySelector(".compact-stat-grid")!)
+        .gridTemplateColumns.split(" ").length,
+      salaryRailScrollable: (() => {
+        const rail = document.querySelector(".salary-level-grid") as HTMLElement | null;
+        return rail != null
+          && getComputedStyle(rail).overflowX === "auto"
+          && rail.scrollWidth > rail.clientWidth;
+      })(),
+      mainChartHeight: document.querySelector("#salary-history .chart-shell")
+        ?.getBoundingClientRect().height ?? 0,
     };
   });
   expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewport + 1);
   expect(layout.sectionsFit).toBe(true);
   expect(layout.chartsFit).toBe(true);
   expect(layout.tocScrollable).toBe(true);
+  expect(layout.statColumns).toBe(2);
+  expect(layout.salaryRailScrollable).toBe(true);
+  expect(layout.mainChartHeight).toBeGreaterThan(200);
+  expect(layout.mainChartHeight).toBeLessThanOrEqual(280);
+  expect(layout.pageHeight).toBeLessThan(12_000);
 });
 
 test("profession structured data cites only visible public datasets", async ({ page }) => {

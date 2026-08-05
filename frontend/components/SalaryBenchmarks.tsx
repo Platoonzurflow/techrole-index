@@ -71,7 +71,7 @@ function BenchmarkCard({ point }: { point: SalaryBenchmarkPoint }) {
   return (
     <article
       id={fragment}
-      className="scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5"
+      className="salary-level-card scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5"
     >
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -113,10 +113,10 @@ function SalaryMedianShowcase({
     <article
       id={`salary-reference-${point.source_id}-${point.scope}-${point.geography}-all`}
       data-testid="salary-median-showcase"
-      className="mt-6 overflow-hidden rounded-3xl border border-line bg-[rgb(var(--panel-rgb)/.55)]"
+      className="salary-headline-showcase mt-6 overflow-hidden rounded-3xl border border-line bg-[rgb(var(--panel-rgb)/.55)]"
     >
-      <div className="grid lg:grid-cols-2">
-        <div className="flex min-h-72 flex-col justify-center p-6 sm:p-8 lg:p-10">
+      <div className="salary-headline-grid grid lg:grid-cols-2">
+        <div className="salary-headline-copy flex min-h-72 flex-col justify-center p-6 sm:p-8 lg:p-10">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h3 className="text-xl font-semibold sm:text-2xl">{point.label}</h3>
             <span className="badge">{scopeLabels[point.scope]}</span>
@@ -127,10 +127,10 @@ function SalaryMedianShowcase({
           </p>
         </div>
 
-        <div className="relative flex min-h-72 flex-col items-center justify-center overflow-hidden border-t border-line bg-[radial-gradient(circle_at_50%_45%,rgb(var(--accent-rgb)/.14),transparent_62%)] p-6 text-center lg:border-l lg:border-t-0">
+        <div className="salary-headline-visual relative flex min-h-72 flex-col items-center justify-center overflow-hidden border-t border-line bg-[radial-gradient(circle_at_50%_45%,rgb(var(--accent-rgb)/.14),transparent_62%)] p-6 text-center lg:border-l lg:border-t-0">
           <div className="pointer-events-none absolute -right-20 -top-20 size-56 rounded-full border-[34px] border-[rgb(var(--accent-rgb)/.07)]" />
           <p className="eyebrow">Относительно максимума</p>
-          <div className="relative mt-4 size-48 sm:size-52" role="img" aria-label={accessibleLabel}>
+          <div className="salary-headline-ring relative mt-4 size-48 sm:size-52" role="img" aria-label={accessibleLabel}>
             <svg className="size-full -rotate-90" viewBox="0 0 120 120" aria-hidden="true">
               <circle cx="60" cy="60" r="49" fill="none" stroke="var(--line)" strokeWidth="10" />
               <circle
@@ -172,12 +172,12 @@ export function SalaryBenchmarks({
   const levels = salaryBenchmarkLevelPoints(data);
 
   return (
-    <section id="salary-benchmark" className="panel mt-10 scroll-mt-24 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
+    <section id="salary-benchmark" className="salary-benchmark-section panel mt-10 scroll-mt-24 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="eyebrow">Зарплатные ориентиры</p>
           <h2 id="salary-benchmark-title" className="mt-2 text-2xl font-semibold">Фактические доходы специалистов</h2>
-          <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">{data.methodology_note}</p>
+          <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{data.methodology_note}</p>
         </div>
         <span className="badge confidence-medium">{coverageLabels[data.coverage]}</span>
       </div>
@@ -195,14 +195,14 @@ export function SalaryBenchmarks({
           {official ? (
             <SalaryBySeniority official={official} benchmark={data} />
           ) : (
-            <div className="mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
+            <div className="salary-level-grid mobile-card-rail mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
           )}
         </div>
       ) : null}
 
-      <div className="mt-8 grid gap-3 lg:grid-cols-2">
+      <div className="salary-source-grid mobile-card-rail mt-8 grid gap-3 lg:grid-cols-2">
         {data.sources.map((source) => (
-          <article id={`salary-source-${source.id}`} key={source.id} className="scroll-mt-24 rounded-2xl border border-line p-4 text-sm">
+          <article id={`salary-source-${source.id}`} key={source.id} className="salary-source-card scroll-mt-24 rounded-2xl border border-line p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div><h3 className="font-semibold">{source.name}</h3><p className="mt-1 text-muted">{source.period} · {taxLabel(source.tax_status)}{source.total_sample_size ? ` · n=${source.total_sample_size.toLocaleString("ru-RU")}` : ""}</p></div>
               <a className="button-secondary" href={source.url} target="_blank" rel="noreferrer">Источник <ExternalLink size={14} /></a>
@@ -232,7 +232,7 @@ export function SalaryBySeniority({
 
   return (
     <>
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="salary-level-grid mobile-card-rail mt-5 grid gap-4 lg:grid-cols-3">
       {salaryLevelOrder.map((seniority) => {
         const observed = officialByLevel.get(seniority);
         const reference = benchmarkByLevel.get(seniority);
@@ -256,7 +256,7 @@ export function SalaryBySeniority({
             : "Нет проверяемого среза";
 
         return (
-          <article id={`salary-level-${seniority}`} key={seniority} className="scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
+          <article id={`salary-level-${seniority}`} key={seniority} className="salary-level-card scroll-mt-24 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-lg font-semibold">{levelLabels[seniority]}</h4>
               <span className={`badge ${useObserved ? "confidence-medium" : ""}`}>

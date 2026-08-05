@@ -49,14 +49,14 @@ function jsonLd(value: unknown) { return JSON.stringify(value).replace(/</g, "\\
 function TechStack({ profession }: { profession: ProfessionDetail }) {
   if (!profession.tech_stack?.length) return null;
   return (
-    <section id="tech-stack" className="panel mt-10 p-6 sm:p-8" aria-labelledby="tech-stack-title">
+    <section id="tech-stack" className="panel tech-stack-section mt-10 p-6 sm:p-8" aria-labelledby="tech-stack-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div><p className="eyebrow">Рабочий инструментарий</p><h2 id="tech-stack-title" className="mt-2 text-2xl font-semibold">Типичный стек профессии</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Языки, программы и платформы, которые часто встречаются в задачах этой роли. Конкретный набор зависит от компании и проекта.</p></div>
+        <div><p className="eyebrow">Рабочий инструментарий</p><h2 id="tech-stack-title" className="mt-2 text-2xl font-semibold">Типичный стек профессии</h2><p className="mobile-clamp mt-3 max-w-3xl text-sm leading-6 text-muted">Языки, программы и платформы, которые часто встречаются в задачах этой роли. Конкретный набор зависит от компании и проекта.</p></div>
         <span className="insight-icon"><Layers3 size={19} /></span>
       </div>
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="mobile-card-rail tech-stack-grid mt-6 grid gap-4 md:grid-cols-3">
         {profession.tech_stack.map((group) => (
-          <article key={group.title} className="rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
+          <article key={group.title} className="tech-stack-card rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.55)] p-5">
             <h3 className="font-semibold">{group.title}</h3>
             <div className="mt-4 flex flex-wrap gap-2">{group.items.map((item) => <span key={item} className="badge">{item}</span>)}</div>
           </article>
@@ -266,12 +266,12 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   return (
     <div className="profession-page shell py-10 lg:py-14">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: jsonLd(schema) }} />
-      <nav className="flex flex-wrap gap-2 text-sm text-muted" aria-label="Хлебные крошки"><Link href="/">Главная</Link><span>/</span><Link href="/professions">Профессии</Link><span>/</span><span aria-current="page">{profession.name_ru}</span></nav>
+      <nav className="profession-breadcrumb flex flex-wrap gap-2 text-sm text-muted" aria-label="Хлебные крошки"><Link href="/">Главная</Link><span>/</span><Link href="/professions">Профессии</Link><span>/</span><span aria-current="page">{profession.name_ru}</span></nav>
       <header className="profession-hero mt-8 grid gap-8 lg:grid-cols-[1fr_auto] lg:items-end">
-        <div><Link href={`/categories/${profession.category_slug}`} className="eyebrow">{profession.category_name}</Link><h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{profession.name_ru}</h1><p className="mt-2 text-lg text-muted">{profession.name_en}</p><p className="mt-5 max-w-3xl leading-7 text-muted">{profession.description}</p></div>
-        {profession.score != null ? <div className="panel flex min-w-56 items-center gap-4 p-5"><div className="grid size-20 place-items-center rounded-full" style={{ background: `radial-gradient(circle, var(--panel) 56%, transparent 58%), conic-gradient(var(--accent) ${profession.score}%, var(--line) 0)` }}><strong className="font-mono text-2xl">{profession.score}</strong></div><div><p className="text-sm text-muted">Индекс из 100</p>{(() => { const badge = confidenceBadge(profession.data_confidence); return <span className={`mt-2 ${badge.className}`}>{badge.label}</span>; })()}</div></div> : null}
+        <div><Link href={`/categories/${profession.category_slug}`} className="eyebrow">{profession.category_name}</Link><h1 className="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">{profession.name_ru}</h1><p className="mt-2 text-lg text-muted">{profession.name_en}</p><p className="profession-description mobile-clamp mt-5 max-w-3xl leading-7 text-muted">{profession.description}</p></div>
+        {profession.score != null ? <div className="profession-score-card panel flex min-w-56 items-center gap-4 p-5"><div className="profession-score-ring grid size-20 place-items-center rounded-full" style={{ background: `radial-gradient(circle, var(--panel) 56%, transparent 58%), conic-gradient(var(--accent) ${profession.score}%, var(--line) 0)` }}><strong className="font-mono text-2xl">{profession.score}</strong></div><div><p className="text-sm text-muted">Индекс из 100</p>{(() => { const badge = confidenceBadge(profession.data_confidence); return <span className={`mt-2 ${badge.className}`}>{badge.label}</span>; })()}</div></div> : null}
       </header>
-      <div className="mt-6"><ShareActions url={canonicalUrl} title={`${profession.name_ru} — TechRole Index`} citation={`TechRole Index. ${profession.name_ru}. ${canonicalUrl}. Дата обновления: ${profession.updated_at ?? "не указана"}.`} /></div>
+      <div className="profession-share mt-6"><ShareActions url={canonicalUrl} title={`${profession.name_ru} — TechRole Index`} citation={`TechRole Index. ${profession.name_ru}. ${canonicalUrl}. Дата обновления: ${profession.updated_at ?? "не указана"}.`} /></div>
 
       <nav className="profession-toc mt-7 flex flex-wrap gap-2" aria-label="Разделы страницы профессии">
         <a href="#tech-stack">Стек</a>
@@ -299,26 +299,26 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div>
               <p className="eyebrow">Динамика рынка</p>
               <h2 id="official-open-data-title" className="mt-2 text-3xl font-semibold">Зарплата и динамика рынка</h2>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.official_open_data.methodology_note}</p>
+              <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.official_open_data.methodology_note}</p>
             </div>
             <a className="button-secondary" href={profession.official_open_data.source_url} rel="noreferrer">Документация источника</a>
           </div>
-          <div className="market-showcase-stats mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div id="publication-count-exact" className="scroll-mt-24"><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
             <div id="publication-count-category" className="scroll-mt-24"><p className="text-sm text-muted">По направлению «{profession.category_name}»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
             <div id="salary-disclosed-count" className="scroll-mt-24"><p className="text-sm text-muted">С границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
             <div id="complete-salary-range-count" className="scroll-mt-24"><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
             <div id="remote-publication-count" className="scroll-mt-24"><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
           </div>
-          <article id="salary-history" className="market-stage market-stage-primary mt-7 scroll-mt-24">
+          <article id="salary-history" className="market-stage market-stage-primary salary-main-stage mt-7 scroll-mt-24">
             <div className="market-stage-copy">
               <p className="eyebrow">Главный график</p>
               <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Среднее полной RUB-вилки в скользящем 30-дневном окне с ограничениями. Охват каждого ряда указан в легенде; пунктиром показан статичный ориентир только там, где наблюдений всё ещё недостаточно.</p>
+              <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">Среднее полной RUB-вилки в скользящем 30-дневном окне с ограничениями. Охват каждого ряда указан в легенде; пунктиром показан статичный ориентир только там, где наблюдений всё ещё недостаточно.</p>
             </div>
             <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} maxPeriodDays={profession.history_days ?? 30} /></div>
           </article>
-          <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
+          <div className="market-footnote mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
             <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>
             {salaryHistoryUsesCategory ? <p className="mt-2">В зарплатной динамике хотя бы один уровень использует направление из-за малой точной выборки.</p> : null}
             {salaryHistoryUsesMarket ? <p className="mt-2">Если данных направления тоже недостаточно, уровень показывает общий IT-рынок и подписывает этот охват отдельно.</p> : null}
@@ -332,11 +332,11 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div>
               <p className="eyebrow">Официальный HH API</p>
               <h2 id="hh-market-data-title" className="mt-2 text-3xl font-semibold">Расширенный снимок вакансий за {profession.hh_market_data.period_days} дней</h2>
-              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.hh_market_data.methodology_note}</p>
+              <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.hh_market_data.methodology_note}</p>
             </div>
             <a className="button-secondary" href={profession.hh_market_data.source_url} rel="noreferrer">Документация HH API</a>
           </div>
-          <div className="market-showcase-stats mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
             <div><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.total_publications)}</p></div>
             <div><p className="text-sm text-muted">По направлению</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.category_total_publications)}</p></div>
             <div><p className="text-sm text-muted">С зарплатой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_disclosed_count)}</p></div>
@@ -350,7 +350,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
                 <div>
                   <p className="eyebrow">Карта найма</p>
                   <h3 className="mt-2 text-2xl font-semibold">Кто нанимает {profession.name_ru}</h3>
-                  <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Пять работодателей с наибольшим числом классифицированных вакансий. Остальные {Math.max(hhEnrichment.distinct_employer_count - 5, 0).toLocaleString("ru-RU")} компаний собраны в одну честную группу «Другие компании».</p>
+                  <p className="mobile-clamp mt-3 max-w-3xl text-sm leading-6 text-muted">Пять работодателей с наибольшим числом классифицированных вакансий. Остальные {Math.max(hhEnrichment.distinct_employer_count - 5, 0).toLocaleString("ru-RU")} компаний собраны в одну честную группу «Другие компании».</p>
                 </div>
                 <div className="flex gap-5 text-right">
                   <span><strong className="block font-mono text-2xl">{hhEnrichment.distinct_employer_count.toLocaleString("ru-RU")}</strong><small className="text-muted">компаний</small></span>
@@ -360,7 +360,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
               <HhEmployerDashboard data={hhEnrichment} />
             </article>
           ) : null}
-          <div className="mt-5 grid gap-5 lg:grid-cols-2">
+          <div className="secondary-chart-grid mt-5 grid gap-5 lg:grid-cols-2">
             {profession.history_days === 180 ? (
               <article className="market-stage">
                 <div className="market-stage-copy"><p className="eyebrow">Поток публикаций</p><h3 className="mt-2 text-2xl font-semibold">Новые вакансии по неделям</h3><p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Поиск выполнен по названию профессии и алиасам. Совпадения дедуплицированы по идентификатору вакансии.</p></div>
@@ -370,30 +370,30 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
               <Paywall compact title="График вакансий за период более 30 дней — в Premium" />
             )}
           </div>
-          <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
+          <div className="market-footnote mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
             <p>Это официальный поисковый снимок, а не полная копия базы HH. Глубина одной поисковой выдачи ограничена 2 000 результатами. Исходные тексты, контакты и адреса не публикуются; названия работодателей показываются только в агрегированном топ-5, остальные объединены в «Другие компании».</p>
           </div>
         </section>
       ) : null}
 
       {hasMarketProfile ? (
-        <section id="market-skills" className="panel mt-10 scroll-mt-24 p-5 sm:p-8">
+        <section id="market-skills" className="market-skills-section panel mt-10 scroll-mt-24 p-5 sm:p-8">
           <p className="eyebrow">Рынок</p>
           <h2 className="mt-2 text-3xl font-semibold">Навыки, условия и регионы</h2>
-          <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">
+          <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">
             Здесь собраны повторяющиеся требования из подробных карточек HH и региональный срез этой профессии. Число рядом с признаком показывает, в скольких вакансиях он указан.
           </p>
           {hhEnrichment?.top_skills.length ? (
             <div className="mt-7">
               <h3 className="text-sm font-semibold">Ключевые навыки HH</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mobile-chip-rail mt-3 flex flex-wrap gap-2">
                 {hhEnrichment.top_skills.map((item) => <span key={item.id} className="badge">{item.name} · {item.count}</span>)}
               </div>
             </div>
           ) : profession.skills?.length ? (
             <div className="mt-7">
               <h3 className="text-sm font-semibold">Упоминания навыков</h3>
-              <div className="mt-3 flex flex-wrap gap-2">
+              <div className="mobile-chip-rail mt-3 flex flex-wrap gap-2">
                 {profession.skills.map((item) => <span key={item.name} className="badge">{item.name} · {item.count}</span>)}
               </div>
             </div>
@@ -413,13 +413,13 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           {profession.regions?.length ? (
             <div className="mt-8">
               <h3 className="text-sm font-semibold">Вакансии по регионам</h3>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div className="market-region-grid mt-3 grid gap-3 sm:grid-cols-2">
                 {profession.regions.map((item) => <div key={item.name} className="flex items-center justify-between border-b border-line pb-3"><span className="flex items-center gap-2"><MapPin size={15} className="text-muted" />{item.name}</span><strong className="font-mono">{item.vacancy_count}</strong></div>)}
               </div>
             </div>
           ) : null}
           {hhEnrichment ? (
-            <p className="mt-7 text-sm leading-7 text-muted">Стажировки: <strong className="text-ink">{hhEnrichment.internship_count.toLocaleString("ru-RU")}</strong> · Ночные смены: <strong className="text-ink">{hhEnrichment.night_shift_count.toLocaleString("ru-RU")}</strong> · Временная работа: <strong className="text-ink">{hhEnrichment.temporary_count.toLocaleString("ru-RU")}</strong> · Трудовой договор: <strong className="text-ink">{hhEnrichment.labor_contract_count.toLocaleString("ru-RU")}</strong> · Нужно сопроводительное письмо: <strong className="text-ink">{hhEnrichment.cover_letter_required_count.toLocaleString("ru-RU")}</strong> · Есть тест: <strong className="text-ink">{hhEnrichment.test_required_count.toLocaleString("ru-RU")}</strong></p>
+            <p className="mobile-clamp mt-7 text-sm leading-7 text-muted">Стажировки: <strong className="text-ink">{hhEnrichment.internship_count.toLocaleString("ru-RU")}</strong> · Ночные смены: <strong className="text-ink">{hhEnrichment.night_shift_count.toLocaleString("ru-RU")}</strong> · Временная работа: <strong className="text-ink">{hhEnrichment.temporary_count.toLocaleString("ru-RU")}</strong> · Трудовой договор: <strong className="text-ink">{hhEnrichment.labor_contract_count.toLocaleString("ru-RU")}</strong> · Нужно сопроводительное письмо: <strong className="text-ink">{hhEnrichment.cover_letter_required_count.toLocaleString("ru-RU")}</strong> · Есть тест: <strong className="text-ink">{hhEnrichment.test_required_count.toLocaleString("ru-RU")}</strong></p>
           ) : null}
         </section>
       ) : null}
@@ -427,7 +427,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
       {!profession.teaser_only && profession.metrics ? (
         <>
           <section id="market-metrics" className="mt-10">
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="market-metric-grid grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
               <article className="panel p-5"><p className="text-sm text-muted">Расчётный объём вакансий</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(currentVacancies)}</p><div className="mt-4"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7 дней" /></div></article>
               <article className="panel p-5"><p className="text-sm text-muted">Полнота gross-витрины</p><p className="mt-2 font-mono text-3xl font-semibold">{weightedVacancies ? percent(weightedSalaryCount / weightedVacancies) : "-"}</p><p className="mt-4 text-xs text-muted">доля записей с расчётной зарплатой</p></article>
               <article className="panel p-5"><p className="text-sm text-muted">Удалённая работа</p><p className="mt-2 font-mono text-3xl font-semibold">{latest.length ? percent(latest.reduce((sum, item) => sum + item.remote_share, 0) / latest.length) : "-"}</p><p className="mt-4 flex items-center gap-2 text-xs text-muted"><Wifi size={14} /> в расчётном срезе</p></article>
@@ -435,10 +435,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
           </section>
 
-          <div className="mt-12 grid gap-5 lg:grid-cols-2">
-            <section id="prepared-vacancy-history" className="panel scroll-mt-24 p-5">
+          <div className="prepared-chart-grid mt-12 grid gap-5 lg:grid-cols-2">
+            <section id="prepared-vacancy-history" className="prepared-chart-panel panel scroll-mt-24 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Скользящий 30-дневный объём точных HH-вакансий по уровням Junior, Middle и Senior.</p></div>
+                <div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mobile-clamp mt-3 max-w-3xl text-sm leading-6 text-muted">Скользящий 30-дневный объём точных HH-вакансий по уровням Junior, Middle и Senior.</p></div>
                 <div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div>
               </div>
               {profession.history_days === 180 ? <VacancyChart metrics={profession.metrics} /> : <div className="mt-5"><Paywall compact title="Расширенный ряд вакансий — в Premium" /></div>}
@@ -451,23 +451,23 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
 
       {profession.teaser_only || !profession.metrics ? <div className="mt-10"><Paywall title={`Метрики «${profession.name_ru}» доступны в Premium`} /></div> : (
         <>
-          <section className="mt-12 max-w-3xl">
+          <section className="score-section mt-12 max-w-3xl">
             <article id="score-breakdown" className="panel p-6">
               <p className="eyebrow">Индекс {profession.scoring_version}</p>
               <h2 className="mt-2 text-2xl font-semibold">За что начислены баллы</h2>
-              <p className="mt-3 text-sm leading-6 text-muted">У каждого фактора есть оценка от 0 до 100 и вес. В версии v1.2.0 спрос, динамика, junior-доступность, удалённость и качество взяты только из HH-вакансий этой профессии; собственная gross RUB-медиана входит при n≥5. Справа показан реальный вклад фактора.</p>
-              <div className="mt-6 grid gap-5">
+              <p className="mobile-clamp mt-3 text-sm leading-6 text-muted">У каждого фактора есть оценка от 0 до 100 и вес. В версии v1.2.0 спрос, динамика, junior-доступность, удалённость и качество взяты только из HH-вакансий этой профессии; собственная gross RUB-медиана входит при n≥5. Справа показан реальный вклад фактора.</p>
+              <div className="score-breakdown-grid mt-6 grid gap-5">
                 {Object.entries(profession.score_breakdown ?? {}).map(([key, value]) => {
                   const weight = profession.score_weights?.[key] ?? 0;
                   const contribution = profession.score_contributions?.[key] ?? Math.round(value * weight * 10) / 10;
                   return (
-                    <div key={key}>
+                    <div key={key} className="score-factor">
                       <div className="flex items-start justify-between gap-4 text-sm">
                         <span>{breakdownLabels[key] ?? key}</span>
                         <strong className="whitespace-nowrap font-mono">+{contribution} балла</strong>
                       </div>
                       <div className="mt-2 h-2 overflow-hidden rounded-full bg-line"><div className="h-full rounded-full bg-accent" style={{ width: `${value}%` }} /></div>
-                      <p className="mt-2 text-xs text-muted">Оценка фактора {value}/100 × вес {Math.round(weight * 100)}%</p>
+                      <p className="score-factor-note mt-2 text-xs text-muted">Оценка фактора {value}/100 × вес {Math.round(weight * 100)}%</p>
                     </div>
                   );
                 })}
