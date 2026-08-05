@@ -2,6 +2,7 @@ from collections import Counter, defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
 from statistics import median
+from typing import Any
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
@@ -19,8 +20,10 @@ from app.models import (
     ScoringVersion,
     SeniorityLevel,
     Vacancy,
+    VacancyProfessionMatch,
     VacancySource,
 )
+from app.services.hh_query_matches import latest_completed_hh_query_run_id
 
 HH_MIN_PROFESSION_SAMPLE = 5
 HH_MIN_SALARY_SAMPLE = 5
@@ -42,29 +45,52 @@ def _hh_score_dataset(
             VacancySource.code == "hh_api", VacancySource.enabled.is_(True)
         )
     )
-    latest_at = db.scalar(
-        select(func.max(Vacancy.published_at)).where(
+    match_run_id = (
+        latest_completed_hh_query_run_id(db, source_id)
+        if source_id is not None
+        else None
+    )
+    latest_statement = select(func.max(Vacancy.published_at)).where(
             Vacancy.source_id == source_id,
-            Vacancy.profession_id.is_not(None),
-        )
-    ) if source_id is not None else None
+    )
+    if match_run_id is not None:
+        latest_statement = latest_statement.join(
+            VacancyProfessionMatch,
+            VacancyProfessionMatch.vacancy_id == Vacancy.id,
+        ).where(VacancyProfessionMatch.last_run_id == match_run_id)
+    else:
+        latest_statement = latest_statement.where(Vacancy.profession_id.is_not(None))
+    latest_at = db.scalar(latest_statement) if source_id is not None else None
     if source_id is None or latest_at is None:
         return None
 
     score_date = latest_at.date()
     start_date = score_date - timedelta(days=max(settings.hh_history_days, 14) - 1)
-    rows = db.scalars(
-        select(Vacancy).where(
+    row_statement: Any = select(Vacancy, Vacancy.profession_id).where(
             Vacancy.source_id == source_id,
             Vacancy.profession_id.is_not(None),
             Vacancy.published_at >= start_date,
             Vacancy.published_at < score_date + timedelta(days=1),
+    )
+    if match_run_id is not None:
+        row_statement = (
+            select(Vacancy, VacancyProfessionMatch.profession_id)
+            .join(
+                VacancyProfessionMatch,
+                VacancyProfessionMatch.vacancy_id == Vacancy.id,
+            )
+            .where(
+                Vacancy.source_id == source_id,
+                VacancyProfessionMatch.last_run_id == match_run_id,
+                Vacancy.published_at >= start_date,
+                Vacancy.published_at < score_date + timedelta(days=1),
+            )
         )
-    ).all()
+    rows = db.execute(row_statement).all()
     grouped: dict[int, list[Vacancy]] = defaultdict(list)
-    for row in rows:
-        if row.profession_id is not None:
-            grouped[row.profession_id].append(row)
+    for row, profession_id in rows:
+        if profession_id is not None:
+            grouped[profession_id].append(row)
 
     contexts = db.execute(
         select(Profession.id, Profession.slug, ProfessionCategory.slug)

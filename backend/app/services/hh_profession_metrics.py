@@ -5,7 +5,7 @@ from dataclasses import asdict, dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from decimal import Decimal
 from statistics import fmean, median
-from typing import cast
+from typing import Any, cast
 
 from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
@@ -16,8 +16,10 @@ from app.models import (
     Region,
     SeniorityLevel,
     Vacancy,
+    VacancyProfessionMatch,
     VacancySource,
 )
+from app.services.hh_query_matches import latest_completed_hh_query_run_id
 
 
 @dataclass(frozen=True)
@@ -68,13 +70,21 @@ def refresh_hh_profession_metrics(
     source = db.scalar(select(VacancySource).where(VacancySource.code == "hh_api"))
     if source is None:
         raise ValueError("Vacancy source not found: hh_api")
+    match_run_id = latest_completed_hh_query_run_id(db, source.id)
 
-    observed_from, observed_to = db.execute(
-        select(func.min(Vacancy.published_at), func.max(Vacancy.published_at)).where(
+    observed_statement = select(
+        func.min(Vacancy.published_at), func.max(Vacancy.published_at)
+    ).where(
             Vacancy.source_id == source.id,
-            Vacancy.profession_id.is_not(None),
-        )
-    ).one()
+    )
+    if match_run_id is not None:
+        observed_statement = observed_statement.join(
+            VacancyProfessionMatch,
+            VacancyProfessionMatch.vacancy_id == Vacancy.id,
+        ).where(VacancyProfessionMatch.last_run_id == match_run_id)
+    else:
+        observed_statement = observed_statement.where(Vacancy.profession_id.is_not(None))
+    observed_from, observed_to = db.execute(observed_statement).one()
     if observed_from is None or observed_to is None:
         return HhProfessionMetricRefresh(
             source="hh_api",
@@ -94,14 +104,27 @@ def refresh_hh_profession_metrics(
     start_at = datetime.combine(load_from, time.min, tzinfo=timezone.utc)
     end_at = datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=timezone.utc)
 
-    vacancies = db.scalars(
-        select(Vacancy).where(
+    vacancy_statement: Any = select(Vacancy, Vacancy.profession_id).where(
             Vacancy.source_id == source.id,
             Vacancy.profession_id.is_not(None),
             Vacancy.published_at >= start_at,
             Vacancy.published_at < end_at,
+    )
+    if match_run_id is not None:
+        vacancy_statement = (
+            select(Vacancy, VacancyProfessionMatch.profession_id)
+            .join(
+                VacancyProfessionMatch,
+                VacancyProfessionMatch.vacancy_id == Vacancy.id,
+            )
+            .where(
+                Vacancy.source_id == source.id,
+                VacancyProfessionMatch.last_run_id == match_run_id,
+                Vacancy.published_at >= start_at,
+                Vacancy.published_at < end_at,
+            )
         )
-    ).all()
+    vacancy_rows = db.execute(vacancy_statement).all()
     national_region_id = db.scalar(select(Region.id).where(Region.code == "ru"))
     if national_region_id is None:
         raise ValueError("National region not found: ru")
@@ -116,9 +139,9 @@ def refresh_hh_profession_metrics(
     }
 
     grouped: dict[tuple[int, int, int], list[Vacancy]] = defaultdict(list)
-    classified_vacancies: list[Vacancy] = []
-    for vacancy in vacancies:
-        assert vacancy.profession_id is not None
+    classified_vacancies: list[tuple[Vacancy, int]] = []
+    for vacancy, profession_id in vacancy_rows:
+        assert profession_id is not None
         seniority_id = vacancy.seniority_id
         if seniority_id is None and vacancy.experience_code:
             seniority_id = seniority_ids.get(
@@ -126,12 +149,12 @@ def refresh_hh_profession_metrics(
             )
         if seniority_id is None:
             continue
-        classified_vacancies.append(vacancy)
-        grouped[(vacancy.profession_id, seniority_id, national_region_id)].append(
+        classified_vacancies.append((vacancy, profession_id))
+        grouped[(profession_id, seniority_id, national_region_id)].append(
             vacancy
         )
         if vacancy.region_id != national_region_id:
-            grouped[(vacancy.profession_id, seniority_id, vacancy.region_id)].append(
+            grouped[(profession_id, seniority_id, vacancy.region_id)].append(
                 vacancy
             )
 
@@ -212,5 +235,5 @@ def refresh_hh_profession_metrics(
         rolling_window_days=rolling_window_days,
         vacancy_count=len(classified_vacancies),
         metric_rows=len(rows),
-        profession_count=len({item.profession_id for item in classified_vacancies}),
+        profession_count=len({profession_id for _, profession_id in classified_vacancies}),
     )

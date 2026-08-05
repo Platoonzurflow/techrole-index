@@ -21,6 +21,7 @@ from app.models import (
     SeniorityLevel,
     SourceQuery,
     Vacancy,
+    VacancyProfessionMatch,
     VacancySkill,
     VacancySnapshot,
     VacancySource,
@@ -46,6 +47,7 @@ class OpenDataIngestionSummary:
     duplicates_skipped: int
     records_outside_window: int
     history_days: int
+    query_match_observations: int = 0
     metrics_recalculated: bool = False
 
     def to_dict(self) -> dict:
@@ -124,7 +126,7 @@ def _ensure_source_query(
     profession_id: int,
     region_id: int,
     query: str,
-) -> None:
+) -> SourceQuery:
     stored = db.scalar(
         select(SourceQuery).where(
             SourceQuery.source_id == source_id,
@@ -134,15 +136,53 @@ def _ensure_source_query(
         )
     )
     if stored is None:
+        stored = SourceQuery(
+            source_id=source_id,
+            profession_id=profession_id,
+            region_id=region_id,
+            query_text=query,
+            enabled=True,
+        )
+        db.add(stored)
+        db.flush()
+    return stored
+
+
+def _store_hh_query_match(
+    db: Session,
+    *,
+    vacancy: Vacancy,
+    profession: Profession,
+    run_id: int,
+    query: str,
+    observed_at: datetime,
+) -> None:
+    stored = db.scalar(
+        select(VacancyProfessionMatch).where(
+            VacancyProfessionMatch.vacancy_id == vacancy.id,
+            VacancyProfessionMatch.profession_id == profession.id,
+        )
+    )
+    if stored is None:
         db.add(
-            SourceQuery(
-                source_id=source_id,
-                profession_id=profession_id,
-                region_id=region_id,
-                query_text=query,
-                enabled=True,
+            VacancyProfessionMatch(
+                vacancy_id=vacancy.id,
+                profession_id=profession.id,
+                last_run_id=run_id,
+                match_method="hh-name-exact-v1",
+                matched_queries=[query],
+                first_seen_at=observed_at,
+                last_seen_at=observed_at,
             )
         )
+        return
+    queries = [] if stored.last_run_id != run_id else list(stored.matched_queries or [])
+    if query not in queries:
+        queries.append(query)
+    stored.last_run_id = run_id
+    stored.match_method = "hh-name-exact-v1"
+    stored.matched_queries = queries
+    stored.last_seen_at = observed_at
 
 
 def _queries_for_profession(
@@ -296,6 +336,7 @@ def _ingest_vacancy_data(
 
     seen = changed = by_rules = by_ai = unclassified = query_errors = 0
     queries_attempted = pages_fetched = raw_records_fetched = 0
+    query_match_observations = 0
     duplicates_skipped = records_outside_window = 0
     ai_used = 0
     errors: list[str] = []
@@ -345,6 +386,23 @@ def _ingest_vacancy_data(
                             continue
                         if record.external_id in processed_external_ids:
                             duplicates_skipped += 1
+                            if options.source_code == "hh_api":
+                                duplicate = db.scalar(
+                                    select(Vacancy).where(
+                                        Vacancy.source_id == source.id,
+                                        Vacancy.external_id == record.external_id,
+                                    )
+                                )
+                                if duplicate is not None:
+                                    _store_hh_query_match(
+                                        db,
+                                        vacancy=duplicate,
+                                        profession=profession,
+                                        run_id=run.id,
+                                        query=query,
+                                        observed_at=now,
+                                    )
+                                    query_match_observations += 1
                             continue
                         processed_external_ids.add(record.external_id)
                         seen += 1
@@ -446,6 +504,16 @@ def _ingest_vacancy_data(
                             **({"details": existing_details} if existing_details else {}),
                         }
                         db.flush()
+                        if options.source_code == "hh_api":
+                            _store_hh_query_match(
+                                db,
+                                vacancy=vacancy,
+                                profession=profession,
+                                run_id=run.id,
+                                query=query,
+                                observed_at=now,
+                            )
+                            query_match_observations += 1
 
                         snapshot = db.scalar(
                             select(VacancySnapshot).where(
@@ -515,6 +583,10 @@ def _ingest_vacancy_data(
         "pages_fetched": pages_fetched,
         "raw_records_fetched": raw_records_fetched,
         "duplicates_skipped": duplicates_skipped,
+        "query_match_method": (
+            "hh-name-exact-v1" if options.source_code == "hh_api" else None
+        ),
+        "query_match_observations": query_match_observations,
         "records_outside_window": records_outside_window,
         "window_start": cutoff.isoformat(),
         "window_end": now.isoformat(),
@@ -540,6 +612,7 @@ def _ingest_vacancy_data(
         duplicates_skipped=duplicates_skipped,
         records_outside_window=records_outside_window,
         history_days=options.history_days,
+        query_match_observations=query_match_observations,
     )
 
 

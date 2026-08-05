@@ -336,10 +336,15 @@ class HhApiProvider:
             return
         per_page = min(limit, 100)
         now = datetime.now(timezone.utc)
+        normalized_query = query.replace('"', "").strip()
         response = self._authorized_get(
             f"{self.base_url}/vacancies",
             params={
-                "text": query,
+                # The default HH search also scans descriptions and employer fields.
+                # Profession coverage must instead mean that the requested phrase was
+                # found in the vacancy name.  Quotes preserve multi-word role names.
+                "text": f'"{normalized_query}"',
+                "search_field": "name",
                 "area": self.area_ids.get(region_code, region_code),
                 "per_page": per_page,
                 "page": page,

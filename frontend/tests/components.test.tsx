@@ -340,7 +340,7 @@ describe("analytics components", () => {
     expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();
   });
 
-  it("uses one coherent source when official level medians are inverted", () => {
+  it("uses the same latest values and scopes as the main salary graph", () => {
     const official = {
       source_name: "Работа России",
       source_url: "https://trudvsem.ru/opendata/api",
@@ -362,7 +362,12 @@ describe("analytics components", () => {
         { seniority: "middle" as const, vacancy_count: 97, salary_count: 97, salary_coverage: 1, sample_size: 97, median: 100000, confidence_level: "high" as const },
         { seniority: "senior" as const, vacancy_count: 23, salary_count: 23, salary_coverage: 1, sample_size: 23, median: 89300, confidence_level: "high" as const },
       ],
-      salary_history: [],
+      salary_history: [
+        { date: "2026-07-23", seniority: "junior" as const, average: 63000, sample_size: 7, scope: "profession" as const },
+        { date: "2026-07-23", seniority: "middle" as const, average: 97000, sample_size: 6, scope: "profession" as const },
+        { date: "2026-07-23", seniority: "senior" as const, average: 166000, sample_size: 12, scope: "market" as const },
+      ],
+      salary_history_window_days: 30,
       salary_history_reference_median: 200000,
       salary_history_reference_scope: "category" as const,
       salary_history_minimum_ratio: { junior: 0.4, middle: 0.7, senior: 1 },
@@ -397,10 +402,11 @@ describe("analytics components", () => {
     render(<SalaryBenchmarks data={benchmark} official={official} />);
 
     expect(screen.queryByText(/перевёрнутую зарплатную градацию/)).not.toBeInTheDocument();
-    expect(screen.getByText("100 000 ₽ — 130 000 ₽")).toBeInTheDocument();
-    expect(screen.getByText("230 000 ₽ — 270 000 ₽")).toBeInTheDocument();
-    expect(screen.getByText("370 000 ₽ — 380 000 ₽")).toBeInTheDocument();
-    expect(screen.queryByText("89 300 ₽")).not.toBeInTheDocument();
+    expect(screen.getByText("63 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("97 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("166 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("общий IT-рынок")).toBeInTheDocument();
+    expect(screen.queryByText("Вилки «Работы России»")).not.toBeInTheDocument();
   });
 
   it("turns the single Premium header link into active account status", async () => {

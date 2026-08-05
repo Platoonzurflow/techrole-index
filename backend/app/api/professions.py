@@ -24,6 +24,7 @@ from app.models import (
     ScoringVersion,
     SeniorityLevel,
     Vacancy,
+    VacancyProfessionMatch,
     VacancySkill,
     VacancySource,
 )
@@ -45,6 +46,7 @@ from app.schemas import (
 )
 from app.security import has_premium, optional_user, require_premium
 from app.services.cache import RedisJsonCache
+from app.services.hh_query_matches import latest_completed_hh_query_run_id
 
 router = APIRouter(tags=["professions"])
 profession_cache = RedisJsonCache(
@@ -216,6 +218,7 @@ def _source_market_summary(
     methodology_note: str,
     period_days: int = 180,
     include_category_context: bool = False,
+    match_run_id: int | None = None,
 ) -> OfficialOpenDataSummary:
     profession_context = db.execute(
         select(Profession.slug, ProfessionCategory.slug, Profession.category_id)
@@ -237,27 +240,37 @@ def _source_market_summary(
     source_id = db.scalar(select(VacancySource.id).where(VacancySource.code == source_code))
     rows: list[tuple[Any, ...]] = []
     if source_id is not None:
+        statement = (
+            select(
+                Vacancy.published_at,
+                Vacancy.salary_from,
+                Vacancy.salary_to,
+                Vacancy.is_remote,
+                Vacancy.last_seen_at,
+                Vacancy.currency,
+                SeniorityLevel.code,
+                Vacancy.salary_gross,
+            )
+            .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
+            .where(
+                Vacancy.source_id == source_id,
+                Vacancy.published_at >= window.start_at,
+                Vacancy.published_at < window.end_at_exclusive,
+            )
+        )
+        if match_run_id is not None:
+            statement = statement.join(
+                VacancyProfessionMatch,
+                VacancyProfessionMatch.vacancy_id == Vacancy.id,
+            ).where(
+                VacancyProfessionMatch.last_run_id == match_run_id,
+                VacancyProfessionMatch.profession_id == profession_id,
+            )
+        else:
+            statement = statement.where(Vacancy.profession_id == profession_id)
         rows = [
             tuple(row)
-            for row in db.execute(
-                select(
-                    Vacancy.published_at,
-                    Vacancy.salary_from,
-                    Vacancy.salary_to,
-                    Vacancy.is_remote,
-                    Vacancy.last_seen_at,
-                    Vacancy.currency,
-                    SeniorityLevel.code,
-                    Vacancy.salary_gross,
-                )
-                .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
-                .where(
-                    Vacancy.source_id == source_id,
-                    Vacancy.profession_id == profession_id,
-                    Vacancy.published_at >= window.start_at,
-                    Vacancy.published_at < window.end_at_exclusive,
-                )
-            ).all()
+            for row in db.execute(statement).all()
         ]
     daily = {date_from + timedelta(days=index): 0 for index in range(period_days)}
     daily_complete_salary_ranges = {
@@ -478,7 +491,16 @@ def _source_market_summary(
         if salary_basis is not None:
             statement = statement.where(Vacancy.salary_gross.is_(salary_basis))
         if scope == "profession":
-            statement = statement.where(Vacancy.profession_id == profession_id)
+            if match_run_id is not None:
+                statement = statement.join(
+                    VacancyProfessionMatch,
+                    VacancyProfessionMatch.vacancy_id == Vacancy.id,
+                ).where(
+                    VacancyProfessionMatch.last_run_id == match_run_id,
+                    VacancyProfessionMatch.profession_id == profession_id,
+                )
+            else:
+                statement = statement.where(Vacancy.profession_id == profession_id)
         elif scope == "category":
             statement = statement.join(
                 Profession, Vacancy.profession_id == Profession.id
@@ -671,6 +693,7 @@ def _hh_market_summary(
     source = db.scalar(select(VacancySource).where(VacancySource.code == "hh_api"))
     if source is None or not source.enabled:
         return None
+    match_run_id = latest_completed_hh_query_run_id(db, source.id)
     summary = _source_market_summary(
         db,
         profession_id,
@@ -681,6 +704,7 @@ def _hh_market_summary(
         salary_basis=True,
         period_days=settings.hh_history_days,
         include_category_context=include_category_context,
+        match_run_id=match_run_id,
         salary_methodology_note=(
             "Зарплатные показатели рассчитаны только по вакансиям в RUB, где API явно "
             "пометил сумму как gross и указал обе границы вилки. Net и записи без признака "
@@ -689,9 +713,10 @@ def _hh_market_summary(
             f"только при выборке не менее {settings.min_salary_sample}."
         ),
         methodology_note=(
-            "Официальный поисковый снимок HH API по названию профессии и её алиасам. "
-            "Результаты дедуплицированы по идентификатору вакансии и классифицированы по "
-            "таксономии TechRole Index. Это не полная историческая выгрузка: API ограничивает "
+            "Официальный поисковый снимок HH API: точная фраза ищется только в названии "
+            "вакансии по профессии и её алиасам. Совпадения дедуплицированы по идентификатору "
+            "вакансии внутри профессии; одна вакансия может относиться к нескольким ролям. "
+            "Это не полная историческая выгрузка: API ограничивает "
             "глубину одной поисковой выдачи 2 000 результатами. Публично показываются только "
             "агрегаты без текстов вакансий, контактов и адресов. Публичные названия "
             "работодателей показываются только в агрегированном топ-5; остальные объединены "
@@ -706,6 +731,7 @@ def _hh_market_summary(
                 source.id,
                 date_from=summary.date_from,
                 date_to=summary.date_to,
+                match_run_id=match_run_id,
             )
         }
     )
@@ -750,19 +776,30 @@ def _hh_market_enrichment_summary(
     *,
     date_from,
     date_to,
+    match_run_id: int | None = None,
 ) -> HhMarketEnrichmentSummary:
     start_at = datetime.combine(date_from, datetime.min.time(), tzinfo=timezone.utc)
     end_at = datetime.combine(
         date_to + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc
     )
-    rows = db.execute(
-        select(Vacancy.id, Vacancy.experience_code, Vacancy.raw_payload).where(
+    statement = select(
+        Vacancy.id, Vacancy.experience_code, Vacancy.raw_payload
+    ).where(
             Vacancy.source_id == source_id,
-            Vacancy.profession_id == profession_id,
             Vacancy.published_at >= start_at,
             Vacancy.published_at < end_at,
+    )
+    if match_run_id is not None:
+        statement = statement.join(
+            VacancyProfessionMatch,
+            VacancyProfessionMatch.vacancy_id == Vacancy.id,
+        ).where(
+            VacancyProfessionMatch.last_run_id == match_run_id,
+            VacancyProfessionMatch.profession_id == profession_id,
         )
-    ).all()
+    else:
+        statement = statement.where(Vacancy.profession_id == profession_id)
+    rows = db.execute(statement).all()
     total = len(rows)
     enriched = 0
     employer_counts: Counter[str] = Counter()
@@ -1338,7 +1375,7 @@ def get_profession(
     premium = has_premium(db, user)
     effective_days = min(days, 180 if premium else 30)
     cache_parts = {
-        "schema": "hh-market-v1",
+        "schema": "hh-market-v2",
         "tier": "premium" if premium else "public",
         "slug": slug,
         "days": effective_days,

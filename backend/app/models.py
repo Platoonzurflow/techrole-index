@@ -136,6 +136,39 @@ class Vacancy(Base, TimestampMixin):
     )
 
 
+class VacancyProfessionMatch(Base, TimestampMixin):
+    """A profession returned by a source query, independent of title classification.
+
+    HH vacancy search is a many-to-many observation: one vacancy can legitimately be
+    returned for more than one profession query.  Keeping this relation separate
+    prevents query coverage from corrupting the conservative canonical classifier.
+    """
+
+    __tablename__ = "vacancy_profession_matches"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    vacancy_id: Mapped[int] = mapped_column(
+        ForeignKey("vacancies.id", ondelete="CASCADE"), index=True
+    )
+    profession_id: Mapped[int] = mapped_column(
+        ForeignKey("professions.id", ondelete="CASCADE"), index=True
+    )
+    last_run_id: Mapped[int] = mapped_column(ForeignKey("ingestion_runs.id"), index=True)
+    match_method: Mapped[str] = mapped_column(String(80))
+    matched_queries: Mapped[list[str]] = mapped_column(JSON, default=list)
+    first_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    __table_args__ = (
+        UniqueConstraint(
+            "vacancy_id", "profession_id", name="uq_vacancy_profession_match"
+        ),
+        Index(
+            "ix_vacancy_profession_match_run",
+            "last_run_id",
+            "profession_id",
+        ),
+    )
+
+
 class VacancySkill(Base):
     __tablename__ = "vacancy_skills"
     id: Mapped[int] = mapped_column(primary_key=True)

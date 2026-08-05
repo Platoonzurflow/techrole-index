@@ -10,8 +10,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import Vacancy, VacancySkill, VacancySource
+from app.models import Vacancy, VacancyProfessionMatch, VacancySkill, VacancySource
 from app.providers.vacancies import HhApiProvider
+from app.services.hh_query_matches import latest_completed_hh_query_run_id
 
 HH_DETAILS_SCHEMA_VERSION = "hh-details-v1"
 HH_DETAILS_KEY = "details"
@@ -79,7 +80,7 @@ def enrich_hh_vacancy_details(
     force: bool = False,
     sleep: Callable[[float], None] = time.sleep,
 ) -> HhDetailEnrichmentSummary:
-    """Enrich classified HH vacancies with a deliberately safe details allowlist.
+    """Enrich query-matched HH vacancies with a deliberately safe details allowlist.
 
     The operation is resumable. Every successful or unavailable vacancy is marked with
     a schema version, and commits happen in small batches. Vacancy descriptions,
@@ -93,6 +94,7 @@ def enrich_hh_vacancy_details(
         raise RuntimeError("HH source is not enabled")
 
     provider = provider or HhApiProvider(settings, sleep=sleep)
+    match_run_id = latest_completed_hh_query_run_id(db, source.id)
     max_records = max_records or settings.hh_detail_max_records_per_run
     batch_size = batch_size or settings.hh_detail_batch_size
     delay = (
@@ -107,15 +109,19 @@ def enrich_hh_vacancy_details(
     pending_changes = 0
 
     while attempted < max_records:
+        statement = select(Vacancy).where(
+            Vacancy.source_id == source.id,
+            Vacancy.id > last_id,
+        )
+        if match_run_id is not None:
+            statement = statement.join(
+                VacancyProfessionMatch,
+                VacancyProfessionMatch.vacancy_id == Vacancy.id,
+            ).where(VacancyProfessionMatch.last_run_id == match_run_id).distinct()
+        else:
+            statement = statement.where(Vacancy.profession_id.is_not(None))
         vacancies = db.scalars(
-            select(Vacancy)
-            .where(
-                Vacancy.source_id == source.id,
-                Vacancy.profession_id.is_not(None),
-                Vacancy.id > last_id,
-            )
-            .order_by(Vacancy.id)
-            .limit(max(batch_size * 4, 200))
+            statement.order_by(Vacancy.id).limit(max(batch_size * 4, 200))
         ).all()
         if not vacancies:
             break

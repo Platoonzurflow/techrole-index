@@ -18,6 +18,7 @@ from app.models import (
     SalaryObservation,
     SeniorityLevel,
     Vacancy,
+    VacancyProfessionMatch,
     VacancySource,
 )
 from app.providers.vacancies import VacancyRecord
@@ -110,12 +111,20 @@ def test_hh_ingestion_is_source_isolated_and_preserves_gross() -> None:
             assert summary.status == "success"
             assert summary.source == "hh_api"
             assert summary.records_seen == 1
+            assert summary.query_match_observations == 1
             vacancy = db.scalar(select(Vacancy))
             assert vacancy is not None
             assert vacancy.profession_id == profession.id
             assert vacancy.seniority_id == middle.id
             assert vacancy.region_id == regions[1].id
             assert vacancy.salary_gross is True
+            query_match = db.scalar(select(VacancyProfessionMatch))
+            assert query_match is not None
+            assert query_match.vacancy_id == vacancy.id
+            assert query_match.profession_id == profession.id
+            assert query_match.last_run_id == summary.run_id
+            assert query_match.match_method == "hh-name-exact-v1"
+            assert query_match.matched_queries == ["Python-разработчик"]
             source = db.scalar(select(VacancySource))
             assert source is not None
             assert source.code == "hh_api"

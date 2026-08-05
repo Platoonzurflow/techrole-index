@@ -159,6 +159,8 @@ def test_hh_provider_uses_application_auth_and_minimizes_raw_payload():
     assert captured[0].headers["hh-user-agent"].startswith("TechRoleIndex/0.1")
     assert captured[0].url.params["area"] == "113"
     assert captured[0].url.params["page"] == "0"
+    assert captured[0].url.params["text"] == '"Python"'
+    assert captured[0].url.params["search_field"] == "name"
     assert captured[0].url.params["date_from"]
 
 

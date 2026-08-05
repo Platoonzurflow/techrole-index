@@ -228,15 +228,23 @@ export function SalaryBySeniority({
   const officialByLevel = new Map(
     official.salary_by_seniority.map((item) => [item.seniority, item]),
   );
-  const officialCoherent = officialSalaryLevelsAreCoherent(official);
+  const latestHistoryByLevel = new Map(
+    salaryLevelOrder.map((seniority) => [
+      seniority,
+      [...official.salary_history]
+        .reverse()
+        .find((item) => item.seniority === seniority && item.average != null),
+    ]),
+  );
 
   return (
     <>
       <div className="salary-level-grid mobile-card-rail mt-5 grid gap-4 lg:grid-cols-3">
       {salaryLevelOrder.map((seniority) => {
         const observed = officialByLevel.get(seniority);
+        const historyPoint = latestHistoryByLevel.get(seniority);
         const reference = benchmarkByLevel.get(seniority);
-        const useObserved = observed?.median != null && (officialCoherent || !reference);
+        const useObserved = historyPoint?.average != null;
         const source = reference
           ? salaryBenchmarkSourceForPoint(benchmark, reference)
           : undefined;
@@ -245,12 +253,12 @@ export function SalaryBySeniority({
           ? `${official.date_from} — ${official.date_to}`
           : source?.period;
         const value = useObserved
-          ? rub(observed.median)
+          ? rub(historyPoint!.average)
           : reference
             ? pointValue(reference)
             : "Источник не найден";
         const basis = useObserved
-          ? "Медиана midpoint опубликованных вилок"
+          ? `Среднее полной RUB-вилки за скользящие ${official.salary_history_window_days ?? 30} дней`
           : reference
             ? `${metricLabel(reference)} · ${reference.label}`
             : "Нет проверяемого среза";
@@ -260,7 +268,13 @@ export function SalaryBySeniority({
             <div className="flex items-center justify-between gap-3">
               <h4 className="text-lg font-semibold">{levelLabels[seniority]}</h4>
               <span className={`badge ${useObserved ? "confidence-medium" : ""}`}>
-                {useObserved ? "180 дней" : scopeLabels[reference?.scope ?? "market_level"]}
+                {useObserved
+                  ? historyPoint!.scope === "category"
+                    ? "направление"
+                    : historyPoint!.scope === "market"
+                      ? "общий IT-рынок"
+                      : "точная профессия"
+                  : scopeLabels[reference?.scope ?? "market_level"]}
               </span>
             </div>
             <p className="mt-5 text-sm text-muted">{basis}</p>
@@ -268,7 +282,7 @@ export function SalaryBySeniority({
             <dl className="mt-5 grid gap-3 border-t border-line pt-4 text-sm">
               <div><dt className="text-muted">Источник</dt><dd className="mt-1 font-medium">{sourceName}</dd></div>
               <div><dt className="text-muted">Период</dt><dd className="mt-1">{period}</dd></div>
-              <div><dt className="text-muted">Вилки «Работы России»</dt><dd className="mt-1 font-mono">n={observed?.sample_size ?? 0}</dd></div>
+              <div><dt className="text-muted">Выборка главного графика</dt><dd className="mt-1 font-mono">n={historyPoint?.sample_size ?? 0}</dd></div>
               {!useObserved && source ? (
                 <div><dt className="text-muted">Данные исследования</dt><dd className="mt-1">{reference?.sample_size ? `n=${reference.sample_size}` : source.total_sample_size ? `вся база n=${source.total_sample_size.toLocaleString("ru-RU")}` : "публичный агрегат"} · {taxLabel(source.tax_status)}</dd></div>
               ) : (
@@ -278,8 +292,8 @@ export function SalaryBySeniority({
             {!useObserved ? (
               <p className="mt-4 text-xs leading-5 text-muted">
                 {observed?.median != null
-                  ? "Официальные вилки сохранены, но не выбраны: их градация по уровням противоречит карьерному порядку."
-                  : `В официальном 180-дневном срезе меньше ${official.salary_min_sample} полных вилок.`} Поэтому сумма взята из указанного открытого исследования.
+                  ? "В главном графике пока нет устойчивой точки для этого уровня."
+                  : `В наблюдаемом срезе меньше ${official.salary_min_sample} полных вилок.`} Поэтому сумма взята из указанного открытого исследования.
               </p>
             ) : null}
           </article>

@@ -11,7 +11,7 @@ WITH latest_salary AS MATERIALIZED (
     SELECT
         (vacancy.published_at AT TIME ZONE 'UTC')::date AS metric_date,
         vacancy.source_id,
-        vacancy.profession_id,
+        COALESCE(query_match.profession_id, vacancy.profession_id) AS profession_id,
         COALESCE(seniority.code, 'unknown') AS seniority_code,
         vacancy.region_id,
         CASE COALESCE(latest_salary.gross, vacancy.salary_gross)
@@ -32,8 +32,14 @@ WITH latest_salary AS MATERIALIZED (
     FROM vacancies AS vacancy
     LEFT JOIN seniority_levels AS seniority ON seniority.id = vacancy.seniority_id
     LEFT JOIN latest_salary ON latest_salary.vacancy_id = vacancy.id
+    LEFT JOIN vacancy_profession_matches AS query_match
+      ON query_match.vacancy_id = vacancy.id
+     AND query_match.last_run_id = :match_run_id
     WHERE vacancy.source_id = :source_id
-      AND vacancy.profession_id IS NOT NULL
+      AND (
+          (:match_run_id IS NOT NULL AND query_match.profession_id IS NOT NULL)
+          OR (:match_run_id IS NULL AND vacancy.profession_id IS NOT NULL)
+      )
       AND vacancy.published_at >= (
           CAST(:date_from AS date)::timestamp AT TIME ZONE 'UTC'
       )

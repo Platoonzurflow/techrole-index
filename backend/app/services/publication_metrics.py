@@ -19,9 +19,11 @@ from app.models import (
     SalaryObservation,
     SeniorityLevel,
     Vacancy,
+    VacancyProfessionMatch,
     VacancySource,
     utcnow,
 )
+from app.services.hh_query_matches import latest_completed_hh_query_run_id
 
 TRANSFORM_VERSION = "observed-publications-v1"
 _POSTGRES_SQL = files("app.sql").joinpath("observed_publication_metrics_daily.sql").read_text(
@@ -124,11 +126,12 @@ def _portable_refresh(
     run_id: str,
     expected_publications: int,
     min_salary_sample: int,
+    match_run_id: int | None,
 ) -> PublicationMetricTransformSummary:
     start = datetime.combine(date_from, time.min, tzinfo=timezone.utc)
     end = datetime.combine(date_to + timedelta(days=1), time.min, tzinfo=timezone.utc)
-    vacancy_rows = db.execute(
-        select(Vacancy, SeniorityLevel.code)
+    vacancy_statement: Any = (
+        select(Vacancy, SeniorityLevel.code, Vacancy.profession_id)
         .outerjoin(SeniorityLevel, SeniorityLevel.id == Vacancy.seniority_id)
         .where(
             Vacancy.source_id == source.id,
@@ -136,8 +139,24 @@ def _portable_refresh(
             Vacancy.published_at >= start,
             Vacancy.published_at < end,
         )
-    ).all()
-    vacancy_ids = [vacancy.id for vacancy, _ in vacancy_rows]
+    )
+    if match_run_id is not None:
+        vacancy_statement = (
+            select(Vacancy, SeniorityLevel.code, VacancyProfessionMatch.profession_id)
+            .outerjoin(SeniorityLevel, SeniorityLevel.id == Vacancy.seniority_id)
+            .join(
+                VacancyProfessionMatch,
+                VacancyProfessionMatch.vacancy_id == Vacancy.id,
+            )
+            .where(
+                Vacancy.source_id == source.id,
+                VacancyProfessionMatch.last_run_id == match_run_id,
+                Vacancy.published_at >= start,
+                Vacancy.published_at < end,
+            )
+        )
+    vacancy_rows = db.execute(vacancy_statement).all()
+    vacancy_ids = list({vacancy.id for vacancy, _, _ in vacancy_rows})
     latest_salary: dict[int, SalaryObservation] = {}
     if vacancy_ids:
         observations = db.scalars(
@@ -156,7 +175,7 @@ def _portable_refresh(
             latest_salary[stored_observation.vacancy_id] = stored_observation
 
     grouped: dict[tuple[Any, ...], list[tuple[Vacancy, SalaryInput]]] = defaultdict(list)
-    for vacancy, seniority_code in vacancy_rows:
+    for vacancy, seniority_code, profession_id in vacancy_rows:
         observation = latest_salary.get(vacancy.id)
         gross = (
             observation.gross
@@ -172,7 +191,7 @@ def _portable_refresh(
         key = (
             vacancy.published_at.date(),
             source.id,
-            vacancy.profession_id,
+            profession_id,
             seniority_code or "unknown",
             vacancy.region_id,
             _tax_status(gross),
@@ -290,6 +309,7 @@ def _postgres_refresh(
     run_id: str,
     expected_publications: int,
     min_salary_sample: int,
+    match_run_id: int | None,
 ) -> PublicationMetricTransformSummary:
     db.execute(
         text("SELECT pg_advisory_xact_lock(hashtext(:lock_name))"),
@@ -304,6 +324,7 @@ def _postgres_refresh(
             "min_salary_sample": min_salary_sample,
             "transform_version": TRANSFORM_VERSION,
             "transform_run_id": run_id,
+            "match_run_id": match_run_id,
         },
     ).mappings().one()
     deleted = db.execute(
@@ -361,12 +382,24 @@ def refresh_observed_publication_metrics(
     source = db.scalar(select(VacancySource).where(VacancySource.code == source_code))
     if source is None:
         return _skipped(source_code, reason="source_not_found")
-    earliest_at, latest_at = db.execute(
-        select(func.min(Vacancy.published_at), func.max(Vacancy.published_at)).where(
+    match_run_id = (
+        latest_completed_hh_query_run_id(db, source.id)
+        if source.code == "hh_api"
+        else None
+    )
+    bounds_statement = select(
+        func.min(Vacancy.published_at), func.max(Vacancy.published_at)
+    ).where(
             Vacancy.source_id == source.id,
-            Vacancy.profession_id.is_not(None),
-        )
-    ).one()
+    )
+    if match_run_id is not None:
+        bounds_statement = bounds_statement.join(
+            VacancyProfessionMatch,
+            VacancyProfessionMatch.vacancy_id == Vacancy.id,
+        ).where(VacancyProfessionMatch.last_run_id == match_run_id)
+    else:
+        bounds_statement = bounds_statement.where(Vacancy.profession_id.is_not(None))
+    earliest_at, latest_at = db.execute(bounds_statement).one()
     if earliest_at is None or latest_at is None:
         return _skipped(source.code, reason="no_classified_publications")
     earliest = earliest_at.date()
@@ -388,17 +421,19 @@ def refresh_observed_publication_metrics(
 
     start_at = datetime.combine(start, time.min, tzinfo=timezone.utc)
     end_at = datetime.combine(end + timedelta(days=1), time.min, tzinfo=timezone.utc)
-    expected_publications = int(
-        db.scalar(
-            select(func.count(Vacancy.id)).where(
+    count_statement = select(func.count(Vacancy.id)).where(
                 Vacancy.source_id == source.id,
-                Vacancy.profession_id.is_not(None),
                 Vacancy.published_at >= start_at,
                 Vacancy.published_at < end_at,
-            )
-        )
-        or 0
     )
+    if match_run_id is not None:
+        count_statement = count_statement.join(
+            VacancyProfessionMatch,
+            VacancyProfessionMatch.vacancy_id == Vacancy.id,
+        ).where(VacancyProfessionMatch.last_run_id == match_run_id)
+    else:
+        count_statement = count_statement.where(Vacancy.profession_id.is_not(None))
+    expected_publications = int(db.scalar(count_statement) or 0)
     if expected_publications == 0:
         return _skipped(
             source.code,
@@ -417,6 +452,7 @@ def refresh_observed_publication_metrics(
                 run_id=run_id,
                 expected_publications=expected_publications,
                 min_salary_sample=sample_gate,
+                match_run_id=match_run_id,
             )
         return _portable_refresh(
             db,
@@ -426,6 +462,7 @@ def refresh_observed_publication_metrics(
             run_id=run_id,
             expected_publications=expected_publications,
             min_salary_sample=sample_gate,
+            match_run_id=match_run_id,
         )
     except Exception:
         db.rollback()
