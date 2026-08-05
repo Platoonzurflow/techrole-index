@@ -639,7 +639,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(citation.URL).toContain("/open-data.json");
 
   const dataPackage = await (await request.get("/datapackage.json")).json();
-  expect(dataPackage.resources).toHaveLength(12);
+  expect(dataPackage.resources).toHaveLength(14);
   expect(dataPackage.licenses[0].path).toContain("/opendata/uslovia-od");
 
   const dailyLandingResponse = await request.get("/open-data-daily");
