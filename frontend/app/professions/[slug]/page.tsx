@@ -336,9 +336,8 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
             <a className="button-secondary" href={profession.hh_market_data.source_url} rel="noreferrer">Документация HH API</a>
           </div>
-          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div><p className="text-sm text-muted">Совпадения поиска по названию</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.total_publications)}</p></div>
-            <div><p className="text-sm text-muted">По направлению</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.category_total_publications)}</p></div>
             <div><p className="text-sm text-muted">С зарплатой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_disclosed_count)}</p></div>
             <div><p className="text-sm text-muted">Gross</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_gross_count ?? 0)}</p></div>
             <div><p className="text-sm text-muted">Net</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_net_count ?? 0)}</p></div>
