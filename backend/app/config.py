@@ -88,6 +88,8 @@ class Settings(BaseSettings):
     hh_contact_email: str = ""
     hh_app_name: str = "TechRoleIndex"
     hh_access_token: str = ""
+    hh_client_id: str = ""
+    hh_client_secret: str = ""
     hh_base_url: str = "https://api.hh.ru"
     hh_terms_url: str = "https://api.hh.ru/openapi/redoc"
     hh_query_limit: int = Field(default=100, ge=1, le=100)
@@ -132,15 +134,18 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_hh_guard(self) -> "Settings":
+        has_hh_client_credentials = bool(self.hh_client_id and self.hh_client_secret)
+        if bool(self.hh_client_id) != bool(self.hh_client_secret):
+            raise ValueError("HH_CLIENT_ID and HH_CLIENT_SECRET must be configured together")
         if self.hh_enabled and not (
             self.hh_commercial_use_confirmed
             and self.hh_contact_email
             and self.hh_app_name
-            and self.hh_access_token
+            and (self.hh_access_token or has_hh_client_credentials)
         ):
             raise ValueError(
                 "HH_ENABLED requires HH_COMMERCIAL_USE_CONFIRMED=true, HH_CONTACT_EMAIL, "
-                "HH_APP_NAME and HH_ACCESS_TOKEN"
+                "HH_APP_NAME and either HH_ACCESS_TOKEN or HH client credentials"
             )
         if (self.support_email_enabled or self.nightly_report_email_enabled) and not (
             self.smtp_host and self.smtp_username and self.smtp_password

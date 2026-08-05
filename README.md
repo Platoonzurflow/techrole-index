@@ -211,6 +211,9 @@ HH_COMMERCIAL_USE_CONFIRMED=true
 HH_CONTACT_EMAIL=owner@example.com
 HH_APP_NAME=TechRoleIndex
 HH_ACCESS_TOKEN=server-only-token
+# Recommended: lets the backend renew an expired application token server-side.
+HH_CLIENT_ID=server-only-client-id
+HH_CLIENT_SECRET=server-only-client-secret
 HH_HISTORY_DAYS=365
 HH_MAX_PROFESSIONS=50
 HH_MAX_PAGES_PER_QUERY=20

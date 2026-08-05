@@ -95,19 +95,75 @@ class HhApiProvider:
             raise RuntimeError("HH provider is disabled")
         if not settings.hh_commercial_use_confirmed:
             raise RuntimeError("Commercial-use confirmation is required")
-        if not settings.hh_access_token:
-            raise RuntimeError("HH application access token is required")
+        if not settings.hh_access_token and not (
+            settings.hh_client_id and settings.hh_client_secret
+        ):
+            raise RuntimeError("HH application authentication is required")
         self.settings = settings
         self.base_url = settings.hh_base_url.rstrip("/")
         self.user_agent = f"{settings.hh_app_name}/0.1 ({settings.hh_contact_email})"
         self.token = settings.hh_access_token
         self.headers = {
-            "Authorization": f"Bearer {self.token}",
             "HH-User-Agent": self.user_agent,
             "User-Agent": self.user_agent,
         }
+        if self.token:
+            self.headers["Authorization"] = f"Bearer {self.token}"
         self.client = client or httpx.Client(timeout=20)
         self._page_counts: dict[tuple[str, str], int] = {}
+
+    @staticmethod
+    def _is_expired_token_response(response: httpx.Response) -> bool:
+        if response.status_code == 401:
+            return True
+        if response.status_code != 403:
+            return False
+        try:
+            errors = response.json().get("errors", [])
+        except (AttributeError, ValueError):
+            return False
+        return any(
+            isinstance(error, dict)
+            and error.get("type") == "oauth"
+            and error.get("value")
+            in {"token_expired", "bad_authorization", "token_revoked"}
+            for error in errors
+        )
+
+    def _renew_application_token(self) -> None:
+        if not (self.settings.hh_client_id and self.settings.hh_client_secret):
+            raise RuntimeError("HH application token expired and renewal is not configured")
+        response = self.client.post(
+            f"{self.base_url}/token",
+            data={
+                "grant_type": "client_credentials",
+                "client_id": self.settings.hh_client_id,
+                "client_secret": self.settings.hh_client_secret,
+            },
+            headers={
+                "HH-User-Agent": self.user_agent,
+                "User-Agent": self.user_agent,
+            },
+        )
+        response.raise_for_status()
+        payload = response.json()
+        token = payload.get("access_token")
+        if not isinstance(token, str) or not token.strip():
+            raise RuntimeError("HH token endpoint returned no application access token")
+        self.token = token.strip()
+        self.settings.hh_access_token = self.token
+        self.headers["Authorization"] = f"Bearer {self.token}"
+
+    def _authorized_get(
+        self, url: str, *, params: dict[str, str | int]
+    ) -> httpx.Response:
+        if not self.token:
+            self._renew_application_token()
+        response = self.client.get(url, params=params, headers=self.headers)
+        if self._is_expired_token_response(response):
+            self._renew_application_token()
+            response = self.client.get(url, params=params, headers=self.headers)
+        return response
 
     @staticmethod
     def _safe_raw(item: dict) -> dict:
@@ -152,7 +208,7 @@ class HhApiProvider:
             return
         per_page = min(limit, 100)
         now = datetime.now(timezone.utc)
-        response = self.client.get(
+        response = self._authorized_get(
             f"{self.base_url}/vacancies",
             params={
                 "text": query,
@@ -163,7 +219,6 @@ class HhApiProvider:
                 "date_to": now.isoformat(),
                 "order_by": "publication_time",
             },
-            headers=self.headers,
         )
         response.raise_for_status()
         payload = response.json()
