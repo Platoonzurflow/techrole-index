@@ -54,12 +54,18 @@ def reclassify_rule_managed_vacancies(
         )
         .order_by(Vacancy.id)
     ).all()
-    vacancy_ids = [vacancy.id for vacancy in vacancies]
     skills_by_vacancy: dict[int, list[str]] = defaultdict(list)
-    if vacancy_ids:
+    if vacancies:
         for vacancy_id, skill in db.execute(
             select(VacancySkill.vacancy_id, VacancySkill.skill)
-            .where(VacancySkill.vacancy_id.in_(vacancy_ids))
+            .join(Vacancy, Vacancy.id == VacancySkill.vacancy_id)
+            .where(
+                Vacancy.source_id == source.id,
+                or_(
+                    Vacancy.classifier_version.is_(None),
+                    Vacancy.classifier_version.like("rules-%"),
+                ),
+            )
             .order_by(VacancySkill.vacancy_id, VacancySkill.id)
         ):
             skills_by_vacancy[vacancy_id].append(skill)
