@@ -114,10 +114,14 @@ def enrich_hh_vacancy_details(
             Vacancy.id > last_id,
         )
         if match_run_id is not None:
-            statement = statement.join(
-                VacancyProfessionMatch,
-                VacancyProfessionMatch.vacancy_id == Vacancy.id,
-            ).where(VacancyProfessionMatch.last_run_id == match_run_id).distinct()
+            statement = statement.where(
+                select(VacancyProfessionMatch.id)
+                .where(
+                    VacancyProfessionMatch.vacancy_id == Vacancy.id,
+                    VacancyProfessionMatch.last_run_id == match_run_id,
+                )
+                .exists()
+            )
         else:
             statement = statement.where(Vacancy.profession_id.is_not(None))
         vacancies = db.scalars(
