@@ -25,7 +25,7 @@ jobs:
     env:
       BASE_URL: ${{ inputs.base_url || 'https://win-702hpohbtiv.tail044b19.ts.net' }}
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: Verify the public data and citation contracts
         shell: pwsh
         run: ./infra/windows/test-public-preview.ps1 -BaseUrl $env:BASE_URL
