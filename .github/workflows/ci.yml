@@ -110,6 +110,7 @@ jobs:
       - run: docker compose --profile e2e run --rm e2e
       - name: Reset frontend memory before the full public crawl
         run: |
+          docker compose exec -T frontend sh -lc 'test "$PWD" = /app && rm -rf -- /app/.next-dev'
           docker compose restart frontend
           docker compose up -d --wait frontend
           for path in \
