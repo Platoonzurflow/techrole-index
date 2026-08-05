@@ -16,6 +16,9 @@ Daily dataset: ${siteUrl}/open-data-daily
 Daily CSV: ${siteUrl}/open-data-daily.csv
 CSVW metadata: ${siteUrl}/open-data-daily.csv-metadata.json
 Croissant 1.1: ${siteUrl}/open-data-daily.croissant.json
+Компании по профессиям: ${siteUrl}/companies
+HH enrichment JSON: ${siteUrl}/hh-market-enrichment.json
+HH enrichment CSV: ${siteUrl}/hh-market-enrichment.csv
 DCAT 3: ${siteUrl}/catalog.jsonld
 Статус данных: ${siteUrl}/data-status
 Provenance JSON: ${siteUrl}/data-status.json

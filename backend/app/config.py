@@ -98,6 +98,9 @@ class Settings(BaseSettings):
     hh_max_pages_per_query: int = Field(default=20, ge=1, le=20)
     hh_use_alias_queries: bool = True
     hh_request_delay_seconds: float = Field(default=0.25, ge=0, le=5)
+    hh_detail_request_delay_seconds: float = Field(default=0.25, ge=0, le=5)
+    hh_detail_max_records_per_run: int = Field(default=10_000, ge=1, le=100_000)
+    hh_detail_batch_size: int = Field(default=50, ge=1, le=500)
 
     ai_classifier_enabled: bool = False
     ollama_base_url: str = "http://host.docker.internal:11434"

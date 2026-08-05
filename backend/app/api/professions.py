@@ -1,4 +1,4 @@
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
 from statistics import fmean
 from typing import Any, Literal
@@ -28,7 +28,9 @@ from app.models import (
     VacancySource,
 )
 from app.schemas import (
+    HhFacetCount,
     HhMarketCatalogSummary,
+    HhMarketEnrichmentSummary,
     MetricPoint,
     OfficialOpenDataSummary,
     OfficialSalaryHistoryPoint,
@@ -172,6 +174,7 @@ def open_data_publications(db: Session = Depends(get_db)):
                         salary_by_seniority=hh.salary_by_seniority,
                         source_url=hh.source_url,
                         methodology_note=hh.methodology_note,
+                        hh_enrichment=hh.hh_enrichment,
                     )
                     if hh is not None
                     else None
@@ -668,7 +671,7 @@ def _hh_market_summary(
     source = db.scalar(select(VacancySource).where(VacancySource.code == "hh_api"))
     if source is None or not source.enabled:
         return None
-    return _source_market_summary(
+    summary = _source_market_summary(
         db,
         profession_id,
         source_code="hh_api",
@@ -690,8 +693,271 @@ def _hh_market_summary(
             "Результаты дедуплицированы по идентификатору вакансии и классифицированы по "
             "таксономии TechRole Index. Это не полная историческая выгрузка: API ограничивает "
             "глубину одной поисковой выдачи 2 000 результатами. Публично показываются только "
-            "агрегаты, без текстов вакансий и данных работодателей."
+            "агрегаты без текстов вакансий, контактов и адресов. Публичные названия "
+            "работодателей показываются только в агрегированном топ-5; остальные объединены "
+            "в «Другие компании»."
         ),
+    )
+    return summary.model_copy(
+        update={
+            "hh_enrichment": _hh_market_enrichment_summary(
+                db,
+                profession_id,
+                source.id,
+                date_from=summary.date_from,
+                date_to=summary.date_to,
+            )
+        }
+    )
+
+
+def _hh_market_enrichment_summary(
+    db: Session,
+    profession_id: int,
+    source_id: int,
+    *,
+    date_from,
+    date_to,
+) -> HhMarketEnrichmentSummary:
+    start_at = datetime.combine(date_from, datetime.min.time(), tzinfo=timezone.utc)
+    end_at = datetime.combine(
+        date_to + timedelta(days=1), datetime.min.time(), tzinfo=timezone.utc
+    )
+    rows = db.execute(
+        select(Vacancy.id, Vacancy.experience_code, Vacancy.raw_payload).where(
+            Vacancy.source_id == source_id,
+            Vacancy.profession_id == profession_id,
+            Vacancy.published_at >= start_at,
+            Vacancy.published_at < end_at,
+        )
+    ).all()
+    total = len(rows)
+    enriched = 0
+    employer_counts: Counter[str] = Counter()
+    employer_names: dict[str, str] = {}
+    facet_counts: dict[str, Counter[tuple[str, str]]] = {
+        "languages": Counter(),
+        "employment": Counter(),
+        "employment_form": Counter(),
+        "work_format": Counter(),
+        "schedule": Counter(),
+        "work_schedule_by_days": Counter(),
+        "working_hours": Counter(),
+        "working_time_intervals": Counter(),
+        "working_time_modes": Counter(),
+        "professional_roles": Counter(),
+        "experience": Counter(),
+        "education": Counter(),
+        "civil_law_contracts": Counter(),
+        "inclusiveness_types": Counter(),
+        "driver_license_types": Counter(),
+    }
+    internship_count = night_shift_count = 0
+    temporary_count = labor_contract_count = 0
+    cover_letter_required_count = test_required_count = 0
+    accessible_workplace_count = teen_candidate_count = 0
+
+    def add_facet(counter: Counter[tuple[str, str]], value: object) -> None:
+        values = value if isinstance(value, list) else [value]
+        seen: set[tuple[str, str]] = set()
+        for item in values:
+            if not isinstance(item, dict):
+                continue
+            raw_id = str(item.get("id") or "").strip()
+            name = str(item.get("name") or raw_id).strip()
+            if not name:
+                continue
+            facet_key = (raw_id or name.casefold(), name[:300])
+            if facet_key not in seen:
+                counter[facet_key] += 1
+                seen.add(facet_key)
+
+    for _, experience_code, raw_value in rows:
+        raw = raw_value if isinstance(raw_value, dict) else {}
+        details_value = raw.get("details")
+        details = details_value if isinstance(details_value, dict) else {}
+        is_enriched = (
+            details.get("schema_version") == "hh-details-v1"
+            and details.get("status") == "ok"
+        )
+        enriched += int(is_enriched)
+
+        employer = details.get("employer") or raw.get("employer")
+        if isinstance(employer, dict):
+            employer_id = str(employer.get("id") or "").strip()
+            employer_name = str(employer.get("name") or "").strip()
+            if employer_name:
+                employer_key = employer_id or employer_name.casefold()
+                employer_counts[employer_key] += 1
+                employer_names.setdefault(employer_key, employer_name[:300])
+
+        for target, facet_field in (
+            ("languages", "languages"),
+            ("employment", "employment"),
+            ("employment_form", "employment_form"),
+            ("work_format", "work_format"),
+            ("schedule", "schedule"),
+            ("work_schedule_by_days", "work_schedule_by_days"),
+            ("working_hours", "working_hours"),
+            ("working_time_intervals", "working_time_intervals"),
+            ("working_time_modes", "working_time_modes"),
+            ("professional_roles", "professional_roles"),
+            ("education", "education"),
+            ("civil_law_contracts", "civil_law_contracts"),
+            ("inclusiveness_types", "inclusiveness_types"),
+            ("driver_license_types", "driver_license_types"),
+        ):
+            value = (
+                details.get(facet_field)
+                if facet_field in details
+                else raw.get(facet_field)
+            )
+            if target == "languages" and isinstance(value, list):
+                languages_with_levels: list[dict[str, object]] = []
+                for language in value:
+                    if not isinstance(language, dict):
+                        continue
+                    normalized_language = dict(language)
+                    level = language.get("level")
+                    if isinstance(level, dict):
+                        level_name = str(level.get("name") or level.get("id") or "").strip()
+                        if level_name:
+                            language_name = str(
+                                language.get("name") or language.get("id") or ""
+                            ).strip()
+                            normalized_language["name"] = (
+                                f"{language_name} · {level_name}"
+                            )
+                    languages_with_levels.append(normalized_language)
+                value = languages_with_levels
+            add_facet(facet_counts[target], value)
+
+        experience_value = details.get("experience") or raw.get("experience")
+        if not isinstance(experience_value, dict) and experience_code:
+            experience_value = {"id": experience_code, "name": experience_code}
+        add_facet(facet_counts["experience"], experience_value)
+        internship_count += int(details.get("internship") is True)
+        night_shift_count += int(details.get("night_shifts") is True)
+        temporary_count += int(details.get("accept_temporary") is True)
+        labor_contract_count += int(details.get("accept_labor_contract") is True)
+        cover_letter_required_count += int(
+            details.get("response_letter_required") is True
+        )
+        test_required_count += int(details.get("test_required") is True)
+        accessible_workplace_count += int(details.get("accept_handicapped") is True)
+        teen_candidate_count += int(details.get("accept_kids") is True)
+
+    def facet_rows(
+        counter: Counter[tuple[str, str]],
+        *,
+        denominator: int,
+        limit: int = 8,
+    ) -> list[HhFacetCount]:
+        return [
+            HhFacetCount(
+                id=item_id,
+                name=name,
+                count=count,
+                share=round(count / denominator, 4) if denominator else 0,
+            )
+            for (item_id, name), count in counter.most_common(limit)
+        ]
+
+    employer_vacancy_count = sum(employer_counts.values())
+    leading_employers = employer_counts.most_common(5)
+    employer_distribution = [
+        HhFacetCount(
+            id=item_id,
+            name=employer_names[item_id],
+            count=count,
+            share=round(count / employer_vacancy_count, 4) if employer_vacancy_count else 0,
+        )
+        for item_id, count in leading_employers
+    ]
+    other_count = employer_vacancy_count - sum(count for _, count in leading_employers)
+    if other_count:
+        employer_distribution.append(
+            HhFacetCount(
+                id="other",
+                name="Другие компании",
+                count=other_count,
+                share=round(other_count / employer_vacancy_count, 4),
+            )
+        )
+
+    skill_rows = db.execute(
+        select(
+            VacancySkill.normalized_skill,
+            func.min(VacancySkill.skill),
+            func.count(VacancySkill.id),
+        )
+        .join(Vacancy, VacancySkill.vacancy_id == Vacancy.id)
+        .where(
+            Vacancy.source_id == source_id,
+            Vacancy.profession_id == profession_id,
+            Vacancy.published_at >= start_at,
+            Vacancy.published_at < end_at,
+        )
+        .group_by(VacancySkill.normalized_skill)
+        .order_by(desc(func.count(VacancySkill.id)))
+        .limit(12)
+    ).all()
+    top_skills = [
+        HhFacetCount(
+            id=normalized,
+            name=name,
+            count=int(count),
+            share=round(int(count) / enriched, 4) if enriched else 0,
+        )
+        for normalized, name, count in skill_rows
+    ]
+
+    return HhMarketEnrichmentSummary(
+        enriched_vacancy_count=enriched,
+        enrichment_coverage=round(enriched / total, 4) if total else 0,
+        employer_vacancy_count=employer_vacancy_count,
+        distinct_employer_count=len(employer_counts),
+        employer_distribution=employer_distribution,
+        top_skills=top_skills,
+        languages=facet_rows(facet_counts["languages"], denominator=enriched),
+        employment_types=facet_rows(facet_counts["employment"], denominator=total),
+        employment_forms=facet_rows(
+            facet_counts["employment_form"], denominator=enriched
+        ),
+        work_formats=facet_rows(facet_counts["work_format"], denominator=total),
+        work_schedules=facet_rows(facet_counts["schedule"], denominator=total),
+        work_schedule_by_days=facet_rows(
+            facet_counts["work_schedule_by_days"], denominator=enriched
+        ),
+        working_hours=facet_rows(facet_counts["working_hours"], denominator=enriched),
+        working_time_intervals=facet_rows(
+            facet_counts["working_time_intervals"], denominator=enriched
+        ),
+        working_time_modes=facet_rows(
+            facet_counts["working_time_modes"], denominator=enriched
+        ),
+        professional_roles=facet_rows(
+            facet_counts["professional_roles"], denominator=total
+        ),
+        experience_levels=facet_rows(facet_counts["experience"], denominator=total),
+        education_levels=facet_rows(facet_counts["education"], denominator=enriched),
+        civil_law_contracts=facet_rows(
+            facet_counts["civil_law_contracts"], denominator=enriched
+        ),
+        inclusiveness_types=facet_rows(
+            facet_counts["inclusiveness_types"], denominator=enriched
+        ),
+        driver_license_types=facet_rows(
+            facet_counts["driver_license_types"], denominator=enriched
+        ),
+        internship_count=internship_count,
+        night_shift_count=night_shift_count,
+        temporary_count=temporary_count,
+        labor_contract_count=labor_contract_count,
+        cover_letter_required_count=cover_letter_required_count,
+        test_required_count=test_required_count,
+        accessible_workplace_count=accessible_workplace_count,
+        teen_candidate_count=teen_candidate_count,
     )
 
 

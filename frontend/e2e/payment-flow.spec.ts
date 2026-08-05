@@ -19,7 +19,9 @@ test("a new user can complete the sandbox payment without a real charge", async 
   await expect(page.getByRole("heading", { level: 1, name: "Уведомления о рынке" })).toBeVisible();
   await expect(page.getByText("Уведомления доступны в Premium")).toBeVisible();
   await page.goto("/pricing");
-  await expect(page.getByText("Подключён безопасный тестовый режим", { exact: false })).toBeVisible();
+  const sandboxMode = page.getByText("Подключён безопасный тестовый режим", { exact: false });
+  test.skip(!(await sandboxMode.isVisible()), "real payment mode must never be exercised by E2E");
+  await expect(sandboxMode).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.addInitScript(() => localStorage.setItem("theme", "dark"));

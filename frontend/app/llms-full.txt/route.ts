@@ -36,6 +36,12 @@ export async function GET(request: Request) {
     const hhSalary = observed?.hh_market_data?.salary_by_seniority.map((slice) =>
       `${slice.seniority}: ${slice.median == null ? `Недостаточно данных (n=${slice.sample_size})` : `${Math.round(slice.median).toLocaleString("ru-RU")} ${observed.hh_market_data?.salary_currency}/месяц gross, n=${slice.sample_size}`}`,
     ).join("; ");
+    const hhEmployers = observed?.hh_market_data?.hh_enrichment?.employer_distribution
+      .map((employer) => `${employer.name}: ${employer.count}`)
+      .join("; ");
+    const hhSkills = observed?.hh_market_data?.hh_enrichment?.top_skills
+      .map((skill) => `${skill.name}: ${skill.count}`)
+      .join("; ");
     return [
       `### ${item.name_ru} (${item.name_en})`,
       `- URL: ${siteUrl}/professions/${item.slug}`,
@@ -46,6 +52,8 @@ export async function GET(request: Request) {
       `- Зарплатные вилки официального источника: ${salary ?? "Недостаточно данных"}; midpoint полных вилок, gross/net не определён`,
       `- Снимок HH API: ${observed?.hh_market_data ? `${observed.hh_market_data.total_publications} классифицированных вакансий за ${observed.hh_market_data.date_from} - ${observed.hh_market_data.date_to}; зарплата указана у ${observed.hh_market_data.salary_disclosed_count}, gross ${observed.hh_market_data.salary_gross_count}, net ${observed.hh_market_data.salary_net_count}, налоговый статус неизвестен у ${observed.hh_market_data.salary_tax_unknown_count}, удалённых ${observed.hh_market_data.remote_count}` : "данные ещё не загружены"}`,
       `- Gross-вилки HH по уровням: ${hhSalary ?? "Недостаточно данных"}; официальный поисковый снимок, не полная историческая база`,
+      `- Работодатели HH (топ-5 и остальные): ${hhEmployers || "подробные карточки ещё не обработаны"}`,
+      `- Навыки в подробных карточках HH: ${hhSkills || "подробные карточки ещё не обработаны"}`,
       "",
     ].join("\n");
   }).join("\n");
@@ -73,6 +81,9 @@ Daily JSON официальных публикаций: ${siteUrl}/open-data-dai
 Daily CSV официальных публикаций: ${siteUrl}/open-data-daily.csv
 Daily JSON снимка HH API: ${siteUrl}/hh-market-daily.json
 Daily CSV снимка HH API: ${siteUrl}/hh-market-daily.csv
+Дашборд работодателей HH: ${siteUrl}/companies
+JSON агрегатов подробных карточек HH: ${siteUrl}/hh-market-enrichment.json
+CSV агрегатов подробных карточек HH: ${siteUrl}/hh-market-enrichment.csv
 CSVW metadata ежедневного датасета: ${siteUrl}/open-data-daily.csv-metadata.json
 JSON Schema ежедневного датасета: ${siteUrl}/open-data-daily.schema.json
 Croissant 1.1 metadata ежедневного датасета: ${siteUrl}/open-data-daily.croissant.json

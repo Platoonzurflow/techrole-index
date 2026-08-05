@@ -25,6 +25,7 @@ def test_dagster_midnight_moscow_schedule_is_enabled() -> None:
         "verify_public_salary_benchmarks",
         "collect_and_classify_open_vacancies",
         "collect_and_classify_hh_vacancies",
+        "enrich_classified_hh_vacancies",
         "materialize_observed_publication_metrics",
         "materialize_hh_publication_metrics",
         "notify_search_engines",

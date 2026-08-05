@@ -3,6 +3,7 @@ from __future__ import annotations
 import hashlib
 import random
 import re
+import time
 from collections.abc import Iterator
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -27,6 +28,15 @@ class VacancyRecord:
     experience: str | None
     is_remote: bool
     skills: tuple[str, ...]
+    raw: dict
+
+
+@dataclass(frozen=True)
+class HhVacancyDetails:
+    external_id: str
+    skills: tuple[str, ...]
+    experience: str | None
+    is_remote: bool
     raw: dict
 
 
@@ -90,7 +100,13 @@ class HhApiProvider:
     code = "hh_api"
     area_ids = {"ru": "113", "msk": "1", "spb": "2"}
 
-    def __init__(self, settings: Settings, client: httpx.Client | None = None):
+    def __init__(
+        self,
+        settings: Settings,
+        client: httpx.Client | None = None,
+        *,
+        sleep=time.sleep,
+    ):
         if not settings.hh_enabled:
             raise RuntimeError("HH provider is disabled")
         if not settings.hh_commercial_use_confirmed:
@@ -110,6 +126,7 @@ class HhApiProvider:
         if self.token:
             self.headers["Authorization"] = f"Bearer {self.token}"
         self.client = client or httpx.Client(timeout=20)
+        self.sleep = sleep
         self._page_counts: dict[tuple[str, str], int] = {}
 
     @staticmethod
@@ -155,14 +172,28 @@ class HhApiProvider:
         self.headers["Authorization"] = f"Bearer {self.token}"
 
     def _authorized_get(
-        self, url: str, *, params: dict[str, str | int]
+        self, url: str, *, params: dict[str, str | int] | None = None
     ) -> httpx.Response:
         if not self.token:
             self._renew_application_token()
-        response = self.client.get(url, params=params, headers=self.headers)
-        if self._is_expired_token_response(response):
-            self._renew_application_token()
+        renewed = False
+        response: httpx.Response | None = None
+        for attempt in range(5):
             response = self.client.get(url, params=params, headers=self.headers)
+            if self._is_expired_token_response(response) and not renewed:
+                self._renew_application_token()
+                renewed = True
+                continue
+            if response.status_code not in {429, 502, 503, 504} or attempt == 4:
+                break
+            retry_after = response.headers.get("Retry-After", "")
+            try:
+                delay = min(max(float(retry_after), 0), 60)
+            except ValueError:
+                delay = min(2**attempt, 30)
+            self.sleep(delay)
+        if response is None:  # pragma: no cover - the loop always executes
+            raise RuntimeError("HH request did not produce a response")
         return response
 
     @staticmethod
@@ -185,7 +216,104 @@ class HhApiProvider:
             "provider": "hh_api",
             **{key: item.get(key) for key in allowed if key in item},
             "area": item.get("area") or {},
+            "employer": HhApiProvider._id_name(item.get("employer")),
         }
+
+    @staticmethod
+    def _id_name(value: object) -> dict[str, str]:
+        if isinstance(value, (str, int)) and str(value).strip():
+            normalized = str(value).strip()[:300]
+            return {"id": normalized, "name": normalized}
+        if not isinstance(value, dict):
+            return {}
+        result: dict[str, str] = {}
+        for key in ("id", "name"):
+            item = value.get(key)
+            if isinstance(item, (str, int)) and str(item).strip():
+                result[key] = str(item).strip()[:300]
+        return result
+
+    @classmethod
+    def _id_name_list(cls, value: object) -> list[dict[str, str]]:
+        if not isinstance(value, list):
+            return []
+        return [item for raw in value if (item := cls._id_name(raw))]
+
+    @classmethod
+    def _safe_details_raw(cls, item: dict) -> dict:
+        safe: dict[str, object] = {
+            "provider": "hh_api",
+            "schema_version": "hh-details-v1",
+            "employer": cls._id_name(item.get("employer")),
+            "key_skills": [
+                str(skill.get("name")).strip()[:120]
+                for skill in item.get("key_skills") or []
+                if isinstance(skill, dict) and str(skill.get("name") or "").strip()
+            ][:30],
+        }
+        for key in (
+            "employment",
+            "employment_form",
+            "experience",
+            "schedule",
+            "education",
+        ):
+            safe[key] = cls._id_name(item.get(key))
+        for key in (
+            "work_format",
+            "work_schedule_by_days",
+            "working_hours",
+            "working_time_intervals",
+            "working_time_modes",
+            "working_days",
+            "professional_roles",
+            "languages",
+            "civil_law_contracts",
+            "driver_license_types",
+            "inclusiveness_types",
+        ):
+            if key == "languages":
+                languages: list[dict[str, object]] = []
+                for language in item.get(key) or []:
+                    if not isinstance(language, dict):
+                        continue
+                    safe_language: dict[str, object] = dict(cls._id_name(language))
+                    level = cls._id_name(language.get("level"))
+                    if level:
+                        safe_language["level"] = level
+                    if safe_language:
+                        languages.append(safe_language)
+                safe[key] = languages
+            else:
+                safe[key] = cls._id_name_list(item.get(key))
+        for key in (
+            "internship",
+            "night_shifts",
+            "accept_temporary",
+            "accept_labor_contract",
+            "accept_handicapped",
+            "accept_kids",
+            "accept_incomplete_resumes",
+            "response_letter_required",
+        ):
+            if isinstance(item.get(key), bool):
+                safe[key] = item[key]
+        test = item.get("test")
+        if isinstance(test, dict) and isinstance(test.get("required"), bool):
+            safe["test_required"] = test["required"]
+        salary_range = item.get("salary_range")
+        if isinstance(salary_range, dict):
+            safe_salary_range: dict[str, object] = {
+                key: salary_range.get(key)
+                for key in ("from", "to", "currency", "gross")
+                if salary_range.get(key) is not None
+            }
+            for key in ("mode", "frequency"):
+                value = cls._id_name(salary_range.get(key))
+                if value:
+                    safe_salary_range[key] = value
+            safe["salary_range"] = safe_salary_range
+        return safe
 
     @staticmethod
     def _is_remote(item: dict) -> bool:
@@ -245,6 +373,23 @@ class HhApiProvider:
                 skills=(),
                 raw=self._safe_raw(item),
             )
+
+    def fetch_details(self, external_id: str) -> HhVacancyDetails | None:
+        response = self._authorized_get(f"{self.base_url}/vacancies/{external_id}")
+        if response.status_code == 404:
+            return None
+        response.raise_for_status()
+        item = response.json()
+        if not isinstance(item, dict):
+            raise RuntimeError("HH vacancy details response must be an object")
+        safe = self._safe_details_raw(item)
+        return HhVacancyDetails(
+            external_id=str(item.get("id") or external_id),
+            skills=tuple(str(skill) for skill in safe["key_skills"]),
+            experience=(safe.get("experience") or {}).get("id"),
+            is_remote=self._is_remote(item),
+            raw=safe,
+        )
 
 
 class TrudvsemOpenDataProvider:

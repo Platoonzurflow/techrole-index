@@ -106,7 +106,7 @@ export default async function DataStatusPage() {
               <div><dt className="text-muted">Basis неизвестен</dt><dd className="mt-1 font-mono font-semibold">{hh.salary_tax_unknown_records.toLocaleString("ru-RU")}</dd></div>
               <div><dt className="text-muted">SQL-срезов</dt><dd className="mt-1 font-mono font-semibold">{hh.materialized_slice_count.toLocaleString("ru-RU")}</dd></div>
             </dl>
-            <p className="mt-5 rounded-xl border border-line p-4 text-sm leading-6">Окно: {formatDate(hh.window_date_from)} - {formatDate(hh.window_date_to)}. Gross-метрики не смешиваются с net. Исходные тексты вакансий и сведения о работодателях не публикуются. Витрина: {hh.materialized_transform_version ?? "ещё не построена"}.</p>
+            <p className="mt-5 rounded-xl border border-line p-4 text-sm leading-6">Окно: {formatDate(hh.window_date_from)} - {formatDate(hh.window_date_to)}. Gross-метрики не смешиваются с net. Исходные тексты, контакты и адреса не публикуются; работодатели доступны только как агрегированный топ-5 и группа «Другие компании». Витрина: {hh.materialized_transform_version ?? "ещё не построена"}.</p>
           </article> : null}
         </section>
       )}

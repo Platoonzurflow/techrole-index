@@ -21,6 +21,7 @@ from app.providers.email import (
     get_nightly_email_provider,
 )
 from app.services.currency_rates import snapshot_configured_currency_rates
+from app.services.hh_detail_enrichment import enrich_hh_vacancy_details
 from app.services.indexnow import submit_indexnow
 from app.services.open_data_ingestion import ingest_hh_data, ingest_trudvsem_open_data
 from app.services.publication_metrics import refresh_observed_publication_metrics
@@ -230,8 +231,28 @@ def materialize_observed_publication_metrics(context, ingestion_result: dict) ->
     return result
 
 
+@op(name="enrich_classified_hh_vacancies")
+def enrich_classified_hh_vacancies(context, ingestion_result: dict) -> dict:
+    if ingestion_result.get("status") != "success":
+        return {
+            "status": "skipped",
+            "reason": "ingestion_not_complete",
+            "ingestion_status": ingestion_result.get("status"),
+        }
+    try:
+        with SessionLocal() as db:
+            result = enrich_hh_vacancy_details(db).to_dict()
+    except Exception as exc:
+        context.log.exception("HH detail enrichment failed")
+        return {"status": "failed", "error": type(exc).__name__}
+    context.log.info(json.dumps(result, ensure_ascii=False, default=str))
+    return result
+
+
 @op(name="materialize_hh_publication_metrics")
-def materialize_hh_publication_metrics(context, ingestion_result: dict) -> dict:
+def materialize_hh_publication_metrics(
+    context, ingestion_result: dict, enrichment_result: dict
+) -> dict:
     if ingestion_result.get("status") != "success":
         result = {
             "status": "skipped",
@@ -269,6 +290,7 @@ def materialize_hh_publication_metrics(context, ingestion_result: dict) -> dict:
             )
             run.metadata_json = {
                 **metadata,
+                "detail_enrichment": enrichment_result,
                 "publication_metrics_materialized": transformed.status == "success",
                 "publication_metric_transform": result,
             }
@@ -305,7 +327,8 @@ def nightly_market_pipeline():
     ingestion_result = collect_and_classify_open_vacancies()
     materialization_result = materialize_observed_publication_metrics(ingestion_result)
     hh_ingestion_result = collect_and_classify_hh_vacancies()
-    materialize_hh_publication_metrics(hh_ingestion_result)
+    hh_enrichment_result = enrich_classified_hh_vacancies(hh_ingestion_result)
+    materialize_hh_publication_metrics(hh_ingestion_result, hh_enrichment_result)
     notify_search_engines(materialization_result)
 
 

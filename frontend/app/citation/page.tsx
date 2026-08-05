@@ -22,6 +22,8 @@ const formats = [
   ["Daily CSV", "/open-data-daily.csv", "Переносимая плоская таблица daily creation-date срезов."],
   ["HH daily JSON", "/hh-market-daily.json", "Source-isolated агрегаты одобренного HH API с раздельными gross, net и unknown."],
   ["HH daily CSV", "/hh-market-daily.csv", "Переносимая таблица ежедневных HH-срезов без текстов вакансий и данных работодателей."],
+  ["HH enrichment JSON", "/hh-market-enrichment.json", "Топ-5 работодателей и другие компании, навыки, языки, опыт и условия работы по профессиям."],
+  ["HH enrichment CSV", "/hh-market-enrichment.csv", "Long-form таблица безопасных агрегатов подробных карточек HH."],
   ["Daily JSON Schema", "/open-data-daily.schema.json", "Строгий контракт Draft 2020-12 для автоматической проверки метаданных и всех 27 полей строки."],
   ["Daily Croissant 1.1", "/open-data-daily.croissant.json", "MLCommons metadata для обнаружения и загрузки датасета AI/ML-инструментами."],
 ];

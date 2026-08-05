@@ -140,7 +140,8 @@ test("profession structured data cites only visible public datasets", async ({ p
   const salary = datasets.find((node: { "@id"?: string }) => node["@id"]?.endsWith("#salary-benchmark"));
   const observed = datasets.find((node: { "@id"?: string }) => node["@id"]?.endsWith("#official-open-data"));
 
-  expect(datasets).toHaveLength(2);
+  expect(datasets.length).toBeGreaterThanOrEqual(2);
+  expect(datasets.length).toBeLessThanOrEqual(3);
   expect(salary).toEqual(expect.objectContaining({
     isAccessibleForFree: true,
     license: expect.stringContaining("/citation#reuse"),
@@ -183,9 +184,9 @@ test("grade cards stay coherent while observed salary inversions remain explaine
   await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
 
   await page.goto("/professions/firmware-engineer");
-  await expect(page.getByText("Линии наблюдений могут пересекаться", { exact: false }))
+  await expect(page.locator("#official-open-data").getByText("Линии наблюдений могут пересекаться", { exact: false }))
     .toBeVisible();
-  await expect(page.getByText("Значения не переставляются искусственно", { exact: false }))
+  await expect(page.locator("#official-open-data").getByText("Значения не переставляются искусственно", { exact: false }))
     .toBeVisible();
 });
 
@@ -216,7 +217,7 @@ test("public calculator median is exact, sourced, and limitation-labeled", async
   await page.goto("/professions/data-scientist");
   await expect(page.getByRole("heading", { level: 1, name: "Data Scientist" })).toBeVisible();
   await expect(page.getByText("235 541 ₽", { exact: true })).toBeVisible();
-  await expect(page.getByText("точная профессия", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("salary-median-showcase").getByText("точная профессия", { exact: true })).toBeVisible();
   const source = page.locator('a[href*="spec_aliases%5B%5D=data_scientist"]');
   await expect(source).toBeVisible();
   await expect(source.locator("xpath=ancestor::article"))
@@ -589,7 +590,7 @@ test("salary benchmark dataset is complete, downloadable, and limitation-labeled
 test("public navigation and machine-readable endpoints have no broken links", async ({ page, request }) => {
   test.setTimeout(300_000);
   const publicRoutes = [
-    "/", "/professions", "/top", "/pricing", "/mentorship", "/support", "/answers", "/answers.json",
+    "/", "/professions", "/top", "/companies", "/pricing", "/mentorship", "/support", "/answers", "/answers.json",
     "/methodology", "/glossary", "/sources", "/about", "/status", "/compare", "/reports/weekly",
     "/login", "/register", "/legal/offer", "/legal/refunds", "/legal/privacy", "/legal/consent", "/payments/error", "/payments/pending", "/llms.txt", "/.well-known/llms.txt", "/.well-known/linkset.json", "/.well-known/security.txt", "/llms-full.txt",
     "/ai-index.json", "/open-data.json", "/feed.xml", "/sitemap.xml", "/robots.txt",
@@ -605,7 +606,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
     "/insight-citations/llm-friendly-open-text-dataset-citation.ris",
     "/data-status", "/data-status.json", "/salary-benchmarks", "/salary-benchmarks.json", "/salary-benchmarks.csv", "/open-data.csv", "/open-data-daily",
     "/open-data-daily.json", "/open-data-daily.csv", "/open-data-daily.csv-metadata.json", "/open-data-daily.schema.json",
-    "/open-data-daily.croissant.json",
+    "/open-data-daily.croissant.json", "/hh-market-enrichment.json", "/hh-market-enrichment.csv",
   ];
   await expectHealthyRoutes(request, publicRoutes);
 
@@ -621,6 +622,9 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(aiIndex.salary_benchmarks_page_url).toContain("/salary-benchmarks");
   expect(aiIndex.salary_benchmarks_json_url).toContain("/salary-benchmarks.json");
   expect(aiIndex.salary_benchmarks_csv_url).toContain("/salary-benchmarks.csv");
+  expect(aiIndex.hh_market_enrichment_dashboard_url).toContain("/companies");
+  expect(aiIndex.hh_market_enrichment_json_url).toContain("/hh-market-enrichment.json");
+  expect(aiIndex.hh_market_enrichment_csv_url).toContain("/hh-market-enrichment.csv");
   expect(aiIndex.answer_first_page_url).toContain("/answers");
   expect(aiIndex.answer_first_data_url).toContain("/answers.json");
 
@@ -639,7 +643,7 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(citation.URL).toContain("/open-data.json");
 
   const dataPackage = await (await request.get("/datapackage.json")).json();
-  expect(dataPackage.resources).toHaveLength(14);
+  expect(dataPackage.resources).toHaveLength(16);
   expect(dataPackage.licenses[0].path).toContain("/opendata/uslovia-od");
 
   const dailyLandingResponse = await request.get("/open-data-daily");

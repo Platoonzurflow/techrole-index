@@ -20,6 +20,7 @@ TechRole Index - русскоязычный сервис аналитики IT-�
 - [Каталог профессий](${siteUrl}/professions): 50 страниц профессий с уникальными описаниями и технологическим стеком.
 - [Рейтинг](${siteUrl}/top): открытая формула индекса и изменение спроса за последние 7 дней.
 - [Короткие ответы](${siteUrl}/answers): answer-first срезы «Работы России» и отдельного HH API, зарплат по уровням, регионов и недельной динамики со стабильными фрагментами.
+- [Компании по профессиям](${siteUrl}/companies): интерактивный топ-5 работодателей и группа «Другие компании» по каждой профессии из подробных карточек HH.
 - [JSON коротких ответов](${siteUrl}/answers.json): те же проверяемые срезы, период, n, налоговый статус, provenance и canonical URL.
 - [Методология](${siteUrl}/methodology): правила расчёта зарплат, трендов, confidence и итоговой оценки.
 - [Источники](${siteUrl}/sources): provenance, юридические ограничения и статус провайдеров.
@@ -39,6 +40,8 @@ TechRole Index - русскоязычный сервис аналитики IT-�
 - [Daily CSV публикаций](${siteUrl}/open-data-daily.csv): плоский вариант тех же observed historical срезов; null не подменяется нулём.
 - [Daily JSON снимка HH API](${siteUrl}/hh-market-daily.json): source-isolated агрегаты по профессии, seniority, региону и gross/net status без текстов вакансий и данных работодателей.
 - [Daily CSV снимка HH API](${siteUrl}/hh-market-daily.csv): переносимая таблица тех же HH-агрегатов с sample gate и provenance.
+- [Агрегаты подробных карточек HH](${siteUrl}/hh-market-enrichment.json): работодатели, навыки, языки, опыт, занятость, форматы и графики по профессиям.
+- [CSV подробных карточек HH](${siteUrl}/hh-market-enrichment.csv): long-form таблица тех же фасетов для анализа и цитирования.
 - [CSVW metadata](${siteUrl}/open-data-daily.csv-metadata.json): W3C-описание 30 CSV-колонок, типов, nullable cells, составного ключа и provenance.
 - [JSON Schema daily dataset](${siteUrl}/open-data-daily.schema.json): контракт Draft 2020-12 для автоматической проверки метаданных и всех 27 полей каждой строки.
 - [Croissant 1.1 daily dataset](${siteUrl}/open-data-daily.croissant.json): стандарт MLCommons для AI/ML-потребителей с фактическими CSV-колонками, типами, ключом, provenance и условиями использования.

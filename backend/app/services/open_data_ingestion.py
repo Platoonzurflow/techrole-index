@@ -439,7 +439,11 @@ def _ingest_vacancy_data(
                         vacancy.seniority_id = level.id if level else None
                         vacancy.classification_confidence = Decimal(str(classification.confidence))
                         vacancy.classifier_version = classifier_version
-                        vacancy.raw_payload = record.raw
+                        existing_details = (vacancy.raw_payload or {}).get("details")
+                        vacancy.raw_payload = {
+                            **record.raw,
+                            **({"details": existing_details} if existing_details else {}),
+                        }
                         db.flush()
 
                         snapshot = db.scalar(

@@ -131,6 +131,19 @@ def test_hh_ingestion_is_source_isolated_and_preserves_gross() -> None:
             assert market.salary_tax_unknown_count == 0
             assert market.salary_gross_status == "reported_per_vacancy"
 
+            vacancy.raw_payload = {
+                **vacancy.raw_payload,
+                "details": {
+                    "schema_version": "hh-details-v1",
+                    "status": "ok",
+                    "employer": {"id": "100", "name": "Example Corp"},
+                },
+            }
+            db.commit()
+            ingest_hh_data(db, provider=FakeHhProvider(), sleep=lambda _: None)
+            db.refresh(vacancy)
+            assert vacancy.raw_payload["details"]["employer"]["name"] == "Example Corp"
+
             db.add(
                 IngestionRun(
                     source_id=source.id,

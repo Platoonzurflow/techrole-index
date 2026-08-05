@@ -54,6 +54,46 @@ export interface OfficialSalarySlice {
   confidence_level: "insufficient" | "low" | "medium" | "high";
 }
 
+export interface HhFacetCount {
+  id: string;
+  name: string;
+  count: number;
+  share: number;
+}
+
+export interface HhMarketEnrichmentSummary {
+  schema_version: "hh-details-v1";
+  enriched_vacancy_count: number;
+  enrichment_coverage: number;
+  employer_vacancy_count: number;
+  distinct_employer_count: number;
+  employer_distribution: HhFacetCount[];
+  top_skills: HhFacetCount[];
+  languages: HhFacetCount[];
+  employment_types: HhFacetCount[];
+  employment_forms: HhFacetCount[];
+  work_formats: HhFacetCount[];
+  work_schedules: HhFacetCount[];
+  work_schedule_by_days: HhFacetCount[];
+  working_hours: HhFacetCount[];
+  working_time_intervals: HhFacetCount[];
+  working_time_modes: HhFacetCount[];
+  professional_roles: HhFacetCount[];
+  experience_levels: HhFacetCount[];
+  education_levels: HhFacetCount[];
+  civil_law_contracts: HhFacetCount[];
+  inclusiveness_types: HhFacetCount[];
+  driver_license_types: HhFacetCount[];
+  internship_count: number;
+  night_shift_count: number;
+  temporary_count: number;
+  labor_contract_count: number;
+  cover_letter_required_count: number;
+  test_required_count: number;
+  accessible_workplace_count: number;
+  teen_candidate_count: number;
+}
+
 export interface OfficialOpenDataSummary {
   source_name: string;
   source_url: string;
@@ -80,7 +120,7 @@ export interface OfficialOpenDataSummary {
   category_confidence_level?: "insufficient" | "low" | "medium" | "high";
   category_salary_by_seniority?: OfficialSalarySlice[];
   salary_currency: "RUB";
-  salary_gross_status: "unknown";
+  salary_gross_status: "unknown" | "reported_per_vacancy";
   salary_min_sample: number;
   salary_by_seniority: OfficialSalarySlice[];
   salary_history: Array<{
@@ -98,6 +138,7 @@ export interface OfficialOpenDataSummary {
   salary_history_minimum_salary: Record<"junior" | "middle" | "senior", number>;
   salary_methodology_note: string;
   methodology_note: string;
+  hh_enrichment?: HhMarketEnrichmentSummary;
 }
 
 export interface SalaryBenchmarkSource {
@@ -193,6 +234,7 @@ export interface OpenDataCatalogItem {
     salary_by_seniority: OfficialSalarySlice[];
     source_url: string;
     methodology_note: string;
+    hh_enrichment?: HhMarketEnrichmentSummary;
   };
 }
 

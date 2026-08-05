@@ -108,6 +108,46 @@ class OfficialSalaryHistoryPoint(BaseModel):
     scope: Literal["profession", "category", "market"] = "profession"
 
 
+class HhFacetCount(BaseModel):
+    id: str
+    name: str
+    count: int
+    share: float
+
+
+class HhMarketEnrichmentSummary(BaseModel):
+    schema_version: Literal["hh-details-v1"] = "hh-details-v1"
+    enriched_vacancy_count: int
+    enrichment_coverage: float
+    employer_vacancy_count: int
+    distinct_employer_count: int
+    employer_distribution: list[HhFacetCount] = Field(default_factory=list)
+    top_skills: list[HhFacetCount] = Field(default_factory=list)
+    languages: list[HhFacetCount] = Field(default_factory=list)
+    employment_types: list[HhFacetCount] = Field(default_factory=list)
+    employment_forms: list[HhFacetCount] = Field(default_factory=list)
+    work_formats: list[HhFacetCount] = Field(default_factory=list)
+    work_schedules: list[HhFacetCount] = Field(default_factory=list)
+    work_schedule_by_days: list[HhFacetCount] = Field(default_factory=list)
+    working_hours: list[HhFacetCount] = Field(default_factory=list)
+    working_time_intervals: list[HhFacetCount] = Field(default_factory=list)
+    working_time_modes: list[HhFacetCount] = Field(default_factory=list)
+    professional_roles: list[HhFacetCount] = Field(default_factory=list)
+    experience_levels: list[HhFacetCount] = Field(default_factory=list)
+    education_levels: list[HhFacetCount] = Field(default_factory=list)
+    civil_law_contracts: list[HhFacetCount] = Field(default_factory=list)
+    inclusiveness_types: list[HhFacetCount] = Field(default_factory=list)
+    driver_license_types: list[HhFacetCount] = Field(default_factory=list)
+    internship_count: int = 0
+    night_shift_count: int = 0
+    temporary_count: int = 0
+    labor_contract_count: int = 0
+    cover_letter_required_count: int = 0
+    test_required_count: int = 0
+    accessible_workplace_count: int = 0
+    teen_candidate_count: int = 0
+
+
 class OfficialOpenDataSummary(BaseModel):
     source_name: str
     source_url: str
@@ -154,6 +194,7 @@ class OfficialOpenDataSummary(BaseModel):
     ]
     salary_methodology_note: str
     methodology_note: str
+    hh_enrichment: HhMarketEnrichmentSummary | None = None
 
 
 class SalaryBenchmarkSource(BaseModel):
@@ -225,6 +266,7 @@ class HhMarketCatalogSummary(BaseModel):
     salary_by_seniority: list[OfficialSalarySlice]
     source_url: str
     methodology_note: str
+    hh_enrichment: HhMarketEnrichmentSummary | None = None
 
 
 class OpenDataCatalogItem(BaseModel):

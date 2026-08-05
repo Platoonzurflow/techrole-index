@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Layers3, MapPin, Radio, Wifi } from "lucide-react";
 import { Paywall } from "@/components/Paywall";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
-import { OfficialSalaryChart, PublicationChart, VacancyChart } from "@/components/Charts";
+import { HhEmployerDashboard, OfficialSalaryChart, PublicationChart, VacancyChart } from "@/components/Charts";
 import { TrendBadge } from "@/components/TrendBadge";
 import { ShareActions } from "@/components/ShareActions";
 import { api, safeApi } from "@/lib/api";
@@ -105,7 +105,7 @@ function DataLayers({ profession }: { profession: ProfessionDetail }) {
         {profession.hh_market_data ? (
           <article className="rounded-2xl border border-line p-5">
             <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Снимок HH API</h3>{(() => { const badge = confidenceBadge(profession.hh_market_data?.confidence_level); return <span className={badge.className}>{badge.label}</span>; })()}</div>
-            <p className="mt-3 text-sm leading-6 text-muted">{profession.hh_market_data.total_publications.toLocaleString("ru-RU")} классифицированных вакансий. Gross, net и неизвестный налоговый статус считаются отдельно; тексты вакансий и данные работодателей не публикуются.</p>
+            <p className="mt-3 text-sm leading-6 text-muted">{profession.hh_market_data.total_publications.toLocaleString("ru-RU")} классифицированных вакансий. Gross, net и неизвестный налоговый статус считаются отдельно; работодатели публикуются только как топ-5 и группа «Другие компании».</p>
           </article>
         ) : null}
       </div>
@@ -142,6 +142,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const hhSalaryHistoryUsesMarket = profession.hh_market_data?.salary_history.some(
     (item) => item.average != null && item.scope === "market",
   ) ?? false;
+  const hhEnrichment = profession.hh_market_data?.hh_enrichment;
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -247,6 +248,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         spatialCoverage: { "@type": "Country", name: "Россия" },
         creator: { "@type": "Organization", name: "HeadHunter", url: profession.hh_market_data.source_url },
         includedInDataCatalog: { "@id": `${siteUrl}/#catalog` },
+        keywords: [profession.name_ru, "вакансии HH", "работодатели", "навыки", ...(hhEnrichment?.top_skills.map((item) => item.name) ?? [])],
         variableMeasured: [{
           "@type": "PropertyValue",
           name: "Классифицировано вакансий",
@@ -255,7 +257,17 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           "@type": "PropertyValue",
           name: "Вакансий с указанной зарплатой gross",
           value: profession.hh_market_data.salary_gross_count ?? 0,
-        }, ...profession.hh_market_data.salary_by_seniority
+        }, ...(hhEnrichment?.employer_distribution.map((item) => ({
+          "@type": "PropertyValue",
+          name: `Вакансии работодателя: ${item.name}`,
+          value: item.count,
+          unitText: "вакансия",
+        })) ?? []), ...(hhEnrichment?.top_skills.map((item) => ({
+          "@type": "PropertyValue",
+          name: `Вакансии с навыком: ${item.name}`,
+          value: item.count,
+          unitText: "вакансия",
+        })) ?? []), ...profession.hh_market_data.salary_by_seniority
           .filter((item) => item.median != null)
           .map((item) => ({
             "@type": "PropertyValue",
@@ -363,6 +375,59 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div><p className="text-sm text-muted">Net</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_net_count ?? 0)}</p></div>
             <div><p className="text-sm text-muted">Удалённые</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.remote_count)}</p></div>
           </div>
+          {hhEnrichment?.employer_distribution.length ? (
+            <article id="top-employers" className="market-stage market-stage-primary mt-7 scroll-mt-24">
+              <div className="market-stage-copy flex flex-wrap items-end justify-between gap-4">
+                <div>
+                  <p className="eyebrow">Карта найма</p>
+                  <h3 className="mt-2 text-2xl font-semibold">Кто нанимает {profession.name_ru}</h3>
+                  <p className="mt-3 max-w-3xl text-sm leading-6 text-muted">Пять работодателей с наибольшим числом классифицированных вакансий. Остальные {Math.max(hhEnrichment.distinct_employer_count - 5, 0).toLocaleString("ru-RU")} компаний собраны в одну честную группу «Другие компании».</p>
+                </div>
+                <div className="flex gap-5 text-right">
+                  <span><strong className="block font-mono text-2xl">{hhEnrichment.distinct_employer_count.toLocaleString("ru-RU")}</strong><small className="text-muted">компаний</small></span>
+                  <span><strong className="block font-mono text-2xl">{percent(hhEnrichment.enrichment_coverage)}</strong><small className="text-muted">детализация</small></span>
+                </div>
+              </div>
+              <HhEmployerDashboard data={hhEnrichment} />
+            </article>
+          ) : null}
+          {hhEnrichment && (hhEnrichment.top_skills.length || hhEnrichment.work_formats.length || hhEnrichment.experience_levels.length) ? (
+            <article id="hh-vacancy-profile" className="market-stage mt-5 scroll-mt-24">
+              <div className="market-stage-copy">
+                <p className="eyebrow">Профиль вакансий</p>
+                <h3 className="mt-2 text-2xl font-semibold">Навыки и условия, которые встречаются в HH</h3>
+                <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Агрегаты построены по подробным карточкам {hhEnrichment.enriched_vacancy_count.toLocaleString("ru-RU")} вакансий. Число рядом с признаком — сколько вакансий его указали; одна вакансия может содержать несколько навыков или форматов.</p>
+              </div>
+              <div className="hh-facet-grid mt-5">
+                {[
+                  ["Ключевые навыки", hhEnrichment.top_skills],
+                  ["Формат работы", hhEnrichment.work_formats],
+                  ["Опыт", hhEnrichment.experience_levels],
+                  ["Тип занятости", hhEnrichment.employment_types],
+                  ["Форма занятости", hhEnrichment.employment_forms],
+                  ["График", hhEnrichment.work_schedules],
+                  ["Рабочие дни", hhEnrichment.work_schedule_by_days],
+                  ["Рабочие часы", hhEnrichment.working_hours],
+                  ["Интервалы работы", hhEnrichment.working_time_intervals],
+                  ["Режим времени", hhEnrichment.working_time_modes],
+                  ["Профессиональные роли", hhEnrichment.professional_roles],
+                  ["Языки", hhEnrichment.languages],
+                  ["Образование", hhEnrichment.education_levels],
+                  ["Гражданско-правовые договоры", hhEnrichment.civil_law_contracts],
+                  ["Инклюзивность", hhEnrichment.inclusiveness_types],
+                  ["Водительские категории", hhEnrichment.driver_license_types],
+                ].filter(([, items]) => items.length).map(([title, items]) => (
+                  <section className="hh-facet-card" key={title as string}>
+                    <h4 className="font-semibold">{title as string}</h4>
+                    <ul className="hh-facet-list">
+                      {(items as typeof hhEnrichment.top_skills).map((item) => <li key={item.id}><span>{item.name}</span><strong>{item.count.toLocaleString("ru-RU")}</strong></li>)}
+                    </ul>
+                  </section>
+                ))}
+              </div>
+              <p className="mt-5 text-sm leading-7 text-muted">Стажировки: <strong className="text-ink">{hhEnrichment.internship_count.toLocaleString("ru-RU")}</strong> · Ночные смены: <strong className="text-ink">{hhEnrichment.night_shift_count.toLocaleString("ru-RU")}</strong> · Временная работа: <strong className="text-ink">{hhEnrichment.temporary_count.toLocaleString("ru-RU")}</strong> · Трудовой договор: <strong className="text-ink">{hhEnrichment.labor_contract_count.toLocaleString("ru-RU")}</strong> · Нужно сопроводительное письмо: <strong className="text-ink">{hhEnrichment.cover_letter_required_count.toLocaleString("ru-RU")}</strong> · Есть тест: <strong className="text-ink">{hhEnrichment.test_required_count.toLocaleString("ru-RU")}</strong> · Доступно кандидатам с инвалидностью: <strong className="text-ink">{hhEnrichment.accessible_workplace_count.toLocaleString("ru-RU")}</strong> · Доступно подросткам: <strong className="text-ink">{hhEnrichment.teen_candidate_count.toLocaleString("ru-RU")}</strong></p>
+            </article>
+          ) : null}
           <article className="market-stage market-stage-primary mt-7">
             <div className="market-stage-copy"><p className="eyebrow">Gross-вилки</p><h3 className="mt-2 text-2xl font-semibold">Наблюдаемая зарплата по уровню</h3><p className="mt-3 max-w-4xl text-sm leading-6 text-muted">В расчёт не смешиваются net-вилки и вакансии без явного налогового статуса.</p></div>
             <div className="mt-5"><OfficialSalaryChart data={profession.hh_market_data} benchmark={profession.salary_benchmark} /></div>
@@ -372,7 +437,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <div className="mt-5"><PublicationChart data={profession.hh_market_data} /></div>
           </article>
           <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
-            <p>Это официальный поисковый снимок, а не полная копия базы HH. Глубина одной поисковой выдачи ограничена 2 000 результатами; исходные тексты вакансий и сведения о работодателях не публикуются.</p>
+            <p>Это официальный поисковый снимок, а не полная копия базы HH. Глубина одной поисковой выдачи ограничена 2 000 результатами. Исходные тексты, контакты и адреса не публикуются; названия работодателей показываются только в агрегированном топ-5, остальные объединены в «Другие компании».</p>
             {hhSalaryHistoryUsesCategory ? <p className="mt-2">Для части зарплатной динамики использован явно подписанный срез направления из-за малой точной выборки.</p> : null}
             {hhSalaryHistoryUsesMarket ? <p className="mt-2">Если данных направления недостаточно, уровень показывает общий IT-срез и помечает этот охват.</p> : null}
           </div>

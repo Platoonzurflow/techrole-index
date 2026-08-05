@@ -32,6 +32,8 @@ def test_hh_requires_application_token():
             hh_contact_email="owner@example.com",
             hh_app_name="TechRoleIndex",
             hh_access_token="",
+            hh_client_id="",
+            hh_client_secret="",
         )
 
 
@@ -54,6 +56,7 @@ def test_hh_provider_can_renew_application_token_server_side():
         hh_commercial_use_confirmed=True,
         hh_contact_email="owner@example.com",
         hh_app_name="TechRoleIndex",
+        hh_access_token="",
         hh_client_id="client-id",
         hh_client_secret="client-secret",
     )
@@ -150,10 +153,67 @@ def test_hh_provider_uses_application_auth_and_minimizes_raw_payload():
     assert rows[0].gross is True
     assert rows[0].is_remote is True
     assert rows[0].raw["provider"] == "hh_api"
-    assert "employer" not in rows[0].raw
+    assert rows[0].raw["employer"] == {"id": "private", "name": "Not persisted"}
     assert "snippet" not in rows[0].raw
     assert captured[0].headers["authorization"] == "Bearer secret-token"
     assert captured[0].headers["hh-user-agent"].startswith("TechRoleIndex/0.1")
     assert captured[0].url.params["area"] == "113"
     assert captured[0].url.params["page"] == "0"
     assert captured[0].url.params["date_from"]
+
+
+def test_hh_provider_details_keep_only_safe_aggregate_fields():
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.path == "/vacancies/42"
+        return httpx.Response(
+            200,
+            json={
+                "id": "42",
+                "name": "Python developer",
+                "description": "must not be stored",
+                "contacts": {"email": "private@example.com"},
+                "address": {"raw": "private address"},
+                "employer": {
+                    "id": "100",
+                    "name": "Example Corp",
+                    "alternate_url": "must not be stored",
+                },
+                "key_skills": [{"name": "Python"}, {"name": "SQL"}],
+                "experience": {"id": "between1And3", "name": "1–3 года"},
+                "employment": {"id": "full", "name": "Полная занятость"},
+                "schedule": {"id": "remote", "name": "Удалённая работа"},
+                "work_format": [{"id": "REMOTE", "name": "Удалённо"}],
+                "working_hours": [{"id": "HOURS_8", "name": "8 часов"}],
+                "professional_roles": [{"id": "96", "name": "Программист"}],
+                "languages": [{
+                    "id": "eng",
+                    "name": "Английский",
+                    "level": {"id": "b2", "name": "B2"},
+                    "private": "must not be stored",
+                }],
+                "internship": False,
+                "night_shifts": True,
+            },
+        )
+
+    provider = HhApiProvider(
+        Settings(
+            hh_enabled=True,
+            hh_commercial_use_confirmed=True,
+            hh_contact_email="owner@example.com",
+            hh_app_name="TechRoleIndex",
+            hh_access_token="secret-token",
+        ),
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+    )
+    details = provider.fetch_details("42")
+
+    assert details is not None
+    assert details.skills == ("Python", "SQL")
+    assert details.is_remote is True
+    assert details.raw["employer"] == {"id": "100", "name": "Example Corp"}
+    assert details.raw["languages"] == [
+        {"id": "eng", "name": "Английский", "level": {"id": "b2", "name": "B2"}}
+    ]
+    assert details.raw["night_shifts"] is True
+    assert not ({"description", "contacts", "address"} & details.raw.keys())

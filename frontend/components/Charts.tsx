@@ -2,13 +2,14 @@
 
 import * as echarts from "echarts";
 import type { LineSeriesOption } from "echarts/charts";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import {
   salaryBenchmarkLevelPoints,
   salaryBenchmarkPointRepresentative,
   salaryLevelOrder,
 } from "@/lib/salary-benchmark-data";
 import type {
+  HhMarketEnrichmentSummary,
   MetricPoint,
   OfficialOpenDataSummary,
   SalaryBenchmarkSummary,
@@ -16,6 +17,7 @@ import type {
 
 const colors = { junior: "#2694a8", middle: "#c85a38", senior: "#8a63a7" };
 const levelLabels = { junior: "Junior", middle: "Middle", senior: "Senior" } as const;
+const employerColors = ["#ff5b62", "#2694a8", "#f2b84b", "#8a63a7", "#3d9b73", "#8b95a7"];
 
 function Chart({
   option,
@@ -42,6 +44,83 @@ function Chart({
     return () => { window.removeEventListener("resize", resize); chart.dispose(); };
   }, [option]);
   return <div ref={ref} className={`chart-shell w-full ${heightClass}`} role="img" aria-label={label} />;
+}
+
+export function HhEmployerDashboard({
+  data,
+}: {
+  data: HhMarketEnrichmentSummary;
+}) {
+  const companies = data.employer_distribution;
+  const option = useMemo<echarts.EChartsOption>(() => ({
+    color: employerColors,
+    tooltip: {
+      trigger: "item",
+      formatter: (params) => {
+        const item = params as { name?: string; value?: number; percent?: number };
+        return `${item.name ?? "Компания"}<br/><strong>${Number(item.value ?? 0).toLocaleString("ru-RU")}</strong> вакансий · ${Number(item.percent ?? 0).toFixed(1)}%`;
+      },
+    },
+    series: [{
+      name: "Вакансии работодателей",
+      type: "pie",
+      radius: ["54%", "82%"],
+      center: ["50%", "50%"],
+      minAngle: 2,
+      avoidLabelOverlap: true,
+      itemStyle: {
+        borderColor: "rgba(255,255,255,.7)",
+        borderWidth: 3,
+        borderRadius: 7,
+      },
+      label: { show: false },
+      emphasis: {
+        scaleSize: 8,
+        itemStyle: { shadowBlur: 24, shadowColor: "rgba(15,23,42,.25)" },
+      },
+      data: companies.map((item) => ({ name: item.name, value: item.count })),
+    }],
+  }), [companies]);
+  const maxCount = Math.max(...companies.map((item) => item.count), 1);
+
+  if (!companies.length) return null;
+  return (
+    <div className="employer-dashboard mt-5">
+      <div className="employer-donut">
+        <Chart
+          option={option}
+          label="Распределение вакансий между пятью ведущими работодателями и другими компаниями"
+          heightClass="h-[21rem]"
+        />
+        <div className="employer-donut-center" aria-hidden="true">
+          <strong>{data.employer_vacancy_count.toLocaleString("ru-RU")}</strong>
+          <span>вакансий</span>
+        </div>
+      </div>
+      <ol className="employer-leaderboard" aria-label="Топ работодателей">
+        {companies.map((item, index) => {
+          const isOther = item.id === "other";
+          return (
+            <li key={item.id} className={isOther ? "is-other" : undefined}>
+              <span className="employer-rank" style={{ "--employer-color": employerColors[index % employerColors.length] } as CSSProperties}>
+                {isOther ? "Σ" : index + 1}
+              </span>
+              <span className="min-w-0">
+                <strong>{item.name}</strong>
+                <span className="employer-bar" aria-hidden="true">
+                  <i style={{ width: `${Math.max((item.count / maxCount) * 100, 2)}%`, background: employerColors[index % employerColors.length] }} />
+                </span>
+              </span>
+              <span className="employer-value">
+                <strong>{item.count.toLocaleString("ru-RU")}</strong>
+                <small>{new Intl.NumberFormat("ru-RU", { style: "percent", maximumFractionDigits: 1 }).format(item.share)}</small>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
+  );
 }
 
 function series(metrics: MetricPoint[], field: "salary_median" | "vacancy_count") {

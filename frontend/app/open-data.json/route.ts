@@ -116,7 +116,18 @@ export async function GET(request: Request) {
           name: "HH-вакансии с указанной gross-зарплатой",
           value: item.hh_market_data.salary_gross_count,
           unitText: "вакансия",
-        }, ...item.hh_market_data.salary_by_seniority.map((slice) => ({
+        }, ...(item.hh_market_data.hh_enrichment?.employer_distribution.map((employer) => ({
+          "@type": "PropertyValue",
+          name: `HH-вакансии работодателя: ${employer.name}`,
+          value: employer.count,
+          unitText: "вакансия",
+          description: employer.id === "other" ? "Все работодатели вне публичного топ-5." : "Публичный топ-5 работодателей по числу классифицированных вакансий.",
+        })) ?? []), ...(item.hh_market_data.hh_enrichment?.top_skills.map((skill) => ({
+          "@type": "PropertyValue",
+          name: `HH-вакансии с навыком: ${skill.name}`,
+          value: skill.count,
+          unitText: "вакансия",
+        })) ?? []), ...item.hh_market_data.salary_by_seniority.map((slice) => ({
           "@type": "PropertyValue",
           name: `Медианная gross-вилка HH: ${slice.seniority}`,
           value: slice.median ?? "Недостаточно данных",
