@@ -790,8 +790,8 @@ test("public navigation and machine-readable endpoints have no broken links", as
   expect(articleRis).toContain("TY  - ELEC");
 
   const provenance = await (await request.get("/data-status.json")).json();
-  expect(provenance.schema_version).toBe("1.3");
-  expect(provenance.layers).toHaveLength(3);
+  expect(provenance.schema_version).toBe("1.4");
+  expect(provenance.layers).toHaveLength(4);
   expect(provenance.layers.every((layer: { current_market_claim: boolean }) => layer.current_market_claim === false)).toBe(true);
   expect(provenance.observed_publication_daily_page_url).toContain("/open-data-daily");
   expect(provenance.observed_publication_daily_csvw_url).toContain("/open-data-daily.csv-metadata.json");
