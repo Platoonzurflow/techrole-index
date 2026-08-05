@@ -1,20 +1,6 @@
 import { api } from "@/lib/api";
 import { conditionalResponse } from "@/lib/conditional-response";
-import type { OfficialSalarySlice } from "@/lib/types";
-
-interface OpenDataItem {
-  slug: string;
-  name_ru: string;
-  period_days: number;
-  date_from: string;
-  date_to: string;
-  total_publications: number;
-  last_ingested_at?: string;
-  salary_currency: string;
-  salary_gross_status: "unknown";
-  salary_min_sample: number;
-  salary_by_seniority: OfficialSalarySlice[];
-}
+import type { OpenDataCatalogItem as OpenDataItem } from "@/lib/types";
 
 export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
@@ -28,7 +14,7 @@ export async function GET(request: Request) {
     );
   }
   const lastModified = items
-    .map((item) => item.last_ingested_at)
+    .flatMap((item) => [item.last_ingested_at, item.hh_market_data?.last_ingested_at])
     .filter((value): value is string => Boolean(value))
     .sort()
     .at(-1);
@@ -43,6 +29,11 @@ export async function GET(request: Request) {
     url: "https://trudvsem.ru/opendata",
     sameAs: "https://trudvsem.ru/opendata/api",
   };
+  const hhSource = {
+    "@type": "DataCatalog",
+    name: "HeadHunter API",
+    url: "https://api.hh.ru/openapi/redoc",
+  };
   const body = JSON.stringify({
     "@context": "https://schema.org",
     "@type": "DataCatalog",
@@ -50,10 +41,10 @@ export async function GET(request: Request) {
     name: "Официальные открытые данные о публикациях IT-вакансий",
     url: `${siteUrl}/open-data.json`,
     inLanguage: "ru-RU",
-    description: "Проверяемые 180-дневные ряды классифицированных публикаций IT-вакансий по 50 профессиям.",
+    description: "Проверяемые source-isolated ряды классифицированных публикаций IT-вакансий по 50 профессиям из открытого API «Работы России» и одобренного HH API.",
     dateModified: lastModified,
     publisher,
-    isBasedOn: source,
+    isBasedOn: items.some((item) => item.hh_market_data) ? [source, hhSource] : source,
     measurementTechnique: `${siteUrl}/methodology`,
     usageInfo: `${siteUrl}/sources`,
     subjectOf: `${siteUrl}/llms-full.txt`,
@@ -64,14 +55,14 @@ export async function GET(request: Request) {
       name: `${item.name_ru}: публикации вакансий за ${item.period_days} дней`,
       description: `Ежедневное число классифицированных публикаций вакансий для профессии «${item.name_ru}» за ${item.period_days} дней.`,
       identifier: `techrole-index:${item.slug}:official-open-data:180d`,
-      keywords: [item.name_ru, "IT-профессии", "зарплата", "вакансии", "рынок труда", "Работа России"],
+      keywords: [item.name_ru, "IT-профессии", "зарплата", "вакансии", "рынок труда", "Работа России", ...(item.hh_market_data ? ["HeadHunter", "HH API"] : [])],
       url: `${siteUrl}/professions/${item.slug}`,
       mainEntityOfPage: `${siteUrl}/professions/${item.slug}`,
       temporalCoverage: `${item.date_from}/${item.date_to}`,
       spatialCoverage: "Россия",
       dateModified: item.last_ingested_at ?? undefined,
       creator: publisher,
-      isBasedOn: source,
+      isBasedOn: item.hh_market_data ? [source, hhSource] : source,
       subjectOf: [
         { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },
         { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
@@ -114,6 +105,24 @@ export async function GET(request: Request) {
           unitText: `${item.salary_currency} в месяц`,
           description: `Midpoint полных вилок, n=${slice.sample_size}; gross/net не определён; минимальная выборка ${item.salary_min_sample}.`,
         })),
+        ...(item.hh_market_data ? [{
+          "@type": "PropertyValue",
+          name: "Классифицированные вакансии в снимке HH API",
+          value: item.hh_market_data.total_publications,
+          unitText: "вакансия",
+          description: `${item.hh_market_data.date_from} — ${item.hh_market_data.date_to}; поисковый снимок, не полная историческая база.`,
+        }, {
+          "@type": "PropertyValue",
+          name: "HH-вакансии с указанной gross-зарплатой",
+          value: item.hh_market_data.salary_gross_count,
+          unitText: "вакансия",
+        }, ...item.hh_market_data.salary_by_seniority.map((slice) => ({
+          "@type": "PropertyValue",
+          name: `Медианная gross-вилка HH: ${slice.seniority}`,
+          value: slice.median ?? "Недостаточно данных",
+          unitText: `${item.hh_market_data?.salary_currency ?? "RUB"} в месяц до вычета налогов`,
+          description: `Midpoint полных gross-вилок, n=${slice.sample_size}; минимальная выборка ${item.hh_market_data?.salary_min_sample ?? item.salary_min_sample}.`,
+        }))] : []),
       ],
     })),
   });

@@ -19,7 +19,7 @@ TechRole Index - русскоязычный сервис аналитики IT-�
 
 - [Каталог профессий](${siteUrl}/professions): 50 страниц профессий с уникальными описаниями и технологическим стеком.
 - [Рейтинг](${siteUrl}/top): открытая формула индекса и изменение спроса за последние 7 дней.
-- [Короткие ответы](${siteUrl}/answers): answer-first срезы спроса, зарплат по уровням, регионов и недельной динамики со стабильными фрагментами.
+- [Короткие ответы](${siteUrl}/answers): answer-first срезы «Работы России» и отдельного HH API, зарплат по уровням, регионов и недельной динамики со стабильными фрагментами.
 - [JSON коротких ответов](${siteUrl}/answers.json): те же проверяемые срезы, период, n, налоговый статус, provenance и canonical URL.
 - [Методология](${siteUrl}/methodology): правила расчёта зарплат, трендов, confidence и итоговой оценки.
 - [Источники](${siteUrl}/sources): provenance, юридические ограничения и статус провайдеров.
@@ -29,7 +29,7 @@ TechRole Index - русскоязычный сервис аналитики IT-�
 - [Полный публичный контекст](${siteUrl}/llms-full.txt): описания всех профессий без закрытых метрик.
 - [Well-known AI-указатель](${siteUrl}/.well-known/llms.txt): короткая точка обнаружения основных машинных ресурсов.
 - [JSON-индекс сущностей](${siteUrl}/ai-index.json): канонические URL, категории, источники и признаки доступности.
-- [Официальные открытые данные](${siteUrl}/open-data.json): 180-дневные числа публикаций и зарплатные вилки Junior/Middle/Senior по всем профессиям с размером выборки и оговорками методологии.
+- [Официальные агрегаты](${siteUrl}/open-data.json): source-isolated 180-дневные публикации «Работы России» и 365-дневный поисковый снимок HH API по всем профессиям, с размером выборки, gross/net и оговорками методологии.
 - [CSV открытых данных](${siteUrl}/open-data.csv): 150 seniority-срезов с периодом, n, confidence, tax status, canonical URL и provenance.
 - [Зарплатный датасет](${siteUrl}/salary-benchmarks): открытые ориентиры фактических доходов по 50 профессиям с явным direct/related/category coverage.
 - [Зарплатный JSON](${siteUrl}/salary-benchmarks.json): все точки, периоды, выборки, tax status, источники и ограничения без Premium-полей.
@@ -37,6 +37,8 @@ TechRole Index - русскоязычный сервис аналитики IT-�
 - [Ежедневный датасет публикаций](${siteUrl}/open-data-daily): человекочитаемое описание observed historical слоя, охвата, полей, ограничений и способов скачивания.
 - [Daily JSON публикаций](${siteUrl}/open-data-daily.json): инкрементальные creation-date срезы по профессии, seniority, региону и tax status с версией transform.
 - [Daily CSV публикаций](${siteUrl}/open-data-daily.csv): плоский вариант тех же observed historical срезов; null не подменяется нулём.
+- [Daily JSON снимка HH API](${siteUrl}/hh-market-daily.json): source-isolated агрегаты по профессии, seniority, региону и gross/net status без текстов вакансий и данных работодателей.
+- [Daily CSV снимка HH API](${siteUrl}/hh-market-daily.csv): переносимая таблица тех же HH-агрегатов с sample gate и provenance.
 - [CSVW metadata](${siteUrl}/open-data-daily.csv-metadata.json): W3C-описание 30 CSV-колонок, типов, nullable cells, составного ключа и provenance.
 - [JSON Schema daily dataset](${siteUrl}/open-data-daily.schema.json): контракт Draft 2020-12 для автоматической проверки метаданных и всех 27 полей каждой строки.
 - [Croissant 1.1 daily dataset](${siteUrl}/open-data-daily.croissant.json): стандарт MLCommons для AI/ML-потребителей с фактическими CSV-колонками, типами, ключом, provenance и условиями использования.

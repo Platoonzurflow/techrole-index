@@ -116,6 +116,9 @@ class OfficialOpenDataSummary(BaseModel):
     date_to: date
     total_publications: int
     salary_disclosed_count: int
+    salary_gross_count: int = 0
+    salary_net_count: int = 0
+    salary_tax_unknown_count: int = 0
     remote_count: int
     confidence_level: str
     last_ingested_at: datetime | None = None
@@ -133,7 +136,7 @@ class OfficialOpenDataSummary(BaseModel):
     category_confidence_level: str = "insufficient"
     category_salary_by_seniority: list[OfficialSalarySlice] = Field(default_factory=list)
     salary_currency: str
-    salary_gross_status: Literal["unknown"]
+    salary_gross_status: Literal["unknown", "reported_per_vacancy"]
     salary_min_sample: int
     salary_by_seniority: list[OfficialSalarySlice]
     salary_history: list[OfficialSalaryHistoryPoint]
@@ -206,6 +209,24 @@ class SalaryBenchmarkCatalogItem(BaseModel):
     benchmark: SalaryBenchmarkSummary
 
 
+class HhMarketCatalogSummary(BaseModel):
+    period_days: int
+    date_from: date
+    date_to: date
+    total_publications: int
+    salary_disclosed_count: int
+    salary_gross_count: int
+    salary_net_count: int
+    salary_tax_unknown_count: int
+    remote_count: int
+    last_ingested_at: datetime | None = None
+    salary_currency: str
+    salary_min_sample: int
+    salary_by_seniority: list[OfficialSalarySlice]
+    source_url: str
+    methodology_note: str
+
+
 class OpenDataCatalogItem(BaseModel):
     slug: str
     name_ru: str
@@ -219,6 +240,7 @@ class OpenDataCatalogItem(BaseModel):
     salary_gross_status: Literal["unknown"]
     salary_min_sample: int
     salary_by_seniority: list[OfficialSalarySlice]
+    hh_market_data: HhMarketCatalogSummary | None = None
 
 
 class ObservedPublicationMetricOut(BaseModel):
@@ -270,6 +292,7 @@ class ProfessionDetail(ProfessionSummary):
     tech_stack: list[dict[str, str | list[str]]] | None = None
     history_days: int | None = None
     official_open_data: OfficialOpenDataSummary | None = None
+    hh_market_data: OfficialOpenDataSummary | None = None
     salary_benchmark: SalaryBenchmarkSummary | None = None
 
 

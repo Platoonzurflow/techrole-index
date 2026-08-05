@@ -195,8 +195,84 @@ def data_provenance(db: Session = Depends(get_db)):
         )
     ).one()
 
+    hh_source = db.scalar(select(VacancySource).where(VacancySource.code == "hh_api"))
+    hh_window = utc_calendar_window(now, days=settings.hh_history_days)
+    hh_filters = (
+        Vacancy.source_id == hh_source.id if hh_source is not None else Vacancy.source_id == -1,
+        Vacancy.published_at >= hh_window.start_at,
+        Vacancy.published_at < hh_window.end_at_exclusive,
+    )
+    hh_records = int(db.scalar(select(func.count(Vacancy.id)).where(*hh_filters)) or 0)
+    hh_classified = int(
+        db.scalar(
+            select(func.count(Vacancy.id)).where(
+                *hh_filters, Vacancy.profession_id.is_not(None)
+            )
+        )
+        or 0
+    )
+    hh_salary_disclosed = int(
+        db.scalar(
+            select(func.count(Vacancy.id)).where(
+                *hh_filters,
+                Vacancy.profession_id.is_not(None),
+                or_(Vacancy.salary_from.is_not(None), Vacancy.salary_to.is_not(None)),
+            )
+        )
+        or 0
+    )
+    hh_salary_gross = int(
+        db.scalar(
+            select(func.count(Vacancy.id)).where(
+                *hh_filters,
+                Vacancy.profession_id.is_not(None),
+                or_(Vacancy.salary_from.is_not(None), Vacancy.salary_to.is_not(None)),
+                Vacancy.salary_gross.is_(True),
+            )
+        )
+        or 0
+    )
+    hh_salary_net = int(
+        db.scalar(
+            select(func.count(Vacancy.id)).where(
+                *hh_filters,
+                Vacancy.profession_id.is_not(None),
+                or_(Vacancy.salary_from.is_not(None), Vacancy.salary_to.is_not(None)),
+                Vacancy.salary_gross.is_(False),
+            )
+        )
+        or 0
+    )
+    hh_observed_from, hh_observed_to, hh_last_ingested = db.execute(
+        select(
+            func.min(Vacancy.published_at),
+            func.max(Vacancy.published_at),
+            func.max(Vacancy.last_seen_at),
+        ).where(*hh_filters, Vacancy.profession_id.is_not(None))
+    ).one()
+    (
+        hh_materialized_from,
+        hh_materialized_to,
+        hh_materialized_slices,
+        hh_materialized_publications,
+        hh_materialized_at,
+        hh_transform_version,
+    ) = db.execute(
+        select(
+            func.min(ObservedPublicationMetricDaily.metric_date),
+            func.max(ObservedPublicationMetricDaily.metric_date),
+            func.count(ObservedPublicationMetricDaily.id),
+            func.coalesce(func.sum(ObservedPublicationMetricDaily.publication_count), 0),
+            func.max(ObservedPublicationMetricDaily.updated_at),
+            func.max(ObservedPublicationMetricDaily.transform_version),
+        ).where(
+            ObservedPublicationMetricDaily.source_id
+            == (hh_source.id if hh_source is not None else -1)
+        )
+    ).one()
+
     return {
-        "schema_version": "1.3",
+        "schema_version": "1.4",
         "generated_at": now,
         "layers": [
             {
@@ -269,6 +345,44 @@ def data_provenance(db: Session = Depends(get_db)):
                     "Версионированные ориентиры фактических доходов из публичных "
                     "исследований. Прямые, технологические, смежные и категорийные "
                     "срезы помечены и не подменяют вилки вакансий."
+                ),
+            },
+            {
+                "id": "hh_market_snapshot",
+                "label": "Официальный поисковый снимок HH API",
+                "status": "observed_historical" if hh_classified else "empty",
+                "source_code": hh_source.code if hh_source is not None else "hh_api",
+                "source_name": hh_source.name if hh_source is not None else "HeadHunter API",
+                "source_url": hh_source.terms_url if hh_source is not None else None,
+                "period_days": settings.hh_history_days,
+                "window_date_from": hh_window.date_from,
+                "window_date_to": hh_window.date_to,
+                "window_time_basis": "UTC_calendar_days",
+                "window_start_at": hh_window.start_at,
+                "window_end_at_exclusive": hh_window.end_at_exclusive,
+                "observed_date_from": hh_observed_from,
+                "observed_date_to": hh_observed_to,
+                "source_records": hh_records,
+                "classified_publications": hh_classified,
+                "salary_disclosed_records": hh_salary_disclosed,
+                "salary_gross_records": hh_salary_gross,
+                "salary_net_records": hh_salary_net,
+                "salary_tax_unknown_records": max(
+                    hh_salary_disclosed - hh_salary_gross - hh_salary_net, 0
+                ),
+                "last_ingested_at": hh_last_ingested,
+                "materialized_date_from": hh_materialized_from,
+                "materialized_date_to": hh_materialized_to,
+                "materialized_slice_count": int(hh_materialized_slices or 0),
+                "materialized_publications": int(hh_materialized_publications or 0),
+                "materialized_at": hh_materialized_at,
+                "materialized_transform_version": hh_transform_version,
+                "salary_currency": "RUB",
+                "salary_tax_status": "reported_per_vacancy",
+                "current_market_claim": False,
+                "interpretation": (
+                    "Официальный поисковый снимок с пределом 2 000 результатов на запрос, "
+                    "а не полная историческая база. Gross, net и неизвестный basis не смешиваются."
                 ),
             },
         ],

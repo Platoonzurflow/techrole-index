@@ -205,7 +205,13 @@ PROFESSIONS = [
         "Облачный инженер",
         "Cloud Engineer",
         "infrastructure",
-        ["cloud engineer", "облачный инженер", "cloud infrastructure engineer"],
+        [
+            "cloud engineer",
+            "cloud-инженер",
+            "облачный инженер",
+            "инженер облачной инфраструктуры",
+            "cloud infrastructure engineer",
+        ],
     ),
     (
         "data-analyst",

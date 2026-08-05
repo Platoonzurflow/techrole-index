@@ -4,6 +4,7 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 
 ## [Unreleased]
 
+- Enabled the approved HH application as a source-isolated official API snapshot: paginated role/alias searches, global vacancy-id deduplication, server-only token, safe raw allowlist, separate gross/net counts, daily materialization and public per-profession aggregates without vacancy texts or employer data.
 - Replaced contradictory duplicate profession charts with one observed 180-day salary chart, explicit dashed research references for missing grades, and a weekly completeness chart for publications versus full RUB ranges; prepared vacancy counts are now labeled as a calculated baseline rather than current active stock.
 - Added answer-first `/answers` and `/answers.json` resources with stable citation fragments, visible provenance, period, sample, scope and tax caveats, plus strict `503` behavior when current data cannot be loaded.
 - Added conditional `ETag`/`Last-Modified` support across the public AI/data corpus and aligned robots, sitemap, RSS, JSON-LD, Croissant, DCAT, CSVW and citation links with visible content.

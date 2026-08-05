@@ -1,7 +1,7 @@
 import { api } from "@/lib/api";
 import { conditionalResponse } from "@/lib/conditional-response";
 import { insights } from "@/lib/insights";
-import type { OfficialSalarySlice, ProfessionSummary } from "@/lib/types";
+import type { OpenDataCatalogItem, ProfessionSummary } from "@/lib/types";
 
 interface Source {
   code: string;
@@ -10,29 +10,16 @@ interface Source {
   terms_url?: string;
 }
 
-interface OpenDataItem {
-  slug: string;
-  period_days: number;
-  date_from: string;
-  date_to: string;
-  total_publications: number;
-  last_ingested_at?: string;
-  salary_currency: string;
-  salary_gross_status: "unknown";
-  salary_min_sample: number;
-  salary_by_seniority: OfficialSalarySlice[];
-}
-
 export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   let professions: ProfessionSummary[];
   let sources: Source[];
-  let openData: OpenDataItem[];
+  let openData: OpenDataCatalogItem[];
   try {
     [professions, sources, openData] = await Promise.all([
       api<ProfessionSummary[]>("/professions"),
       api<Source[]>("/sources"),
-      api<OpenDataItem[]>("/open-data/publications"),
+      api<OpenDataCatalogItem[]>("/open-data/publications"),
     ]);
   } catch {
     return new Response("TechRole Index: публичные данные временно недоступны. Повторите запрос позже.\n", {
@@ -46,6 +33,9 @@ export async function GET(request: Request) {
     const salary = observed?.salary_by_seniority.map((slice) =>
       `${slice.seniority}: ${slice.median == null ? `Недостаточно данных (n=${slice.sample_size})` : `${Math.round(slice.median).toLocaleString("ru-RU")} ${observed.salary_currency}/месяц, n=${slice.sample_size}`}`,
     ).join("; ");
+    const hhSalary = observed?.hh_market_data?.salary_by_seniority.map((slice) =>
+      `${slice.seniority}: ${slice.median == null ? `Недостаточно данных (n=${slice.sample_size})` : `${Math.round(slice.median).toLocaleString("ru-RU")} ${observed.hh_market_data?.salary_currency}/месяц gross, n=${slice.sample_size}`}`,
+    ).join("; ");
     return [
       `### ${item.name_ru} (${item.name_en})`,
       `- URL: ${siteUrl}/professions/${item.slug}`,
@@ -54,6 +44,8 @@ export async function GET(request: Request) {
       `- Публичный технологический стек: ${siteUrl}/professions/${item.slug}#tech-stack-title`,
       `- Официальный открытый источник: ${observed ? `${observed.total_publications} классифицированных публикаций за ${observed.date_from} - ${observed.date_to}` : "данные ещё не загружены"}`,
       `- Зарплатные вилки официального источника: ${salary ?? "Недостаточно данных"}; midpoint полных вилок, gross/net не определён`,
+      `- Снимок HH API: ${observed?.hh_market_data ? `${observed.hh_market_data.total_publications} классифицированных вакансий за ${observed.hh_market_data.date_from} - ${observed.hh_market_data.date_to}; зарплата указана у ${observed.hh_market_data.salary_disclosed_count}, gross ${observed.hh_market_data.salary_gross_count}, net ${observed.hh_market_data.salary_net_count}, налоговый статус неизвестен у ${observed.hh_market_data.salary_tax_unknown_count}, удалённых ${observed.hh_market_data.remote_count}` : "данные ещё не загружены"}`,
+      `- Gross-вилки HH по уровням: ${hhSalary ?? "Недостаточно данных"}; официальный поисковый снимок, не полная историческая база`,
       "",
     ].join("\n");
   }).join("\n");
@@ -79,6 +71,8 @@ CSV официальных открытых данных: ${siteUrl}/open-data.c
 Описание ежедневного датасета публикаций: ${siteUrl}/open-data-daily
 Daily JSON официальных публикаций: ${siteUrl}/open-data-daily.json
 Daily CSV официальных публикаций: ${siteUrl}/open-data-daily.csv
+Daily JSON снимка HH API: ${siteUrl}/hh-market-daily.json
+Daily CSV снимка HH API: ${siteUrl}/hh-market-daily.csv
 CSVW metadata ежедневного датасета: ${siteUrl}/open-data-daily.csv-metadata.json
 JSON Schema ежедневного датасета: ${siteUrl}/open-data-daily.schema.json
 Croissant 1.1 metadata ежедневного датасета: ${siteUrl}/open-data-daily.croissant.json
@@ -129,7 +123,7 @@ ${professionLines}
 Сообщить об ошибке: ${siteUrl}/support
 Контакт: sqldevelopermoscow@yandex.com
 `;
-  const lastModified = openData.map((item) => item.last_ingested_at).filter((value): value is string => Boolean(value)).sort().at(-1);
+  const lastModified = openData.flatMap((item) => [item.last_ingested_at, item.hh_market_data?.last_ingested_at]).filter((value): value is string => Boolean(value)).sort().at(-1);
   return conditionalResponse(request, content, {
     headers: {
       "Content-Type": "text/plain; charset=utf-8",

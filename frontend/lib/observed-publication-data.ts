@@ -188,7 +188,9 @@ export function buildObservedPublicationCsv(rows: ObservedPublicationMetric[], s
     row.transform_version,
     row.current_market_claim,
     `${siteUrl}/professions/${row.profession_slug}`,
-    "https://trudvsem.ru/opendata/api",
+    row.source_code === "hh_api"
+      ? "https://api.hh.ru/openapi/redoc"
+      : "https://trudvsem.ru/opendata/api",
     `${siteUrl}/methodology`,
   ]);
   return `${[observedPublicationCsvColumns, ...values].map((row) => row.map(csvCell).join(",")).join("\r\n")}\r\n`;

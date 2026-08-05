@@ -62,6 +62,15 @@ describe("observed publication CSV", () => {
     );
     expect(prefixed).toContain("\"'\t =WEBSERVICE(\"\"bad\"\")\"");
   });
+
+  it("uses the matching official documentation URL for HH rows", () => {
+    const csv = buildObservedPublicationCsv(
+      [{ ...record, source_code: "hh_api", source_name: "HeadHunter API" }],
+      "https://techrole.example",
+    );
+    expect(csv).toContain("https://api.hh.ru/openapi/redoc");
+    expect(csv).not.toContain("https://trudvsem.ru/opendata/api");
+  });
 });
 
 describe("observed publication metadata", () => {

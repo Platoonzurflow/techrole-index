@@ -28,6 +28,7 @@ from app.models import (
     VacancySource,
 )
 from app.schemas import (
+    HhMarketCatalogSummary,
     MetricPoint,
     OfficialOpenDataSummary,
     OfficialSalaryHistoryPoint,
@@ -139,6 +140,7 @@ def open_data_publications(db: Session = Depends(get_db)):
     publications: list[OpenDataCatalogItem] = []
     for profession_id, slug, name_ru, category_slug, total, last_ingested_at in rows:
         official = _official_open_data_summary(db, profession_id, period_days)
+        hh = _hh_market_summary(db, profession_id)
         publications.append(
             OpenDataCatalogItem(
                 slug=slug,
@@ -153,6 +155,27 @@ def open_data_publications(db: Session = Depends(get_db)):
                 salary_gross_status=official.salary_gross_status,
                 salary_min_sample=official.salary_min_sample,
                 salary_by_seniority=official.salary_by_seniority,
+                hh_market_data=(
+                    HhMarketCatalogSummary(
+                        period_days=hh.period_days,
+                        date_from=hh.date_from,
+                        date_to=hh.date_to,
+                        total_publications=hh.total_publications,
+                        salary_disclosed_count=hh.salary_disclosed_count,
+                        salary_gross_count=hh.salary_gross_count,
+                        salary_net_count=hh.salary_net_count,
+                        salary_tax_unknown_count=hh.salary_tax_unknown_count,
+                        remote_count=hh.remote_count,
+                        last_ingested_at=hh.last_ingested_at,
+                        salary_currency=hh.salary_currency,
+                        salary_min_sample=hh.salary_min_sample,
+                        salary_by_seniority=hh.salary_by_seniority,
+                        source_url=hh.source_url,
+                        methodology_note=hh.methodology_note,
+                    )
+                    if hh is not None
+                    else None
+                ),
             )
         )
     return publications
@@ -177,11 +200,18 @@ def _latest_score_date(db: Session, scoring_version_id: int | None = None):
     )
 
 
-def _official_open_data_summary(
+def _source_market_summary(
     db: Session,
     profession_id: int,
-    period_days: int = 180,
     *,
+    source_code: str,
+    source_name: str,
+    source_url: str,
+    salary_gross_status: Literal["unknown", "reported_per_vacancy"],
+    salary_basis: bool | None,
+    salary_methodology_note: str,
+    methodology_note: str,
+    period_days: int = 180,
     include_category_context: bool = False,
 ) -> OfficialOpenDataSummary:
     profession_context = db.execute(
@@ -201,7 +231,7 @@ def _official_open_data_summary(
     window = utc_calendar_window(now, days=period_days)
     date_to = window.date_to
     date_from = window.date_from
-    source_id = db.scalar(select(VacancySource.id).where(VacancySource.code == "trudvsem_open"))
+    source_id = db.scalar(select(VacancySource.id).where(VacancySource.code == source_code))
     rows: list[tuple[Any, ...]] = []
     if source_id is not None:
         rows = [
@@ -215,6 +245,7 @@ def _official_open_data_summary(
                     Vacancy.last_seen_at,
                     Vacancy.currency,
                     SeniorityLevel.code,
+                    Vacancy.salary_gross,
                 )
                 .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
                 .where(
@@ -235,6 +266,7 @@ def _official_open_data_summary(
     }
     salary_disclosed_count = remote_count = 0
     complete_salary_range_count = 0
+    salary_gross_count = salary_net_count = salary_tax_unknown_count = 0
     category_salary_disclosed_count = category_remote_count = 0
     category_complete_salary_range_count = 0
     last_ingested_at = None
@@ -251,11 +283,19 @@ def _official_open_data_summary(
         last_seen_at,
         currency,
         seniority_code,
+        salary_gross,
     ) in rows:
         published_date = published_at.date()
         if published_date in daily:
             daily[published_date] += 1
         salary_disclosed_count += int(salary_from is not None or salary_to is not None)
+        if salary_from is not None or salary_to is not None:
+            if salary_gross is True:
+                salary_gross_count += 1
+            elif salary_gross is False:
+                salary_net_count += 1
+            else:
+                salary_tax_unknown_count += 1
         has_complete_rub_range = (
             currency == "RUB" and salary_from is not None and salary_to is not None
         )
@@ -271,6 +311,7 @@ def _official_open_data_summary(
                     published_at,
                     salary_from if currency == "RUB" else None,
                     salary_to if currency == "RUB" else None,
+                    salary_gross,
                 )
             )
     total = len(rows)
@@ -290,6 +331,7 @@ def _official_open_data_summary(
                     Vacancy.is_remote,
                     Vacancy.currency,
                     SeniorityLevel.code,
+                    Vacancy.salary_gross,
                 )
                 .join(Profession, Vacancy.profession_id == Profession.id)
                 .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
@@ -308,6 +350,7 @@ def _official_open_data_summary(
                 is_remote,
                 currency,
                 seniority_code,
+                salary_gross,
             ) in category_rows:
                 published_date = published_at.date()
                 if published_date in category_daily:
@@ -331,6 +374,7 @@ def _official_open_data_summary(
                             published_at,
                             salary_from if currency == "RUB" else None,
                             salary_to if currency == "RUB" else None,
+                            salary_gross,
                         )
                     )
     confidence = (
@@ -350,12 +394,12 @@ def _official_open_data_summary(
             level_rows = grouped_rows[seniority_code]
             stats = calculate_salary_statistics(
                 [
-                    SalaryInput(lower=salary_from, upper=salary_to, gross=None)
-                    for _, salary_from, salary_to in level_rows
+                    SalaryInput(lower=salary_from, upper=salary_to, gross=salary_gross)
+                    for _, salary_from, salary_to, salary_gross in level_rows
                 ],
                 total_vacancies=len(level_rows),
                 min_sample=settings.min_salary_sample,
-                gross=None,
+                gross=salary_basis,
             )
             slices.append(
                 OfficialSalarySlice(
@@ -428,6 +472,8 @@ def _official_open_data_summary(
                 Vacancy.salary_to.is_not(None),
             )
         )
+        if salary_basis is not None:
+            statement = statement.where(Vacancy.salary_gross.is_(salary_basis))
         if scope == "profession":
             statement = statement.where(Vacancy.profession_id == profession_id)
         elif scope == "category":
@@ -467,12 +513,12 @@ def _official_open_data_summary(
                 ]
                 point_stats = calculate_salary_statistics(
                     [
-                        SalaryInput(lower=salary_from, upper=salary_to, gross=None)
+                        SalaryInput(lower=salary_from, upper=salary_to, gross=salary_basis)
                         for salary_from, salary_to in window_rows
                     ],
                     total_vacancies=len(window_rows),
                     min_sample=settings.min_salary_sample,
-                    gross=None,
+                    gross=salary_basis,
                 )
                 points.append(
                     OfficialSalaryHistoryPoint(
@@ -527,13 +573,16 @@ def _official_open_data_summary(
             salary_history.extend(selected_points)
 
     return OfficialOpenDataSummary(
-        source_name="Работа России - официальный открытый API",
-        source_url="https://trudvsem.ru/opendata/api",
+        source_name=source_name,
+        source_url=source_url,
         period_days=period_days,
         date_from=date_from,
         date_to=date_to,
         total_publications=total,
         salary_disclosed_count=salary_disclosed_count,
+        salary_gross_count=salary_gross_count,
+        salary_net_count=salary_net_count,
+        salary_tax_unknown_count=salary_tax_unknown_count,
         remote_count=remote_count,
         confidence_level=confidence,
         last_ingested_at=last_ingested_at,
@@ -560,7 +609,7 @@ def _official_open_data_summary(
         category_confidence_level=category_confidence,
         category_salary_by_seniority=category_salary_by_seniority,
         salary_currency="RUB",
-        salary_gross_status="unknown",
+        salary_gross_status=salary_gross_status,
         salary_min_sample=settings.min_salary_sample,
         salary_by_seniority=salary_by_seniority,
         salary_history=salary_history,
@@ -570,6 +619,28 @@ def _official_open_data_summary(
         salary_history_reference_scope=history_reference_scope,
         salary_history_minimum_ratio=SALARY_HISTORY_MINIMUM_RATIO,
         salary_history_minimum_salary=history_minimum_salary,
+        salary_methodology_note=salary_methodology_note,
+        methodology_note=methodology_note,
+    )
+
+
+def _official_open_data_summary(
+    db: Session,
+    profession_id: int,
+    period_days: int = 180,
+    *,
+    include_category_context: bool = False,
+) -> OfficialOpenDataSummary:
+    return _source_market_summary(
+        db,
+        profession_id,
+        source_code="trudvsem_open",
+        source_name="Работа России - официальный открытый API",
+        source_url="https://trudvsem.ru/opendata/api",
+        salary_gross_status="unknown",
+        salary_basis=None,
+        period_days=period_days,
+        include_category_context=include_category_context,
         salary_methodology_note=(
             "Динамика рассчитана по RUB-записям с двумя границами вилки после "
             "воспроизводимой нижней отсечки относительно видимой зарплатной медианы: "
@@ -584,6 +655,42 @@ def _official_open_data_summary(
         methodology_note=(
             "Количество найденных публикаций по дате создания записи. Это не историческое "
             "число одновременно активных вакансий; gross/net источником не определён."
+        ),
+    )
+
+
+def _hh_market_summary(
+    db: Session,
+    profession_id: int,
+    *,
+    include_category_context: bool = False,
+) -> OfficialOpenDataSummary | None:
+    source = db.scalar(select(VacancySource).where(VacancySource.code == "hh_api"))
+    if source is None or not source.enabled:
+        return None
+    return _source_market_summary(
+        db,
+        profession_id,
+        source_code="hh_api",
+        source_name="HeadHunter - официальный API",
+        source_url=settings.hh_terms_url,
+        salary_gross_status="reported_per_vacancy",
+        salary_basis=True,
+        period_days=settings.hh_history_days,
+        include_category_context=include_category_context,
+        salary_methodology_note=(
+            "Зарплатные показатели рассчитаны только по вакансиям в RUB, где API явно "
+            "пометил сумму как gross и указал обе границы вилки. Net и записи без признака "
+            "налогообложения считаются отдельно и не смешиваются с gross. Временной ряд "
+            f"использует скользящее окно {SALARY_HISTORY_WINDOW_DAYS} дней и публикуется "
+            f"только при выборке не менее {settings.min_salary_sample}."
+        ),
+        methodology_note=(
+            "Официальный поисковый снимок HH API по названию профессии и её алиасам. "
+            "Результаты дедуплицированы по идентификатору вакансии и классифицированы по "
+            "таксономии TechRole Index. Это не полная историческая выгрузка: API ограничивает "
+            "глубину одной поисковой выдачи 2 000 результатами. Публично показываются только "
+            "агрегаты, без текстов вакансий и данных работодателей."
         ),
     )
 
@@ -753,6 +860,11 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
         profession.id,
         include_category_context=True,
     )
+    hh_market_data = _hh_market_summary(
+        db,
+        profession.id,
+        include_category_context=True,
+    )
     salary_benchmark = SalaryBenchmarkSummary.model_validate(
         salary_benchmark_for(profession.slug, category.slug)
     )
@@ -761,6 +873,7 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
             **summary.model_dump(),
             tech_stack=tech_stack,
             official_open_data=official_open_data,
+            hh_market_data=hh_market_data,
             salary_benchmark=salary_benchmark,
         )
 
@@ -777,6 +890,7 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
             **summary.model_dump(),
             tech_stack=tech_stack,
             official_open_data=official_open_data,
+            hh_market_data=hh_market_data,
             salary_benchmark=salary_benchmark,
         )
     start_date = max_date - timedelta(days=history_days - 1)
@@ -903,6 +1017,7 @@ def build_detail(db: Session, slug: str, user, days: int = 30) -> ProfessionDeta
         tech_stack=tech_stack,
         history_days=history_days,
         official_open_data=official_open_data,
+        hh_market_data=hh_market_data,
         salary_benchmark=salary_benchmark,
     )
 
@@ -919,7 +1034,7 @@ def get_profession(
     premium = has_premium(db, user)
     effective_days = min(days, 180 if premium else 30)
     cache_parts = {
-        "schema": "salary-benchmark-v3",
+        "schema": "hh-market-v1",
         "tier": "premium" if premium else "public",
         "slug": slug,
         "days": effective_days,

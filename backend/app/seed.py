@@ -107,10 +107,10 @@ def _seed_sources_and_scoring(
     )
     hh_source = VacancySource(
         code="hh_api",
-        name="Официальный API российского сервиса вакансий (выключен)",
+        name="HeadHunter - официальный API",
         provider_type="HhApiProvider",
-        enabled=False,
-        terms_url="https://dev.hh.ru/",
+        enabled=settings.hh_enabled,
+        terms_url=settings.hh_terms_url,
     )
     trudvsem_source = VacancySource(
         code="trudvsem_open",

@@ -22,7 +22,7 @@ from app.providers.email import (
 )
 from app.services.currency_rates import snapshot_configured_currency_rates
 from app.services.indexnow import submit_indexnow
-from app.services.open_data_ingestion import ingest_trudvsem_open_data
+from app.services.open_data_ingestion import ingest_hh_data, ingest_trudvsem_open_data
 from app.services.publication_metrics import refresh_observed_publication_metrics
 from app.services.salary_source_audit import (
     audit_habr_calculator_public_medians,
@@ -91,6 +91,25 @@ def collect_and_classify_open_vacancies(context) -> dict:
     result["email_report"] = _send_report(
         status=result["status"], started_at=started_at, summary=result
     )
+    context.log.info(json.dumps(result, ensure_ascii=False, default=str))
+    return result
+
+
+@op(name="collect_and_classify_hh_vacancies")
+def collect_and_classify_hh_vacancies(context) -> dict:
+    if not settings.hh_enabled:
+        result = {"status": "skipped", "reason": "HH_ENABLED=false"}
+        context.log.info(json.dumps(result, ensure_ascii=False))
+        return result
+    try:
+        with SessionLocal() as db:
+            result = ingest_hh_data(db).to_dict()
+    except Exception as exc:
+        context.log.exception("HH ingestion failed")
+        raise Failure(
+            description="HH ingestion failed",
+            metadata={"status": "failed", "error": type(exc).__name__},
+        ) from exc
     context.log.info(json.dumps(result, ensure_ascii=False, default=str))
     return result
 
@@ -211,6 +230,59 @@ def materialize_observed_publication_metrics(context, ingestion_result: dict) ->
     return result
 
 
+@op(name="materialize_hh_publication_metrics")
+def materialize_hh_publication_metrics(context, ingestion_result: dict) -> dict:
+    if ingestion_result.get("status") != "success":
+        result = {
+            "status": "skipped",
+            "reason": "ingestion_not_complete",
+            "ingestion_status": ingestion_result.get("status"),
+        }
+        context.log.info(json.dumps(result, ensure_ascii=False))
+        return result
+    run_id = ingestion_result.get("run_id")
+    if not isinstance(run_id, int):
+        raise Failure(
+            description="HH publication metric transform has no ingestion run id",
+            metadata={"status": "failed", "reason": "missing_run_id"},
+        )
+    try:
+        with SessionLocal() as db:
+            run = db.get(IngestionRun, run_id)
+            if run is None:
+                raise RuntimeError("HH ingestion run not found")
+            metadata = run.metadata_json or {}
+            oldest = metadata.get("oldest_published_at")
+            newest = metadata.get("newest_published_at")
+            transformed = refresh_observed_publication_metrics(
+                db,
+                source_code="hh_api",
+                date_from=datetime.fromisoformat(oldest).date() if oldest else None,
+                date_to=datetime.fromisoformat(newest).date() if newest else None,
+            )
+            result = transformed.to_dict()
+            result["date_from"] = (
+                transformed.date_from.isoformat() if transformed.date_from else None
+            )
+            result["date_to"] = (
+                transformed.date_to.isoformat() if transformed.date_to else None
+            )
+            run.metadata_json = {
+                **metadata,
+                "publication_metrics_materialized": transformed.status == "success",
+                "publication_metric_transform": result,
+            }
+            db.commit()
+    except Exception as exc:
+        context.log.exception("HH publication metric transform failed")
+        raise Failure(
+            description="HH publication metric transform failed",
+            metadata={"status": "failed", "error": type(exc).__name__},
+        ) from exc
+    context.log.info(json.dumps(result, ensure_ascii=False, default=str))
+    return result
+
+
 @op(name="notify_search_engines")
 def notify_search_engines(context, materialization_result: dict) -> dict:
     if materialization_result.get("status") != "success":
@@ -232,6 +304,8 @@ def nightly_market_pipeline():
     verify_public_salary_benchmarks()
     ingestion_result = collect_and_classify_open_vacancies()
     materialization_result = materialize_observed_publication_metrics(ingestion_result)
+    hh_ingestion_result = collect_and_classify_hh_vacancies()
+    materialize_hh_publication_metrics(hh_ingestion_result)
     notify_search_engines(materialization_result)
 
 

@@ -88,35 +88,92 @@ class HhApiProvider:
     """Official HH API only. No HTML scraping or limit bypassing."""
 
     code = "hh_api"
-    base_url = "https://api.hh.ru"
+    area_ids = {"ru": "113", "msk": "1", "spb": "2"}
 
-    def __init__(self, settings: Settings):
+    def __init__(self, settings: Settings, client: httpx.Client | None = None):
         if not settings.hh_enabled:
             raise RuntimeError("HH provider is disabled")
         if not settings.hh_commercial_use_confirmed:
             raise RuntimeError("Commercial-use confirmation is required")
+        if not settings.hh_access_token:
+            raise RuntimeError("HH application access token is required")
+        self.settings = settings
+        self.base_url = settings.hh_base_url.rstrip("/")
         self.user_agent = f"{settings.hh_app_name}/0.1 ({settings.hh_contact_email})"
         self.token = settings.hh_access_token
+        self.headers = {
+            "Authorization": f"Bearer {self.token}",
+            "HH-User-Agent": self.user_agent,
+            "User-Agent": self.user_agent,
+        }
+        self.client = client or httpx.Client(timeout=20)
+        self._page_counts: dict[tuple[str, str], int] = {}
+
+    @staticmethod
+    def _safe_raw(item: dict) -> dict:
+        allowed = (
+            "id",
+            "name",
+            "published_at",
+            "created_at",
+            "archived",
+            "alternate_url",
+            "salary",
+            "experience",
+            "employment",
+            "schedule",
+            "work_format",
+            "professional_roles",
+        )
+        return {
+            "provider": "hh_api",
+            **{key: item.get(key) for key in allowed if key in item},
+            "area": item.get("area") or {},
+        }
+
+    @staticmethod
+    def _is_remote(item: dict) -> bool:
+        formats = item.get("work_format") or []
+        format_ids = {
+            str(value.get("id", "")).casefold()
+            for value in formats
+            if isinstance(value, dict)
+        }
+        schedule_id = str((item.get("schedule") or {}).get("id", "")).casefold()
+        return "remote" in format_ids or schedule_id == "remote"
 
     def fetch(
         self, query: str, region_code: str, *, limit: int = 100, offset: int = 0
     ) -> Iterator[VacancyRecord]:
-        if offset:
+        page = max(offset, 0)
+        key = (query.casefold(), region_code)
+        known_pages = self._page_counts.get(key)
+        if known_pages is not None and page >= known_pages:
             return
         per_page = min(limit, 100)
-        headers = {"HH-User-Agent": self.user_agent, "User-Agent": self.user_agent}
-        if self.token:
-            headers["Authorization"] = f"Bearer {self.token}"
-        # A single official API page is deliberate: no pagination-depth or rate-limit circumvention.
-        response = httpx.get(
+        now = datetime.now(timezone.utc)
+        response = self.client.get(
             f"{self.base_url}/vacancies",
-            params={"text": query, "area": region_code, "per_page": per_page, "page": 0},
-            headers=headers,
-            timeout=20,
+            params={
+                "text": query,
+                "area": self.area_ids.get(region_code, region_code),
+                "per_page": per_page,
+                "page": page,
+                "date_from": (now - timedelta(days=self.settings.hh_history_days)).isoformat(),
+                "date_to": now.isoformat(),
+                "order_by": "publication_time",
+            },
+            headers=self.headers,
         )
         response.raise_for_status()
-        for item in response.json().get("items", []):
+        payload = response.json()
+        pages = int(payload.get("pages") or 0)
+        self._page_counts[key] = min(pages, self.settings.hh_max_pages_per_query)
+        for item in payload.get("items", []):
             salary = item.get("salary") or {}
+            currency = salary.get("currency")
+            if currency == "RUR":
+                currency = "RUB"
             yield VacancyRecord(
                 external_id=str(item["id"]),
                 title=item["name"],
@@ -125,13 +182,13 @@ class HhApiProvider:
                 if salary.get("from") is not None
                 else None,
                 salary_to=Decimal(str(salary["to"])) if salary.get("to") is not None else None,
-                currency=salary.get("currency"),
+                currency=currency,
                 gross=salary.get("gross"),
                 published_at=datetime.fromisoformat(item["published_at"]),
                 experience=(item.get("experience") or {}).get("id"),
-                is_remote=item.get("work_format", [{}])[0].get("id") == "REMOTE",
+                is_remote=self._is_remote(item),
                 skills=(),
-                raw=item,
+                raw=self._safe_raw(item),
             )
 
 

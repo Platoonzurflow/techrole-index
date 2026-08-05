@@ -2,7 +2,7 @@ import { api } from "@/lib/api";
 import { conditionalResponse } from "@/lib/conditional-response";
 import { insightCitationUrls } from "@/lib/insight-citation";
 import { insights } from "@/lib/insights";
-import type { DataProvenance, OfficialSalarySlice, ProfessionSummary } from "@/lib/types";
+import type { DataProvenance, OpenDataCatalogItem, ProfessionSummary } from "@/lib/types";
 
 interface Source {
   code: string;
@@ -11,30 +11,17 @@ interface Source {
   terms_url?: string;
 }
 
-interface OpenDataItem {
-  slug: string;
-  period_days: number;
-  date_from: string;
-  date_to: string;
-  total_publications: number;
-  last_ingested_at?: string;
-  salary_currency: string;
-  salary_gross_status: "unknown";
-  salary_min_sample: number;
-  salary_by_seniority: OfficialSalarySlice[];
-}
-
 export async function GET(request: Request) {
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   let professions: ProfessionSummary[];
   let sources: Source[];
-  let openData: OpenDataItem[];
+  let openData: OpenDataCatalogItem[];
   let provenance: DataProvenance;
   try {
     [professions, sources, openData, provenance] = await Promise.all([
       api<ProfessionSummary[]>("/professions"),
       api<Source[]>("/sources"),
-      api<OpenDataItem[]>("/open-data/publications"),
+      api<OpenDataCatalogItem[]>("/open-data/publications"),
       api<DataProvenance>("/data-provenance"),
     ]);
   } catch {
@@ -75,6 +62,8 @@ export async function GET(request: Request) {
     observed_publication_daily_schema_url: `${siteUrl}/open-data-daily.schema.json`,
     observed_publication_daily_croissant_url: `${siteUrl}/open-data-daily.croissant.json`,
     observed_publication_daily_page_url: `${siteUrl}/open-data-daily`,
+    hh_market_daily_json_url: `${siteUrl}/hh-market-daily.json`,
+    hh_market_daily_csv_url: `${siteUrl}/hh-market-daily.csv`,
     observed_publication_linkset_url: `${siteUrl}/.well-known/linkset.json`,
     dcat_catalog_url: `${siteUrl}/catalog.jsonld`,
     data_status_url: `${siteUrl}/data-status`,
@@ -145,6 +134,29 @@ export async function GET(request: Request) {
             })),
           },
         } : null,
+        hh_market_snapshot: observed?.hh_market_data ? {
+          source: "HeadHunter API",
+          period_days: observed.hh_market_data.period_days,
+          date_from: observed.hh_market_data.date_from,
+          date_to: observed.hh_market_data.date_to,
+          count: observed.hh_market_data.total_publications,
+          salary_disclosed_count: observed.hh_market_data.salary_disclosed_count,
+          salary_gross_count: observed.hh_market_data.salary_gross_count,
+          salary_net_count: observed.hh_market_data.salary_net_count,
+          salary_tax_unknown_count: observed.hh_market_data.salary_tax_unknown_count,
+          remote_count: observed.hh_market_data.remote_count,
+          last_ingested_at: observed.hh_market_data.last_ingested_at ?? null,
+          interpretation: "Официальный поисковый снимок с пределом 2 000 результатов на запрос, не полная историческая база",
+          gross_salary_levels: observed.hh_market_data.salary_by_seniority.map((slice) => ({
+            seniority: slice.seniority,
+            status: slice.median == null ? "insufficient_data" : "available",
+            median: slice.median ?? null,
+            average: slice.average ?? null,
+            p25: slice.p25 ?? null,
+            p75: slice.p75 ?? null,
+            sample_size: slice.sample_size,
+          })),
+        } : null,
       };
     }),
     sources: sources.map((source) => ({
@@ -154,7 +166,7 @@ export async function GET(request: Request) {
       terms_url: source.terms_url ?? null,
     })),
   });
-  const lastModified = [provenance.generated_at, ...openData.map((item) => item.last_ingested_at)]
+  const lastModified = [provenance.generated_at, ...openData.flatMap((item) => [item.last_ingested_at, item.hh_market_data?.last_ingested_at])]
     .filter((value): value is string => Boolean(value))
     .sort()
     .at(-1);

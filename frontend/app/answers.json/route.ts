@@ -25,12 +25,14 @@ export async function GET(request: Request) {
     canonical_url: `${siteUrl}/answers`,
     language: "ru-RU",
     current_market_claim: false,
-    source_name: "Работа России",
-    source_url: "https://trudvsem.ru/opendata/api",
+    sources: [
+      { name: "Работа России", url: "https://trudvsem.ru/opendata/api", salary_tax_status: "unknown" },
+      ...(summary.hh_top_professions.length ? [{ name: "HeadHunter API", url: "https://api.hh.ru/openapi/redoc", salary_tax_status: "reported_per_vacancy" }] : []),
+    ],
     methodology_url: `${siteUrl}/methodology`,
     provenance_url: `${siteUrl}/data-status.json`,
     citation_url: `${siteUrl}/citation`,
-    interpretation: "Показаны публикации по дате создания, а не число одновременно активных вакансий. Зарплаты — midpoint полных RUB-вилок; gross/net не определён.",
+    interpretation: "Источники изолированы. «Работа России» показывает публикации по дате создания с неизвестным gross/net. HH — ограниченный поисковый снимок; его gross, net и неизвестный налоговый статус не смешиваются.",
     ...summary,
   });
   return conditionalResponse(request, body, {

@@ -138,8 +138,8 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
         payload = data_provenance(db)
     engine.dispose()
 
-    prepared, official, benchmarks = payload["layers"]
-    assert payload["schema_version"] == "1.3"
+    prepared, official, benchmarks, hh = payload["layers"]
+    assert payload["schema_version"] == "1.4"
     assert prepared["status"] == "prepared_baseline"
     assert prepared["last_metric_date"] == date(2026, 7, 17)
     assert prepared["profession_count"] == 1
@@ -154,6 +154,9 @@ def test_data_provenance_marks_prepared_layer_without_live_market_claim() -> Non
     assert benchmarks["direct_professions"] == 37
     assert benchmarks["related_professions"] == 13
     assert benchmarks["category_only_professions"] == 0
+    assert hh["id"] == "hh_market_snapshot"
+    assert hh["status"] == "empty"
+    assert hh["salary_tax_status"] == "reported_per_vacancy"
     assert (
         sum(
             benchmarks[key]

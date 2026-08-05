@@ -76,9 +76,9 @@ export default async function SourcesPage() {
           </article>
         ))}
       </div>
-      <section className="mt-8 rounded-2xl border border-amber-400/35 bg-amber-400/5 p-6">
-        <h2 className="text-xl font-semibold">Договорные API остаются выключенными</h2>
-        <p className="mt-3 max-w-4xl leading-7 text-muted">Технически API hh.ru отдаёт вакансии с указанными работодателями зарплатами, но его условия не дают автоматического права собирать из них публичную стороннюю базу. TechRole Index включит provider только после письменного согласования агрегации, хранения и публикации, а также при <code>HH_ENABLED=true</code>, <code>HH_COMMERCIAL_USE_CONFIRMED=true</code>, app name и контактном email. API Хабр Карьеры также требует активированное OAuth-приложение; публичного метода массовой выгрузки зарплат в открытой документации нет. Поэтому сейчас используются только явно опубликованные агрегаты и отчёты, без HTML scraping, обхода входа или CAPTCHA.</p>
+      <section className="mt-8 rounded-2xl border border-emerald-400/35 bg-emerald-400/5 p-6">
+        <h2 className="text-xl font-semibold">HH API: одобренный агрегированный сценарий</h2>
+        <p className="mt-3 max-w-4xl leading-7 text-muted">Приложение TechRole Index одобрено HeadHunter для заявленного сценария публичной коммерческой аналитики рынка IT-профессий. Интеграция использует серверный application token, официальный поиск и лимиты API. Источники изолированы: gross, net и неизвестный налоговый статус не смешиваются, результаты дедуплицируются, а публично выводятся только агрегаты без текстов вакансий, сведений о работодателях и персональных данных. Глубина одной поисковой выдачи ограничена 2 000 результатами, поэтому слой называется снимком, а не полной исторической базой. API Хабр Карьеры остаётся выключенным: для него нет активированного приложения и подтверждённого массового сценария.</p>
         <div className="mt-4 flex flex-wrap gap-4">
           <a className="font-semibold text-accent" href="https://dev.hh.ru/admin/developer_agreement" rel="noreferrer">Условия API hh.ru ↗</a>
           <a className="font-semibold text-accent" href="https://career.habr.com/info/legal/api_rules" rel="noreferrer">Условия API Хабр Карьеры ↗</a>

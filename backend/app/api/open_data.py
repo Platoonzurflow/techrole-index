@@ -1,3 +1,5 @@
+from typing import Literal
+
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -22,8 +24,11 @@ router = APIRouter(prefix="/open-data", tags=["open-data"])
     "/publication-metrics-daily",
     response_model=ObservedPublicationMetricsExportOut,
 )
-def publication_metrics_daily(db: Session = Depends(get_db)):
-    rows = db.execute(
+def publication_metrics_daily(
+    db: Session = Depends(get_db),
+    source: Literal["trudvsem_open", "hh_api", "all"] = "trudvsem_open",
+):
+    statement = (
         select(
             ObservedPublicationMetricDaily,
             VacancySource.code,
@@ -39,7 +44,6 @@ def publication_metrics_daily(db: Session = Depends(get_db)):
         )
         .join(Profession, Profession.id == ObservedPublicationMetricDaily.profession_id)
         .join(Region, Region.id == ObservedPublicationMetricDaily.region_id)
-        .where(VacancySource.code == "trudvsem_open")
         .order_by(
             ObservedPublicationMetricDaily.metric_date,
             Profession.slug,
@@ -47,7 +51,10 @@ def publication_metrics_daily(db: Session = Depends(get_db)):
             Region.code,
             ObservedPublicationMetricDaily.salary_tax_status,
         )
-    ).all()
+    )
+    if source != "all":
+        statement = statement.where(VacancySource.code == source)
+    rows = db.execute(statement).all()
     sample_gate = get_settings().min_salary_sample
     records: list[ObservedPublicationMetricOut] = []
     for (

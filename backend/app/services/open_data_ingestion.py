@@ -26,7 +26,7 @@ from app.models import (
     VacancySource,
 )
 from app.providers.ai import OllamaOptionalClassifier
-from app.providers.vacancies import TrudvsemOpenDataProvider, VacancyDataProvider
+from app.providers.vacancies import HhApiProvider, TrudvsemOpenDataProvider, VacancyDataProvider
 
 
 @dataclass(frozen=True)
@@ -52,21 +52,41 @@ class OpenDataIngestionSummary:
         return asdict(self)
 
 
-def _ensure_source(db: Session) -> VacancySource:
-    source = db.scalar(select(VacancySource).where(VacancySource.code == "trudvsem_open"))
+@dataclass(frozen=True)
+class ProviderIngestionOptions:
+    source_code: str
+    source_name: str
+    provider_type: str
+    terms_url: str
+    enabled: bool
+    query_limit: int
+    max_professions: int
+    history_days: int
+    max_pages_per_query: int
+    use_alias_queries: bool
+    request_delay_seconds: float
+    metrics_note: str
+
+
+def _ensure_source(db: Session, options: ProviderIngestionOptions) -> VacancySource:
+    source = db.scalar(
+        select(VacancySource).where(VacancySource.code == options.source_code)
+    )
     if source is None:
         source = VacancySource(
-            code="trudvsem_open",
-            name="Работа России - официальный открытый API",
-            provider_type="TrudvsemOpenDataProvider",
-            enabled=settings.trudvsem_enabled,
-            terms_url=settings.trudvsem_terms_url,
+            code=options.source_code,
+            name=options.source_name,
+            provider_type=options.provider_type,
+            enabled=options.enabled,
+            terms_url=options.terms_url,
         )
         db.add(source)
         db.flush()
     else:
-        source.enabled = settings.trudvsem_enabled
-        source.terms_url = settings.trudvsem_terms_url
+        source.name = options.source_name
+        source.provider_type = options.provider_type
+        source.enabled = options.enabled
+        source.terms_url = options.terms_url
     return source
 
 
@@ -124,9 +144,11 @@ def _ensure_source_query(
         )
 
 
-def _queries_for_profession(db: Session, profession: Profession) -> list[str]:
+def _queries_for_profession(
+    db: Session, profession: Profession, *, use_alias_queries: bool
+) -> list[str]:
     candidates = [profession.name_ru]
-    if settings.trudvsem_use_alias_queries:
+    if use_alias_queries:
         candidates.append(profession.name_en)
         candidates.extend(ALIASES_BY_PROFESSION.get(profession.slug, ()))
         candidates.extend(
@@ -152,9 +174,9 @@ def _queries_for_profession(db: Session, profession: Profession) -> list[str]:
 
 def _coarse_region(region_code: str, regions: dict[str, Region]) -> Region:
     normalized = region_code.strip()
-    if normalized.startswith("77"):
+    if normalized == "1" or normalized.startswith("77"):
         return regions["msk"]
-    if normalized.startswith("78"):
+    if normalized == "2" or normalized.startswith("78"):
         return regions["spb"]
     return regions["other"]
 
@@ -183,7 +205,7 @@ def _store_salary_observation(db: Session, vacancy: Vacancy, observed_at: dateti
             original_currency="RUB",
             normalized_currency="RUB",
             rate=Decimal("1"),
-            gross=None,
+            gross=vacancy.salary_gross,
             salary_from=vacancy.salary_from,
             salary_to=vacancy.salary_to,
             midpoint=midpoint,
@@ -192,17 +214,18 @@ def _store_salary_observation(db: Session, vacancy: Vacancy, observed_at: dateti
     )
 
 
-def ingest_trudvsem_open_data(
+def _ingest_vacancy_data(
     db: Session,
     *,
-    provider: VacancyDataProvider | None = None,
+    options: ProviderIngestionOptions,
+    provider: VacancyDataProvider,
     ai_classifier: OllamaOptionalClassifier | None = None,
     sleep: Callable[[float], None] = time.sleep,
 ) -> OpenDataIngestionSummary:
-    if not settings.trudvsem_enabled:
-        raise RuntimeError("TRUDVSEM_ENABLED is false")
+    if not options.enabled:
+        raise RuntimeError(f"{options.source_code} provider is disabled")
 
-    source = _ensure_source(db)
+    source = _ensure_source(db, options)
     recovery_time = datetime.now(timezone.utc)
     stale_runs = db.scalars(
         select(IngestionRun).where(
@@ -222,6 +245,16 @@ def ingest_trudvsem_open_data(
         }
     if stale_runs:
         db.commit()
+    active_run_id = db.scalar(
+        select(IngestionRun.id).where(
+            IngestionRun.source_id == source.id,
+            IngestionRun.status == "running",
+        )
+    )
+    if active_run_id is not None:
+        raise RuntimeError(
+            f"{options.source_code} ingestion is already running (run {active_run_id})"
+        )
     rules, professions_by_slug = build_rule_classifier(db)
     regions = {item.code: item for item in db.scalars(select(Region)).all()}
     if not {"ru", "msk", "spb", "other"}.issubset(regions):
@@ -231,8 +264,7 @@ def ingest_trudvsem_open_data(
         item.code: item
         for item in db.scalars(select(SeniorityLevel).order_by(SeniorityLevel.sort_order)).all()
     }
-    professions = list(professions_by_slug.values())[: settings.trudvsem_max_professions]
-    provider = provider or TrudvsemOpenDataProvider(settings)
+    professions = list(professions_by_slug.values())[: options.max_professions]
     if (
         ai_classifier is None
         and settings.ai_classifier_enabled
@@ -249,11 +281,11 @@ def ingest_trudvsem_open_data(
         records_changed=0,
         metadata_json={
             "provider": source.code,
-            "terms_url": settings.trudvsem_terms_url,
-            "query_limit": settings.trudvsem_query_limit,
-            "history_days": settings.trudvsem_history_days,
-            "max_pages_per_query": settings.trudvsem_max_pages_per_query,
-            "alias_queries": settings.trudvsem_use_alias_queries,
+            "terms_url": options.terms_url,
+            "query_limit": options.query_limit,
+            "history_days": options.history_days,
+            "max_pages_per_query": options.max_pages_per_query,
+            "alias_queries": options.use_alias_queries,
             "ai_model": settings.ollama_model if ai_classifier else None,
         },
     )
@@ -267,14 +299,16 @@ def ingest_trudvsem_open_data(
     ai_used = 0
     errors: list[str] = []
     now = datetime.now(timezone.utc)
-    cutoff = now - timedelta(days=settings.trudvsem_history_days)
+    cutoff = now - timedelta(days=options.history_days)
     future_limit = now + timedelta(days=1)
     processed_external_ids: set[str] = set()
     oldest_published_at: datetime | None = None
     newest_published_at: datetime | None = None
     try:
         for profession in professions:
-            for query in _queries_for_profession(db, profession):
+            for query in _queries_for_profession(
+                db, profession, use_alias_queries=options.use_alias_queries
+            ):
                 queries_attempted += 1
                 _ensure_source_query(
                     db,
@@ -283,13 +317,13 @@ def ingest_trudvsem_open_data(
                     region_id=national_region.id,
                     query=query,
                 )
-                for page in range(settings.trudvsem_max_pages_per_query):
+                for page in range(options.max_pages_per_query):
                     try:
                         records = list(
                             provider.fetch(
                                 query,
                                 "ru",
-                                limit=settings.trudvsem_query_limit,
+                                limit=options.query_limit,
                                 offset=page,
                             )
                         )
@@ -449,10 +483,10 @@ def ingest_trudvsem_open_data(
                         _store_salary_observation(db, vacancy, now)
 
                     db.commit()
-                    if len(records) < settings.trudvsem_query_limit:
+                    if len(records) < options.query_limit:
                         break
-                    if settings.trudvsem_request_delay_seconds:
-                        sleep(settings.trudvsem_request_delay_seconds)
+                    if options.request_delay_seconds:
+                        sleep(options.request_delay_seconds)
     finally:
         if ai_classifier is not None:
             ai_classifier.unload()
@@ -482,10 +516,7 @@ def ingest_trudvsem_open_data(
         "oldest_published_at": oldest_published_at.isoformat() if oldest_published_at else None,
         "newest_published_at": newest_published_at.isoformat() if newest_published_at else None,
         "metrics_recalculated": False,
-        "metrics_note": (
-            "official publication records were loaded; gross/net semantics and historical "
-            "active-state are unknown, so salary/active-vacancy metrics were not overwritten"
-        ),
+        "metrics_note": options.metrics_note,
     }
     db.commit()
     return OpenDataIngestionSummary(
@@ -503,5 +534,76 @@ def ingest_trudvsem_open_data(
         raw_records_fetched=raw_records_fetched,
         duplicates_skipped=duplicates_skipped,
         records_outside_window=records_outside_window,
+        history_days=options.history_days,
+    )
+
+
+def ingest_trudvsem_open_data(
+    db: Session,
+    *,
+    provider: VacancyDataProvider | None = None,
+    ai_classifier: OllamaOptionalClassifier | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+) -> OpenDataIngestionSummary:
+    if not settings.trudvsem_enabled:
+        raise RuntimeError("TRUDVSEM_ENABLED is false")
+    options = ProviderIngestionOptions(
+        source_code="trudvsem_open",
+        source_name="Работа России - официальный открытый API",
+        provider_type="TrudvsemOpenDataProvider",
+        terms_url=settings.trudvsem_terms_url,
+        enabled=settings.trudvsem_enabled,
+        query_limit=settings.trudvsem_query_limit,
+        max_professions=settings.trudvsem_max_professions,
         history_days=settings.trudvsem_history_days,
+        max_pages_per_query=settings.trudvsem_max_pages_per_query,
+        use_alias_queries=settings.trudvsem_use_alias_queries,
+        request_delay_seconds=settings.trudvsem_request_delay_seconds,
+        metrics_note=(
+            "official publication records were loaded; gross/net semantics and historical "
+            "active-state are unknown, so salary/active-vacancy metrics were not overwritten"
+        ),
+    )
+    return _ingest_vacancy_data(
+        db,
+        options=options,
+        provider=provider or TrudvsemOpenDataProvider(settings),
+        ai_classifier=ai_classifier,
+        sleep=sleep,
+    )
+
+
+def ingest_hh_data(
+    db: Session,
+    *,
+    provider: VacancyDataProvider | None = None,
+    ai_classifier: OllamaOptionalClassifier | None = None,
+    sleep: Callable[[float], None] = time.sleep,
+) -> OpenDataIngestionSummary:
+    if not settings.hh_enabled:
+        raise RuntimeError("HH_ENABLED is false")
+    options = ProviderIngestionOptions(
+        source_code="hh_api",
+        source_name="HeadHunter - официальный API",
+        provider_type="HhApiProvider",
+        terms_url=settings.hh_terms_url,
+        enabled=settings.hh_enabled,
+        query_limit=settings.hh_query_limit,
+        max_professions=settings.hh_max_professions,
+        history_days=settings.hh_history_days,
+        max_pages_per_query=settings.hh_max_pages_per_query,
+        use_alias_queries=settings.hh_use_alias_queries,
+        request_delay_seconds=settings.hh_request_delay_seconds,
+        metrics_note=(
+            "official HH vacancy search snapshots were loaded with explicit salary gross/net "
+            "flags; raw provider feeds remain source-isolated and only aggregated metrics may "
+            "be published"
+        ),
+    )
+    return _ingest_vacancy_data(
+        db,
+        options=options,
+        provider=provider or HhApiProvider(settings),
+        ai_classifier=ai_classifier,
+        sleep=sleep,
     )

@@ -1,18 +1,10 @@
 import type { ObservedPublicationMetric } from "@/lib/observed-publication-data";
-import type { OfficialSalarySlice } from "@/lib/types";
+import type { OpenDataCatalogItem } from "@/lib/types";
 
-export interface AnswerOpenDataItem {
-  slug: string;
-  name_ru: string;
-  date_from: string;
-  date_to: string;
-  total_publications: number;
-  last_ingested_at?: string;
-  salary_currency: string;
-  salary_gross_status: "unknown";
-  salary_min_sample: number;
-  salary_by_seniority: OfficialSalarySlice[];
-}
+export type AnswerOpenDataItem = Omit<OpenDataCatalogItem, "category_slug" | "period_days"> & {
+  category_slug?: string;
+  period_days?: number;
+};
 
 export interface AnswerSummary {
   date_from: string | null;
@@ -25,6 +17,17 @@ export interface AnswerSummary {
     seniority: "junior" | "middle" | "senior";
     roles: Array<{ slug: string; name: string; median: number; sample_size: number }>;
   }>;
+  hh_date_from: string | null;
+  hh_date_to: string | null;
+  hh_top_professions: Array<{ slug: string; name: string; publications: number }>;
+  hh_salary_by_level: Array<{
+    seniority: "junior" | "middle" | "senior";
+    roles: Array<{ slug: string; name: string; median: number; sample_size: number }>;
+  }>;
+  hh_salary_disclosed_count: number;
+  hh_salary_gross_count: number;
+  hh_salary_net_count: number;
+  hh_salary_tax_unknown_count: number;
   top_regions: Array<{ code: string; name: string; publications: number }>;
   publication_dynamics: {
     current_date_from: string | null;
@@ -51,6 +54,7 @@ export function buildAnswerSummary(
   const dateTo = items.map((item) => item.date_to).filter(Boolean).sort().at(-1) ?? null;
   const explicitDateModified = [
     ...items.map((item) => item.last_ingested_at),
+    ...items.map((item) => item.hh_market_data?.last_ingested_at),
     ...records.flatMap((record) => [record.materialized_at, record.last_ingested_at]),
   ].filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
   // A freshly seeded publication layer may legitimately have no ingestion
@@ -68,6 +72,26 @@ export function buildAnswerSummary(
     seniority,
     roles: items.flatMap((item) => {
       const slice = item.salary_by_seniority.find((candidate) => candidate.seniority === seniority);
+      return slice?.median == null ? [] : [{
+        slug: item.slug,
+        name: item.name_ru,
+        median: slice.median,
+        sample_size: slice.sample_size,
+      }];
+    }).sort((left, right) => right.sample_size - left.sample_size || left.name.localeCompare(right.name, "ru")).slice(0, 5),
+  }));
+  const hhItems = items.filter((item) => item.hh_market_data != null);
+  const hhDateFrom = hhItems.map((item) => item.hh_market_data?.date_from).filter((value): value is string => Boolean(value)).sort().at(0) ?? null;
+  const hhDateTo = hhItems.map((item) => item.hh_market_data?.date_to).filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+  const hhTopProfessions = hhItems
+    .filter((item) => (item.hh_market_data?.total_publications ?? 0) > 0)
+    .sort((left, right) => (right.hh_market_data?.total_publications ?? 0) - (left.hh_market_data?.total_publications ?? 0) || left.name_ru.localeCompare(right.name_ru, "ru"))
+    .slice(0, 5)
+    .map((item) => ({ slug: item.slug, name: item.name_ru, publications: item.hh_market_data?.total_publications ?? 0 }));
+  const hhLevels = (["junior", "middle", "senior"] as const).map((seniority) => ({
+    seniority,
+    roles: hhItems.flatMap((item) => {
+      const slice = item.hh_market_data?.salary_by_seniority.find((candidate) => candidate.seniority === seniority);
       return slice?.median == null ? [] : [{
         slug: item.slug,
         name: item.name_ru,
@@ -118,6 +142,14 @@ export function buildAnswerSummary(
     salary_data_available: levels.some((level) => level.roles.length > 0),
     top_professions: topProfessions,
     salary_by_level: levels,
+    hh_date_from: hhDateFrom,
+    hh_date_to: hhDateTo,
+    hh_top_professions: hhTopProfessions,
+    hh_salary_by_level: hhLevels,
+    hh_salary_disclosed_count: hhItems.reduce((sum, item) => sum + (item.hh_market_data?.salary_disclosed_count ?? 0), 0),
+    hh_salary_gross_count: hhItems.reduce((sum, item) => sum + (item.hh_market_data?.salary_gross_count ?? 0), 0),
+    hh_salary_net_count: hhItems.reduce((sum, item) => sum + (item.hh_market_data?.salary_net_count ?? 0), 0),
+    hh_salary_tax_unknown_count: hhItems.reduce((sum, item) => sum + (item.hh_market_data?.salary_tax_unknown_count ?? 0), 0),
     top_regions: topRegions,
     publication_dynamics: {
       current_date_from: currentFrom,

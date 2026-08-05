@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     hh_contact_email: str = ""
     hh_app_name: str = "TechRoleIndex"
     hh_access_token: str = ""
+    hh_base_url: str = "https://api.hh.ru"
+    hh_terms_url: str = "https://api.hh.ru/openapi/redoc"
+    hh_query_limit: int = Field(default=100, ge=1, le=100)
+    hh_max_professions: int = Field(default=50, ge=1, le=100)
+    hh_history_days: int = Field(default=365, ge=1, le=365)
+    hh_max_pages_per_query: int = Field(default=20, ge=1, le=20)
+    hh_use_alias_queries: bool = True
+    hh_request_delay_seconds: float = Field(default=0.25, ge=0, le=5)
 
     ai_classifier_enabled: bool = False
     ollama_base_url: str = "http://host.docker.internal:11434"
@@ -125,10 +133,14 @@ class Settings(BaseSettings):
     @model_validator(mode="after")
     def validate_hh_guard(self) -> "Settings":
         if self.hh_enabled and not (
-            self.hh_commercial_use_confirmed and self.hh_contact_email and self.hh_app_name
+            self.hh_commercial_use_confirmed
+            and self.hh_contact_email
+            and self.hh_app_name
+            and self.hh_access_token
         ):
             raise ValueError(
-                "HH_ENABLED requires HH_COMMERCIAL_USE_CONFIRMED=true, HH_CONTACT_EMAIL and HH_APP_NAME"
+                "HH_ENABLED requires HH_COMMERCIAL_USE_CONFIRMED=true, HH_CONTACT_EMAIL, "
+                "HH_APP_NAME and HH_ACCESS_TOKEN"
             )
         if (self.support_email_enabled or self.nightly_report_email_enabled) and not (
             self.smtp_host and self.smtp_username and self.smtp_password

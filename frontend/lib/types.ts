@@ -62,6 +62,9 @@ export interface OfficialOpenDataSummary {
   date_to: string;
   total_publications: number;
   salary_disclosed_count: number;
+  salary_gross_count?: number;
+  salary_net_count?: number;
+  salary_tax_unknown_count?: number;
   remote_count: number;
   confidence_level: "insufficient" | "low" | "medium" | "high";
   last_ingested_at?: string;
@@ -157,6 +160,7 @@ export interface ProfessionDetail extends ProfessionSummary {
   tech_stack?: Array<{ title: string; items: string[] }>;
   history_days?: number;
   official_open_data?: OfficialOpenDataSummary;
+  hh_market_data?: OfficialOpenDataSummary;
   salary_benchmark?: SalaryBenchmarkSummary;
 }
 
@@ -170,9 +174,26 @@ export interface OpenDataCatalogItem {
   total_publications: number;
   last_ingested_at?: string;
   salary_currency: "RUB";
-  salary_gross_status: "unknown";
+  salary_gross_status: "unknown" | "reported_per_vacancy";
   salary_min_sample: number;
   salary_by_seniority: OfficialSalarySlice[];
+  hh_market_data?: {
+    period_days: number;
+    date_from: string;
+    date_to: string;
+    total_publications: number;
+    salary_disclosed_count: number;
+    salary_gross_count: number;
+    salary_net_count: number;
+    salary_tax_unknown_count: number;
+    remote_count: number;
+    last_ingested_at?: string;
+    salary_currency: string;
+    salary_min_sample: number;
+    salary_by_seniority: OfficialSalarySlice[];
+    source_url: string;
+    methodology_note: string;
+  };
 }
 
 export interface PreparedAnalyticsLayer {
@@ -238,10 +259,44 @@ export interface SalaryBenchmarksLayer {
   interpretation: string;
 }
 
+export interface HhMarketSnapshotLayer {
+  id: "hh_market_snapshot";
+  label: string;
+  status: "observed_historical" | "empty";
+  source_code: "hh_api";
+  source_name: string;
+  source_url?: string;
+  period_days: number;
+  window_date_from: string;
+  window_date_to: string;
+  window_time_basis: "UTC_calendar_days";
+  window_start_at: string;
+  window_end_at_exclusive: string;
+  observed_date_from?: string;
+  observed_date_to?: string;
+  source_records: number;
+  classified_publications: number;
+  salary_disclosed_records: number;
+  salary_gross_records: number;
+  salary_net_records: number;
+  salary_tax_unknown_records: number;
+  last_ingested_at?: string;
+  materialized_date_from?: string;
+  materialized_date_to?: string;
+  materialized_slice_count: number;
+  materialized_publications: number;
+  materialized_at?: string;
+  materialized_transform_version?: string;
+  salary_currency: "RUB";
+  salary_tax_status: "reported_per_vacancy";
+  current_market_claim: false;
+  interpretation: string;
+}
+
 export interface DataProvenance {
-  schema_version: "1.3";
+  schema_version: "1.3" | "1.4";
   generated_at: string;
-  layers: Array<PreparedAnalyticsLayer | OfficialPublicationsLayer | SalaryBenchmarksLayer>;
+  layers: Array<PreparedAnalyticsLayer | OfficialPublicationsLayer | SalaryBenchmarksLayer | HhMarketSnapshotLayer>;
 }
 
 export interface User {

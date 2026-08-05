@@ -82,6 +82,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="alternate" type="application/ld+json" href="/open-data.json" title="Official open-data catalog" />
         <link rel="alternate" type="application/json" href="/open-data-daily.json" title="Observed publication daily data" />
         <link rel="alternate" type="text/csv" href="/open-data-daily.csv" title="Observed publication daily CSV" />
+        <link rel="alternate" type="application/json" href="/hh-market-daily.json" title="HH API market daily JSON" />
+        <link rel="alternate" type="text/csv" href="/hh-market-daily.csv" title="HH API market daily CSV" />
         <link rel="alternate" type="application/csvm+json" href="/open-data-daily.csv-metadata.json" title="Observed publication daily CSVW metadata" />
         <link rel="alternate" type="application/schema+json" href="/open-data-daily.schema.json" title="Observed publication daily JSON Schema" />
         <link rel="alternate" type={'application/ld+json; profile="http://mlcommons.org/croissant/1.1"'} href="/open-data-daily.croissant.json" title="Observed publication daily Croissant 1.1 metadata" />

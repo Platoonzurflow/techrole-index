@@ -89,7 +89,7 @@ function DataLayers({ profession }: { profession: ProfessionDetail }) {
         <div><p className="eyebrow">Статус данных</p><h2 id="data-layers-title" className="mt-2 text-2xl font-semibold">Слои, которые нельзя смешивать</h2></div>
         <Link href="/data-status" className="button-secondary">Как читать статусы</Link>
       </div>
-      <div className="mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-4">
         <article className="rounded-2xl border border-line p-5">
           <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Официальные публикации</h3>{(() => { const badge = confidenceBadge(profession.official_open_data?.confidence_level); return <span className={badge.className}>{badge.label}</span>; })()}</div>
           <p className="mt-3 text-sm leading-6 text-muted">{profession.official_open_data ? `${profession.official_open_data.total_publications.toLocaleString("ru-RU")} классифицированных публикаций за ${profession.official_open_data.date_from} — ${profession.official_open_data.date_to}. Публикации не равны одновременно активным вакансиям; gross/net не определён.${profession.official_open_data.last_ingested_at ? ` Загрузка: ${profession.official_open_data.last_ingested_at}.` : ""}` : "Для этой роли пока нет классифицированных публикаций официального слоя."}</p>
@@ -102,6 +102,12 @@ function DataLayers({ profession }: { profession: ProfessionDetail }) {
           <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Публичные зарплатные исследования</h3><span className={confidenceBadge(profession.salary_benchmark?.coverage === "direct" ? "high" : profession.salary_benchmark?.coverage === "related" ? "medium" : "low").className}>{profession.salary_benchmark?.coverage === "direct" ? "точный срез" : profession.salary_benchmark?.coverage === "related" ? "смежный срез" : "ориентир"}</span></div>
           <p className="mt-3 text-sm leading-6 text-muted">Фактические доходы специалистов показаны отдельным справочным слоем: точные, смежные и категорийные значения никогда не смешиваются с вилками вакансий.</p>
         </article>
+        {profession.hh_market_data ? (
+          <article className="rounded-2xl border border-line p-5">
+            <div className="flex items-center justify-between gap-3"><h3 className="font-semibold">Снимок HH API</h3>{(() => { const badge = confidenceBadge(profession.hh_market_data?.confidence_level); return <span className={badge.className}>{badge.label}</span>; })()}</div>
+            <p className="mt-3 text-sm leading-6 text-muted">{profession.hh_market_data.total_publications.toLocaleString("ru-RU")} классифицированных вакансий. Gross, net и неизвестный налоговый статус считаются отдельно; тексты вакансий и данные работодателей не публикуются.</p>
+          </article>
+        ) : null}
       </div>
     </section>
   );
@@ -128,6 +134,12 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
     (item) => item.average != null && item.scope === "category",
   ) ?? false;
   const salaryHistoryUsesMarket = profession.official_open_data?.salary_history.some(
+    (item) => item.average != null && item.scope === "market",
+  ) ?? false;
+  const hhSalaryHistoryUsesCategory = profession.hh_market_data?.salary_history.some(
+    (item) => item.average != null && item.scope === "category",
+  ) ?? false;
+  const hhSalaryHistoryUsesMarket = profession.hh_market_data?.salary_history.some(
     (item) => item.average != null && item.scope === "market",
   ) ?? false;
   const schema = {
@@ -223,6 +235,43 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           { "@type": "DataDownload", encodingFormat: "application/json", contentUrl: `${siteUrl}/open-data-daily.json` },
         ],
       }] : []),
+      ...(profession.hh_market_data ? [{
+        "@type": "Dataset",
+        "@id": `${canonicalUrl}#hh-market-data`,
+        name: `Наблюдаемый рынок вакансий HH: ${profession.name_ru}`,
+        description: profession.hh_market_data.methodology_note,
+        url: `${canonicalUrl}#hh-market-data`,
+        inLanguage: "ru-RU",
+        isAccessibleForFree: true,
+        temporalCoverage: `${profession.hh_market_data.date_from}/${profession.hh_market_data.date_to}`,
+        spatialCoverage: { "@type": "Country", name: "Россия" },
+        creator: { "@type": "Organization", name: "HeadHunter", url: profession.hh_market_data.source_url },
+        includedInDataCatalog: { "@id": `${siteUrl}/#catalog` },
+        variableMeasured: [{
+          "@type": "PropertyValue",
+          name: "Классифицировано вакансий",
+          value: profession.hh_market_data.total_publications,
+        }, {
+          "@type": "PropertyValue",
+          name: "Вакансий с указанной зарплатой gross",
+          value: profession.hh_market_data.salary_gross_count ?? 0,
+        }, ...profession.hh_market_data.salary_by_seniority
+          .filter((item) => item.median != null)
+          .map((item) => ({
+            "@type": "PropertyValue",
+            name: `Медианная gross-зарплата ${levelLabels[item.seniority]}`,
+            value: item.median,
+            unitText: "RUB в месяц до вычета налогов",
+          }))],
+        measurementTechnique: "Официальный HH API; поиск по роли и алиасам; дедупликация по vacancy id; правило классификации TechRole Index",
+        isBasedOn: profession.hh_market_data.source_url,
+        citation: profession.hh_market_data.source_url,
+        subjectOf: [
+          { "@type": "CreativeWork", name: "Как цитировать TechRole Index", url: `${siteUrl}/citation` },
+          { "@type": "CreativeWork", name: "Методология TechRole Index", url: `${siteUrl}/methodology` },
+          { "@type": "CreativeWork", name: "Источники TechRole Index", url: `${siteUrl}/sources` },
+        ],
+      }] : []),
     ],
   };
   return (
@@ -239,6 +288,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         <a href="#tech-stack">Стек</a>
         <a href="#salary-benchmark">Зарплата</a>
         <a href="#official-open-data">Динамика</a>
+        {profession.hh_market_data ? <a href="#hh-market-data">HH API</a> : null}
         {!profession.teaser_only && profession.metrics ? <a href="#market-metrics">Расчётный ряд</a> : null}
         <a href="#data-layers">Источники</a>
         {!profession.teaser_only && profession.metrics ? <><a href="#score-breakdown">Индекс</a><a href="#market-skills">Навыки и регионы</a></> : null}
@@ -291,6 +341,40 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>
             {salaryHistoryUsesCategory ? <p className="mt-2">В зарплатной динамике хотя бы один уровень использует направление из-за малой точной выборки.</p> : null}
             {salaryHistoryUsesMarket ? <p className="mt-2">Если данных направления тоже недостаточно, уровень показывает общий IT-рынок и подписывает этот охват отдельно.</p> : null}
+          </div>
+        </section>
+      ) : null}
+
+      {profession.hh_market_data ? (
+        <section id="hh-market-data" className="market-showcase mt-10 scroll-mt-24 p-5 sm:p-8" aria-labelledby="hh-market-data-title">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <p className="eyebrow">Официальный HH API</p>
+              <h2 id="hh-market-data-title" className="mt-2 text-3xl font-semibold">Расширенный снимок вакансий за {profession.hh_market_data.period_days} дней</h2>
+              <p className="mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.hh_market_data.methodology_note}</p>
+            </div>
+            <a className="button-secondary" href={profession.hh_market_data.source_url} rel="noreferrer">Документация HH API</a>
+          </div>
+          <div className="market-showcase-stats mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <div><p className="text-sm text-muted">Точно по профессии</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.total_publications)}</p></div>
+            <div><p className="text-sm text-muted">По направлению</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.category_total_publications)}</p></div>
+            <div><p className="text-sm text-muted">С зарплатой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_disclosed_count)}</p></div>
+            <div><p className="text-sm text-muted">Gross</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_gross_count ?? 0)}</p></div>
+            <div><p className="text-sm text-muted">Net</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_net_count ?? 0)}</p></div>
+            <div><p className="text-sm text-muted">Удалённые</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.remote_count)}</p></div>
+          </div>
+          <article className="market-stage market-stage-primary mt-7">
+            <div className="market-stage-copy"><p className="eyebrow">Gross-вилки</p><h3 className="mt-2 text-2xl font-semibold">Наблюдаемая зарплата по уровню</h3><p className="mt-3 max-w-4xl text-sm leading-6 text-muted">В расчёт не смешиваются net-вилки и вакансии без явного налогового статуса.</p></div>
+            <div className="mt-5"><OfficialSalaryChart data={profession.hh_market_data} benchmark={profession.salary_benchmark} /></div>
+          </article>
+          <article className="market-stage mt-5">
+            <div className="market-stage-copy"><p className="eyebrow">Поток публикаций</p><h3 className="mt-2 text-2xl font-semibold">Новые вакансии по неделям</h3><p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Поиск выполнен по названию профессии и алиасам. Совпадения дедуплицированы по идентификатору вакансии.</p></div>
+            <div className="mt-5"><PublicationChart data={profession.hh_market_data} /></div>
+          </article>
+          <div className="mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
+            <p>Это официальный поисковый снимок, а не полная копия базы HH. Глубина одной поисковой выдачи ограничена 2 000 результатами; исходные тексты вакансий и сведения о работодателях не публикуются.</p>
+            {hhSalaryHistoryUsesCategory ? <p className="mt-2">Для части зарплатной динамики использован явно подписанный срез направления из-за малой точной выборки.</p> : null}
+            {hhSalaryHistoryUsesMarket ? <p className="mt-2">Если данных направления недостаточно, уровень показывает общий IT-срез и помечает этот охват.</p> : null}
           </div>
         </section>
       ) : null}

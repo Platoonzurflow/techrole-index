@@ -106,4 +106,31 @@ describe("answer-first summary", () => {
     expect(summary.top_professions).toEqual([]);
     expect(summary.top_regions).toEqual([]);
   });
+
+  it("keeps HH demand and gross salary answers source-isolated", () => {
+    const hhItem = item("backend", "Backend-разработчик", 3, 3);
+    hhItem.hh_market_data = {
+      period_days: 365,
+      date_from: "2025-08-05",
+      date_to: "2026-08-05",
+      total_publications: 120,
+      salary_disclosed_count: 70,
+      salary_gross_count: 50,
+      salary_net_count: 15,
+      salary_tax_unknown_count: 5,
+      remote_count: 30,
+      salary_currency: "RUB",
+      salary_min_sample: 3,
+      salary_by_seniority: [slice("junior", 140_000, 12)],
+      source_url: "https://api.hh.ru/openapi/redoc",
+      methodology_note: "Official API snapshot",
+    };
+
+    const summary = buildAnswerSummary([hhItem], []);
+
+    expect(summary.hh_top_professions[0]).toMatchObject({ slug: "backend", publications: 120 });
+    expect(summary.hh_salary_by_level[0].roles[0]).toMatchObject({ median: 140_000, sample_size: 12 });
+    expect(summary.hh_salary_gross_count).toBe(50);
+    expect(summary.hh_salary_net_count).toBe(15);
+  });
 });
