@@ -402,9 +402,9 @@ describe("analytics components", () => {
     render(<SalaryBenchmarks data={benchmark} official={official} />);
 
     expect(screen.queryByText(/перевёрнутую зарплатную градацию/)).not.toBeInTheDocument();
-    expect(screen.getByText("63 000 ₽")).toBeInTheDocument();
-    expect(screen.getByText("97 000 ₽")).toBeInTheDocument();
-    expect(screen.getByText("166 000 ₽")).toBeInTheDocument();
+    expect(screen.getByText("63 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("97 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("166 тыс. ₽")).toBeInTheDocument();
     expect(screen.getByText("общий IT-рынок")).toBeInTheDocument();
     expect(screen.queryByText("Вилки «Работы России»")).not.toBeInTheDocument();
   });

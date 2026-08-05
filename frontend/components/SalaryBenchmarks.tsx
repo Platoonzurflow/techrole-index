@@ -253,7 +253,7 @@ export function SalaryBySeniority({
           ? `${official.date_from} — ${official.date_to}`
           : source?.period;
         const value = useObserved
-          ? rub(historyPoint!.average)
+          ? `${Math.round(historyPoint!.average! / 1000)} тыс. ₽`
           : reference
             ? pointValue(reference)
             : "Источник не найден";
