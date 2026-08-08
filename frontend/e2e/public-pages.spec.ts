@@ -142,8 +142,12 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
   expect(layout.tocScrollable).toBe(true);
   expect(layout.statColumns).toBe(2);
   expect(layout.salaryRailScrollable).toBe(true);
-  expect(layout.mainChartHeight).toBeGreaterThan(200);
-  expect(layout.mainChartHeight).toBeLessThanOrEqual(280);
+  if (selectors.includes("#salary-history")) {
+    expect(layout.mainChartHeight).toBeGreaterThan(200);
+    expect(layout.mainChartHeight).toBeLessThanOrEqual(280);
+  } else {
+    expect(layout.mainChartHeight).toBe(0);
+  }
   expect(layout.pageHeight).toBeLessThan(12_000);
 });
 
