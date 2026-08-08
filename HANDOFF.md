@@ -1,8 +1,15 @@
 # TechRole Index - полный handoff проекта
 
-Последнее обновление: 2026-08-06, Europe/Moscow.
+Последнее обновление: 2026-08-08, Europe/Moscow.
 
 Этот файл предназначен для нового чата или разработчика, который продолжит проект без истории текущего диалога. Перед любыми изменениями необходимо полностью прочитать `AGENTS.md`, затем этот файл, `DECISIONS.md` и профильный документ из списка ниже.
+
+## Актуальный production-релиз (2026-08-08)
+
+- Релиз `fd9ef06f` развёрнут именно на постоянном `https://techrole.ru`, а не только в Tailscale preview. Все девять production-сервисов healthy; внешний HTTPS smoke подтвердил главную, readiness API, обе hero-картинки, страницу профессии и sitemap. Локальные пользовательские изменения `infra/Caddyfile` и `infra/Caddyfile.pre-faktvybor-20260727` на VDS сохранены.
+- Главный экран заменён выбранной светлой Möbius-композицией «Из поиска к первому оферу»: отдельные desktop/mobile изображения лежат в `frontend/public/media`, текст и поиск остаются настоящим HTML, есть лёгкое движение, `prefers-reduced-motion` и отдельное затемнение для тёмной темы. Production standalone теперь явно копирует `public`, иначе эти изображения возвращали бы 404.
+- Карточки Junior/Middle/Senior ищут последнюю единую дату главного точного HH-графика, где у всех трёх уровней `n≥5`, `Middle ≥ Junior × 1,4` и `Senior ≥ Middle × 1,3`. Разные даты и market/category scope не смешиваются. На текущем снимке ни у одной роли ещё нет такой полной тройки, поэтому карточки честно показывают подписанный единый исследовательский резерв, а исходные HH-линии не переставляются и остаются на графике.
+- Полный gate: Ruff, mypy, 153 backend tests; ESLint, TypeScript, 73 frontend tests; production build 103 pages; 46 Playwright passed и 1 sandbox payment intentionally skipped. Staged secret scan — без находок. Перед deploy создан и gzip-проверен backup `/opt/techrole-index/backups/predeploy-1d37e29c-20260808T200523Z.sql.gz` с SHA-256 sidecar и mode `600`.
 
 ## Актуальный релиз профессий и HH (2026-08-06)
 
