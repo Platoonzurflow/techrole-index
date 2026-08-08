@@ -59,26 +59,6 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Инструменты", ("Postman", "Swagger", "Charles", "TestRail")),
         ("Автоматизация", ("Playwright", "Selenium", "Pytest", "CI/CD")),
     ),
-    "android-developer": (
-        ("Языки", ("Kotlin", "Java")),
-        ("Android", ("Jetpack Compose", "Android SDK", "Coroutines")),
-        ("Инструменты", ("Android Studio", "Gradle", "Room", "Firebase")),
-    ),
-    "ios-developer": (
-        ("Языки", ("Swift", "Objective-C")),
-        ("Apple", ("SwiftUI", "UIKit", "Combine")),
-        ("Инструменты", ("Xcode", "Core Data", "CocoaPods", "SPM")),
-    ),
-    "flutter-developer": (
-        ("Языки", ("Dart", "Kotlin", "Swift")),
-        ("Фреймворк", ("Flutter", "Bloc", "Riverpod")),
-        ("Инструменты", ("Android Studio", "Xcode", "Firebase", "Git")),
-    ),
-    "react-native-developer": (
-        ("Языки", ("TypeScript", "JavaScript", "Kotlin", "Swift")),
-        ("Фреймворки", ("React Native", "Expo", "Redux Toolkit")),
-        ("Инструменты", ("Android Studio", "Xcode", "Metro", "Firebase")),
-    ),
     "qa-manual": (
         ("Тестирование", ("Тест-дизайн", "API testing", "SQL", "DevTools")),
         ("Инструменты", ("Postman", "Swagger", "Charles", "DBeaver")),
@@ -89,25 +69,10 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Автоматизация", ("Pytest", "Selenium", "Playwright", "REST Assured")),
         ("Инструменты", ("Allure", "GitLab CI", "Docker", "Postman")),
     ),
-    "sdet": (
-        ("Языки", ("Java", "Python", "TypeScript", "SQL")),
-        ("Фреймворки", ("JUnit", "Pytest", "Playwright", "Selenium")),
-        ("Инженерия", ("CI/CD", "Docker", "Kafka", "Performance testing")),
-    ),
     "devops-engineer": (
         ("Автоматизация", ("Bash", "Python", "Ansible", "Terraform")),
         ("Контейнеры", ("Docker", "Kubernetes", "Helm")),
         ("CI и наблюдаемость", ("GitLab CI", "Jenkins", "Prometheus", "Grafana")),
-    ),
-    "sre": (
-        ("Языки", ("Go", "Python", "Bash")),
-        ("Платформа", ("Kubernetes", "Linux", "Terraform", "Service Mesh")),
-        ("Наблюдаемость", ("Prometheus", "Grafana", "OpenTelemetry", "ELK")),
-    ),
-    "platform-engineer": (
-        ("Платформа", ("Kubernetes", "Docker", "Helm", "Backstage")),
-        ("Автоматизация", ("Terraform", "Ansible", "Argo CD", "GitLab CI")),
-        ("Облака", ("AWS", "Azure", "Yandex Cloud", "OpenStack")),
     ),
     "system-administrator": (
         ("Системы", ("Linux", "Windows Server", "Active Directory")),
@@ -179,11 +144,6 @@ TECH_STACKS: dict[str, TechStack] = {
         ("ML", ("PyTorch", "TensorFlow", "scikit-learn", "ONNX")),
         ("Production", ("FastAPI", "Docker", "Kubernetes", "MLflow")),
     ),
-    "mlops-engineer": (
-        ("ML-платформа", ("MLflow", "Kubeflow", "Airflow", "Feature Store")),
-        ("Инфраструктура", ("Kubernetes", "Docker", "Terraform", "Helm")),
-        ("Наблюдаемость", ("Prometheus", "Grafana", "Evidently", "OpenTelemetry")),
-    ),
     "ai-engineer": (
         ("Языки", ("Python", "SQL", "TypeScript")),
         ("AI", ("LLM", "Transformers", "RAG", "PyTorch")),
@@ -209,20 +169,10 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Интеграция", ("TCP/IP", "DNS", "Storage", "Backup")),
         ("Инструменты", ("Ansible", "PowerShell", "Zabbix", "Git")),
     ),
-    "penetration-tester": (
-        ("Инструменты", ("Burp Suite", "Nmap", "Metasploit", "Wireshark")),
-        ("Языки", ("Python", "Bash", "PowerShell", "JavaScript")),
-        ("Методологии", ("OWASP", "PTES", "OSSTMM", "MITRE ATT&CK")),
-    ),
     "game-developer": (
         ("Языки", ("C#", "C++", "Lua", "Python")),
         ("Движки", ("Unity", "Unreal Engine", "Godot")),
         ("Инструменты", ("Git LFS", "Blender", "Visual Studio", "Profilers")),
-    ),
-    "unity-developer": (
-        ("Языки", ("C#", "HLSL")),
-        ("Движок", ("Unity", "URP/HDRP", "DOTS", "Addressables")),
-        ("Инструменты", ("Rider", "Git LFS", "Blender", "Unity Profiler")),
     ),
     "1c-analyst": (
         ("Платформа", ("1С:Предприятие 8", "1С:ERP", "1С:ЗУП", "1С:Документооборот")),
@@ -253,6 +203,56 @@ TECH_STACKS: dict[str, TechStack] = {
         ("Архитектура", ("C4", "UML", "DDD", "Event-driven architecture")),
         ("Интеграции", ("REST", "gRPC", "Kafka", "API Gateway")),
         ("Платформы", ("Kubernetes", "PostgreSQL", "Cloud", "Terraform")),
+    ),
+    "mobile-developer": (
+        ("Платформы", ("Android", "iOS", "Flutter", "React Native")),
+        ("Языки", ("Kotlin", "Swift", "Dart", "TypeScript")),
+        ("Инструменты", ("Android Studio", "Xcode", "Firebase", "Git")),
+    ),
+    "information-systems-administrator": (
+        ("Системы", ("ERP", "CRM", "Active Directory", "Linux")),
+        ("Администрирование", ("Права доступа", "Резервное копирование", "Мониторинг", "SLA")),
+        ("Инструменты", ("SQL", "PowerShell", "Zabbix", "Service Desk")),
+    ),
+    "it-sales-manager": (
+        ("Продажи", ("B2B", "SaaS", "Solution Selling", "Enterprise Sales")),
+        ("Аналитика", ("Воронка", "Unit Economics", "Forecast", "CRM")),
+        ("Инструменты", ("amoCRM", "Битрикс24", "Excel", "Презентации")),
+    ),
+    "automation-specialist": (
+        ("Автоматизация", ("RPA", "BPMN", "Low-code", "API")),
+        ("Данные", ("SQL", "Excel", "Power Query", "ETL")),
+        ("Инструменты", ("Python", "1С", "Power Automate", "Git")),
+    ),
+    "implementation-specialist": (
+        ("Внедрение", ("Сбор требований", "Настройка", "Миграция", "Обучение")),
+        ("Интеграции", ("REST API", "SQL", "ETL", "Webhooks")),
+        ("Инструменты", ("Jira", "Confluence", "Postman", "Service Desk")),
+    ),
+    "web-designer": (
+        ("Дизайн", ("Лендинги", "Адаптив", "Типографика", "Design System")),
+        ("Инструменты", ("Figma", "Tilda", "Webflow", "Adobe Photoshop")),
+        ("Web", ("HTML", "CSS", "UX", "Прототипирование")),
+    ),
+    "seo-specialist": (
+        ("Поиск", ("Технический SEO", "Семантика", "Ссылки", "Контент")),
+        ("Аналитика", ("Яндекс Метрика", "Google Analytics", "Search Console", "DataLens")),
+        ("Инструменты", ("Screaming Frog", "Ahrefs", "SQL", "Excel")),
+    ),
+    "internet-marketer": (
+        ("Каналы", ("Контекст", "Таргет", "Email", "SEO")),
+        ("Аналитика", ("CPL", "CAC", "ROMI", "Атрибуция")),
+        ("Инструменты", ("Яндекс Директ", "VK Ads", "Метрика", "CRM")),
+    ),
+    "database-operator": (
+        ("Данные", ("Ввод данных", "Валидация", "Дедупликация", "Справочники")),
+        ("СУБД", ("SQL", "PostgreSQL", "MS SQL", "1С")),
+        ("Инструменты", ("Excel", "DBeaver", "Power Query", "CRM")),
+    ),
+    "development-manager": (
+        ("Управление", ("Engineering Management", "Hiring", "Performance Review", "Delivery")),
+        ("Архитектура", ("System Design", "Technical Strategy", "Reliability", "Security")),
+        ("Инструменты", ("Jira", "GitLab", "Confluence", "Roadmap")),
     ),
 }
 

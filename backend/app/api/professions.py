@@ -1,5 +1,6 @@
 from collections import Counter, defaultdict
 from datetime import date, datetime, timedelta, timezone
+from decimal import Decimal
 from statistics import fmean
 from typing import Any, Literal
 
@@ -20,9 +21,11 @@ from app.domain.salary_history import (
     SalaryHistorySeniority,
     salary_history_reference,
 )
+from app.domain.salary_segments import SalarySegmentInput, build_ranked_salary_segments
 from app.domain.time_windows import utc_calendar_window
 from app.domain.trends import Trend, calculate_all_trends, calculate_trend
 from app.models import (
+    CurrencyRateSnapshot,
     Profession,
     ProfessionCategory,
     ProfessionMetricDaily,
@@ -220,6 +223,15 @@ def _source_market_summary(
         .where(Profession.id == profession_id)
     ).one()
     profession_slug, category_slug, category_id = profession_context
+    currency_rates: dict[str, Decimal] = {"RUB": Decimal(1)}
+    for snapshot in db.scalars(
+        select(CurrencyRateSnapshot).order_by(desc(CurrencyRateSnapshot.requested_date))
+    ).all():
+        currency_rates.setdefault(snapshot.currency, snapshot.rate_to_rub)
+
+    def to_rub(value: Decimal | None, currency: str | None) -> Decimal | None:
+        rate = currency_rates.get(str(currency or "").upper())
+        return value * rate if value is not None and rate is not None else None
     history_reference_median, history_reference_scope = salary_history_reference(
         salary_benchmark_for(profession_slug, category_slug)
     )
@@ -244,6 +256,7 @@ def _source_market_summary(
                 Vacancy.currency,
                 SeniorityLevel.code,
                 Vacancy.salary_gross,
+                Vacancy.experience_code,
             )
             .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
             .where(
@@ -285,6 +298,7 @@ def _source_market_summary(
         "middle": [],
         "senior": [],
     }
+    ranked_salary_rows: list[SalarySegmentInput] = []
     for (
         published_at,
         salary_from,
@@ -294,6 +308,7 @@ def _source_market_summary(
         currency,
         seniority_code,
         salary_gross,
+        experience_code,
     ) in rows:
         published_date = published_at.date()
         if published_date in daily:
@@ -324,6 +339,14 @@ def _source_market_summary(
                     salary_gross,
                 )
             )
+        ranked_salary_rows.append(
+            SalarySegmentInput(
+                lower=to_rub(salary_from, currency),
+                upper=to_rub(salary_to, currency),
+                gross=salary_gross,
+                experience_code=experience_code,
+            )
+        )
     total = len(rows)
     category_total = 0
     category_salary_rows: dict[str, list[tuple[Any, ...]]] = {
@@ -331,6 +354,7 @@ def _source_market_summary(
         "middle": [],
         "senior": [],
     }
+    category_ranked_salary_rows: list[SalarySegmentInput] = []
     if include_category_context and source_id is not None:
         if category_id is not None:
             category_rows = db.execute(
@@ -342,6 +366,7 @@ def _source_market_summary(
                     Vacancy.currency,
                     SeniorityLevel.code,
                     Vacancy.salary_gross,
+                    Vacancy.experience_code,
                 )
                 .join(Profession, Vacancy.profession_id == Profession.id)
                 .outerjoin(SeniorityLevel, Vacancy.seniority_id == SeniorityLevel.id)
@@ -361,6 +386,7 @@ def _source_market_summary(
                 currency,
                 seniority_code,
                 salary_gross,
+                experience_code,
             ) in category_rows:
                 published_date = published_at.date()
                 if published_date in category_daily:
@@ -387,6 +413,14 @@ def _source_market_summary(
                             salary_gross,
                         )
                     )
+                category_ranked_salary_rows.append(
+                    SalarySegmentInput(
+                        lower=to_rub(salary_from, currency),
+                        upper=to_rub(salary_to, currency),
+                        gross=salary_gross,
+                        experience_code=experience_code,
+                    )
+                )
     confidence = (
         "high"
         if total >= 100
@@ -398,7 +432,29 @@ def _source_market_summary(
     )
     def build_salary_slices(
         grouped_rows: dict[str, list[tuple[Any, ...]]],
+        ranked_rows: list[SalarySegmentInput],
     ) -> list[OfficialSalarySlice]:
+        if salary_basis is True:
+            return [
+                OfficialSalarySlice(
+                    seniority=segment.seniority,
+                    vacancy_count=segment.vacancy_count,
+                    salary_count=segment.sample_size,
+                    salary_coverage=segment.share,
+                    sample_size=segment.sample_size,
+                    median=segment.median,
+                    average=segment.average,
+                    p25=segment.p25,
+                    p75=segment.p75,
+                    lower_bound_median=segment.p25,
+                    upper_bound_median=segment.p75,
+                    confidence_level=segment.confidence_level,
+                )
+                for segment in build_ranked_salary_segments(
+                    ranked_rows,
+                    minimum_sample=settings.min_salary_sample,
+                )
+            ]
         slices: list[OfficialSalarySlice] = []
         for seniority_code in ("junior", "middle", "senior"):
             level_rows = grouped_rows[seniority_code]
@@ -437,8 +493,11 @@ def _source_market_summary(
             )
         return slices
 
-    salary_by_seniority = build_salary_slices(salary_rows)
-    category_salary_by_seniority = build_salary_slices(category_salary_rows)
+    salary_by_seniority = build_salary_slices(salary_rows, ranked_salary_rows)
+    category_salary_by_seniority = build_salary_slices(
+        category_salary_rows,
+        category_ranked_salary_rows,
+    )
     category_confidence = (
         "high"
         if category_total >= 100
@@ -760,11 +819,15 @@ def _hh_market_summary(
         include_salary_history=include_salary_history,
         match_run_id=match_run_id,
         salary_methodology_note=(
-            "Зарплатные показатели рассчитаны только по вакансиям в RUB, где API явно "
-            "пометил сумму как gross и указал обе границы вилки. Net и записи без признака "
-            "налогообложения считаются отдельно и не смешиваются с gross. Временной ряд "
-            f"использует скользящее окно {SALARY_HISTORY_WINDOW_DAYS} дней и публикуется "
-            f"только при выборке не менее {settings.min_salary_sample}."
+            "Расчёт использует все вакансии профессии с указанной зарплатой в RUB. Net "
+            "пересчитывается в сопоставимый gross по действующей прогрессивной шкале НДФЛ; "
+            "для односторонней вилки недостающий центр оценивается по типичной ширине полных "
+            "вилок этой же профессии. Доли Junior, Middle и Senior берутся из требований HH "
+            "к опыту по профессии, после чего зарплаты ранжируются и делятся на три сплошных "
+            "сегмента. Поэтому сумма n трёх уровней равна всей совместимой зарплатной выборке. "
+            f"Временной ряд использует скользящее окно {SALARY_HISTORY_WINDOW_DAYS} дней; "
+            f"каждый сегмент публикуется при n≥{settings.min_salary_sample}. Это модельные "
+            "зарплатные сегменты рынка вакансий, а не грейды, указанные работодателем."
         ),
         methodology_note=(
             "Официальный поисковый снимок HH API: точная фраза ищется только в названии "
@@ -1018,7 +1081,7 @@ def _hh_market_enrichment_summary(
             )
         )
 
-    skill_rows = db.execute(
+    skill_statement = (
         select(
             VacancySkill.normalized_skill,
             func.min(VacancySkill.skill),
@@ -1027,10 +1090,22 @@ def _hh_market_enrichment_summary(
         .join(Vacancy, VacancySkill.vacancy_id == Vacancy.id)
         .where(
             Vacancy.source_id == source_id,
-            Vacancy.profession_id == profession_id,
             Vacancy.published_at >= start_at,
             Vacancy.published_at < end_at,
         )
+    )
+    if match_run_id is not None:
+        skill_statement = skill_statement.join(
+            VacancyProfessionMatch,
+            VacancyProfessionMatch.vacancy_id == Vacancy.id,
+        ).where(
+            VacancyProfessionMatch.last_run_id == match_run_id,
+            VacancyProfessionMatch.profession_id == profession_id,
+        )
+    else:
+        skill_statement = skill_statement.where(Vacancy.profession_id == profession_id)
+    skill_rows = db.execute(
+        skill_statement
         .group_by(VacancySkill.normalized_skill)
         .order_by(desc(func.count(VacancySkill.id)))
         .limit(12)

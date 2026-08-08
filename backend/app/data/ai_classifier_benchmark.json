@@ -34,7 +34,7 @@
       "id": "ml_platform_middle",
       "title": "Инженер платформы моделей, middle",
       "description": "MLflow, model serving, feature store, мониторинг дрейфа, CI/CD моделей",
-      "expected_slugs": ["mlops-engineer"],
+      "expected_slugs": ["machine-learning-engineer"],
       "expected_seniorities": ["middle"]
     },
     {
@@ -55,7 +55,7 @@
       "id": "flutter_junior",
       "title": "Младший разработчик кроссплатформенных мобильных приложений",
       "description": "Dart, Flutter, Android, iOS, публикация мобильных приложений",
-      "expected_slugs": ["flutter-developer"],
+      "expected_slugs": ["mobile-developer"],
       "expected_seniorities": ["junior"]
     },
     {
@@ -69,14 +69,14 @@
       "id": "pentest_senior",
       "title": "Старший специалист по проверке защищённости",
       "description": "Burp Suite, эксплуатация уязвимостей, red team, отчёты по проникновению",
-      "expected_slugs": ["penetration-tester"],
+      "expected_slugs": ["information-security-specialist"],
       "expected_seniorities": ["senior"]
     },
     {
       "id": "reliability_senior",
       "title": "Старший инженер надёжности сервисов",
       "description": "SLO, error budget, observability, on-call, incident response, Kubernetes",
-      "expected_slugs": ["sre"],
+      "expected_slugs": ["devops-engineer"],
       "expected_seniorities": ["senior"]
     },
     {
@@ -139,7 +139,7 @@
       "id": "test_infrastructure_middle",
       "title": "Инженер тестовой инфраструктуры, middle",
       "description": "Python, Playwright, pytest, CI, разработка фреймворка автотестов",
-      "expected_slugs": ["qa-automation", "sdet"],
+      "expected_slugs": ["qa-automation"],
       "expected_seniorities": ["middle"]
     },
     {

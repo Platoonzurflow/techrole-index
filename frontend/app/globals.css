@@ -1442,7 +1442,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   color: #fff;
   box-shadow: 0 8px 24px rgb(239 85 96 / .32);
 }
-.career-journey-offer > span:last-child { display: grid; gap: .06rem; }
+.career-offer-copy { display: grid; gap: .06rem; }
 .career-journey-offer small { color: #77727a; font-size: .58rem; font-weight: 750; text-transform: uppercase; }
 .career-journey-offer strong { font-size: .76rem; font-weight: 900; text-transform: uppercase; }
 
@@ -1506,7 +1506,256 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   }
 }
 
+@media (max-width: 520px) {
+  .site-header .brand-label { display: none; }
+  .site-header .shell { gap: .6rem; }
+  .header-premium-status { min-height: 2.2rem; padding-inline: .65rem; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .career-journey-image,
   .career-journey-offer { animation: none !important; }
+}
+
+/* Career journey v3: resolution-independent data particles, a live route and
+   lightweight DOM accents.  Canvas is DPR-capped in the component and pauses
+   outside the viewport, so mobile gets real motion without a video payload. */
+.career-data-universe {
+  background:
+    radial-gradient(circle at 78% 48%, rgb(239 85 96 / .12), transparent 17%),
+    radial-gradient(circle at 66% 68%, rgb(91 140 190 / .1), transparent 28%),
+    linear-gradient(115deg, #f8f5f2 0 39%, #f4f1ef 67%, #eee9e6 100%);
+}
+.career-data-universe::before {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background-image:
+    linear-gradient(rgb(81 89 104 / .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(81 89 104 / .035) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: linear-gradient(90deg, transparent 31%, #000 58%, #000 100%);
+  content: "";
+}
+.career-particle-canvas {
+  z-index: 5;
+  pointer-events: auto;
+  touch-action: pan-y;
+}
+.career-flow-map {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+  filter: drop-shadow(0 22px 38px rgb(76 62 65 / .12));
+}
+.career-flow-ribbon,
+.career-flow-line,
+.career-flow-pulse { fill: none; stroke-linecap: round; }
+.career-flow-ribbon {
+  stroke: url(#career-flow-gradient);
+  stroke-width: 94;
+  opacity: .75;
+}
+.career-flow-line { stroke: rgb(255 255 255 / .58); stroke-width: 1.5; }
+.career-flow-pulse {
+  stroke: #ef5560;
+  stroke-width: 4;
+  stroke-dasharray: 25 190;
+  filter: url(#career-flow-glow);
+  animation: career-flow-travel 5.8s linear infinite;
+}
+.career-data-aurora {
+  position: absolute;
+  z-index: 2;
+  top: 12%;
+  right: 2%;
+  width: 47%;
+  height: 66%;
+  border-radius: 48% 52% 58% 42%;
+  background: conic-gradient(from 140deg, transparent, rgb(239 85 96 / .16), rgb(95 150 196 / .09), transparent 70%);
+  filter: blur(45px);
+  animation: career-aurora-turn 16s linear infinite;
+}
+.career-orbit {
+  position: absolute;
+  z-index: 4;
+  top: 23%;
+  right: 8.2%;
+  width: min(39vw, 31rem);
+  aspect-ratio: 1;
+  border: 1px solid rgb(87 96 112 / .13);
+  border-radius: 50%;
+  pointer-events: none;
+}
+.career-orbit::before,
+.career-orbit::after {
+  position: absolute;
+  width: .55rem;
+  height: .55rem;
+  border-radius: 50%;
+  background: #ef5560;
+  box-shadow: 0 0 20px rgb(239 85 96 / .58);
+  content: "";
+}
+.career-orbit::before { top: 9%; left: 20%; }
+.career-orbit::after { right: 4%; bottom: 27%; width: .3rem; height: .3rem; }
+.career-orbit-one { animation: career-orbit-spin 18s linear infinite; }
+.career-orbit-two {
+  transform: rotate(63deg) scale(.78);
+  border-style: dashed;
+  opacity: .64;
+  animation: career-orbit-spin-reverse 12s linear infinite;
+}
+.career-stream-card {
+  position: absolute;
+  z-index: 7;
+  display: grid;
+  width: 2.8rem;
+  height: 2.8rem;
+  place-items: center;
+  border: 1px solid rgb(75 83 97 / .13);
+  border-radius: .8rem;
+  background: rgb(255 255 255 / .64);
+  color: #656d7b;
+  box-shadow: 0 16px 40px rgb(70 56 54 / .1);
+  font: 850 .62rem/1 ui-monospace, monospace;
+  backdrop-filter: blur(14px);
+  pointer-events: none;
+}
+.career-stream-card-one { right: 36%; bottom: 15%; animation: career-card-float 5.4s ease-in-out infinite; }
+.career-stream-card-two { right: 11%; bottom: 22%; animation: career-card-float 4.7s .8s ease-in-out infinite; }
+.career-stream-card-three { right: 28%; top: 22%; animation: career-card-float 5.9s 1.3s ease-in-out infinite; }
+.career-data-universe .career-journey-shade {
+  z-index: 6;
+  background:
+    linear-gradient(90deg, #f8f5f2 0%, rgb(248 245 242 / .97) 27%, rgb(248 245 242 / .58) 43%, transparent 62%),
+    linear-gradient(0deg, rgb(248 245 242 / .45), transparent 27%);
+  pointer-events: none;
+}
+.career-data-universe .career-journey-source {
+  z-index: 9;
+  right: 4%;
+  bottom: 5%;
+}
+.career-stage-node {
+  position: absolute;
+  z-index: 9;
+  display: grid;
+  min-width: 4.7rem;
+  gap: .1rem;
+  border: 1px solid rgb(77 84 98 / .14);
+  border-radius: .8rem;
+  background: rgb(255 255 255 / .66);
+  padding: .48rem .58rem;
+  color: #3d434e;
+  box-shadow: 0 14px 34px rgb(64 54 55 / .1);
+  font: 850 .68rem/1.1 ui-monospace, monospace;
+  backdrop-filter: blur(15px);
+  pointer-events: none;
+  animation: career-node-breathe 4s ease-in-out infinite;
+}
+.career-stage-node small { color: #8b9099; font: 700 .5rem/1 system-ui, sans-serif; text-transform: uppercase; }
+.career-stage-junior { right: 42%; bottom: 10%; transform: rotate(-6deg); }
+.career-stage-middle { right: 29%; bottom: 17%; transform: rotate(4deg); animation-delay: .7s; }
+.career-stage-senior { right: 9%; top: 36%; transform: rotate(-4deg); animation-delay: 1.4s; }
+.career-data-universe .career-journey-offer {
+  z-index: 10;
+  top: 14%;
+  right: 6.5%;
+  overflow: visible;
+  box-shadow: 0 24px 70px rgb(239 85 96 / .24);
+}
+.career-journey-offer-rings {
+  position: absolute;
+  z-index: -1;
+  inset: -1.35rem;
+  border: 1px solid rgb(239 85 96 / .25);
+  border-radius: 1.5rem;
+  animation: career-offer-ring 2.8s ease-out infinite;
+}
+.career-offer-spark { color: #ef5560; animation: career-spark 2.2s ease-in-out infinite; }
+
+.dark .career-data-universe {
+  background:
+    radial-gradient(circle at 78% 48%, rgb(239 85 96 / .17), transparent 18%),
+    radial-gradient(circle at 66% 68%, rgb(92 144 199 / .12), transparent 29%),
+    linear-gradient(115deg, #09090b 0 39%, #0e0f13 68%, #121319 100%);
+}
+.dark .career-data-universe::before {
+  background-image:
+    linear-gradient(rgb(255 255 255 / .035) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(255 255 255 / .035) 1px, transparent 1px);
+}
+.dark .career-data-universe .career-journey-shade {
+  background:
+    linear-gradient(90deg, #09090b 0%, rgb(9 9 11 / .97) 27%, rgb(9 9 11 / .64) 44%, transparent 64%),
+    linear-gradient(0deg, rgb(9 9 11 / .55), transparent 29%);
+}
+.dark .career-flow-ribbon { opacity: .48; }
+.dark .career-flow-line { stroke: rgb(255 255 255 / .16); }
+.dark .career-orbit { border-color: rgb(255 255 255 / .1); }
+.dark .career-stage-node,
+.dark .career-stream-card {
+  border-color: rgb(255 255 255 / .13);
+  background: rgb(13 14 18 / .66);
+  color: rgb(255 255 255 / .78);
+  box-shadow: 0 18px 45px rgb(0 0 0 / .28);
+}
+.dark .career-stage-node small { color: rgb(255 255 255 / .42); }
+
+@keyframes career-flow-travel { to { stroke-dashoffset: -430; } }
+@keyframes career-aurora-turn { to { transform: rotate(360deg) scale(1.06); } }
+@keyframes career-orbit-spin { to { transform: rotate(360deg); } }
+@keyframes career-orbit-spin-reverse { from { transform: rotate(63deg) scale(.78); } to { transform: rotate(-297deg) scale(.78); } }
+@keyframes career-card-float { 50% { transform: translate3d(0, -12px, 0) rotate(3deg); } }
+@keyframes career-node-breathe { 50% { translate: 0 -5px; border-color: rgb(239 85 96 / .3); } }
+@keyframes career-offer-ring { 0% { opacity: .7; transform: scale(.82); } 100% { opacity: 0; transform: scale(1.3); } }
+@keyframes career-spark { 50% { transform: rotate(14deg) scale(1.24); opacity: .62; } }
+
+@media (max-width: 767px) {
+  .career-data-universe {
+    background:
+      radial-gradient(circle at 58% 70%, rgb(239 85 96 / .13), transparent 24%),
+      linear-gradient(180deg, #f8f5f2 0 36%, #f1edeb 73%, #ebe5e2 100%);
+  }
+  .career-data-universe::before { mask-image: linear-gradient(180deg, transparent 31%, #000 58%); background-size: 42px 42px; }
+  .career-data-universe .career-journey-shade {
+    background: linear-gradient(180deg, #f8f5f2 0%, rgb(248 245 242 / .96) 31%, rgb(248 245 242 / .46) 48%, transparent 67%);
+  }
+  .career-flow-map { transform: translate(-17%, 11%) rotate(21deg) scale(1.12); transform-origin: center; }
+  .career-flow-ribbon { stroke-width: 110; }
+  .career-data-aurora { top: 47%; right: -20%; width: 110%; height: 50%; }
+  .career-orbit { top: 53%; right: 7%; width: 72vw; }
+  .career-data-universe .career-journey-offer { top: 45%; right: 3%; transform: scale(.82); transform-origin: right center; }
+  .career-data-universe .career-journey-source { display: none; }
+  .career-stage-node { min-width: 3.7rem; padding: .38rem .45rem; font-size: .56rem; }
+  .career-stage-junior { right: auto; left: 5%; bottom: 9%; }
+  .career-stage-middle { right: 38%; bottom: 5%; }
+  .career-stage-senior { right: 3%; top: auto; bottom: 26%; }
+  .career-stream-card { width: 2.25rem; height: 2.25rem; border-radius: .65rem; font-size: .52rem; }
+  .career-stream-card-one { right: 68%; bottom: 20%; }
+  .career-stream-card-two { right: 8%; bottom: 12%; }
+  .career-stream-card-three { right: 15%; top: 55%; }
+  .dark .career-data-universe {
+    background:
+      radial-gradient(circle at 58% 70%, rgb(239 85 96 / .17), transparent 25%),
+      linear-gradient(180deg, #09090b 0 36%, #0d0e12 73%, #12131a 100%);
+  }
+  .dark .career-data-universe .career-journey-shade {
+    background: linear-gradient(180deg, #09090b 0%, rgb(9 9 11 / .97) 31%, rgb(9 9 11 / .5) 49%, transparent 68%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .career-flow-pulse,
+  .career-data-aurora,
+  .career-orbit,
+  .career-stream-card,
+  .career-stage-node,
+  .career-journey-offer-rings,
+  .career-offer-spark { animation: none !important; }
 }

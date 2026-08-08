@@ -76,11 +76,9 @@ def test_public_calculator_medians_expand_exact_role_coverage_without_hidden_val
     expected = {
         "qa-manual": 132500,
         "data-scientist": 235541,
-        "mlops-engineer": 351666,
         "computer-vision-engineer": 172500,
         "information-security-specialist": 168036,
         "security-engineer": 207333,
-        "penetration-tester": 170833,
     }
     categories = {slug: category for slug, _, _, category, _ in PROFESSIONS}
 
@@ -105,9 +103,9 @@ def test_salary_coverage_counts_are_versioned() -> None:
         salary_benchmark_for(slug, category)["coverage"]
         for slug, _, _, category, _ in PROFESSIONS
     ]
-    assert coverage.count("direct") == 34
-    assert coverage.count("related") == 14
-    assert coverage.count("category") == 2
+    assert coverage.count("direct") == 29
+    assert coverage.count("related") == 10
+    assert coverage.count("category") == 11
 
 
 def test_small_samples_and_unknown_tax_status_remain_visible() -> None:
@@ -163,9 +161,9 @@ def test_salary_benchmark_catalog_exports_every_profession() -> None:
         "related",
         "category",
     }
-    assert sum(item["benchmark"]["coverage"] == "direct" for item in catalog) == 34
-    assert sum(item["benchmark"]["coverage"] == "related" for item in catalog) == 14
-    assert sum(item["benchmark"]["coverage"] == "category" for item in catalog) == 2
+    assert sum(item["benchmark"]["coverage"] == "direct" for item in catalog) == 29
+    assert sum(item["benchmark"]["coverage"] == "related" for item in catalog) == 10
+    assert sum(item["benchmark"]["coverage"] == "category" for item in catalog) == 11
     assert all(item["benchmark"]["points"] for item in catalog)
     assert all(item["benchmark"]["sources"] for item in catalog)
     assert all(

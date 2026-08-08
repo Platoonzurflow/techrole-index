@@ -255,6 +255,7 @@ DATA_AI_CATEGORY = {
     "mlops-engineer": "development",
     "ai-engineer": "development",
     "computer-vision-engineer": "development",
+    "database-operator": "infrastructure",
 }
 
 
@@ -450,10 +451,7 @@ REGIONAL_ROLE_MEDIANS = {
 
 MOBILE_REGIONAL = ("Разработчик мобильных приложений", 320000, 299000, 263000)
 for _mobile_slug in (
-    "android-developer",
-    "ios-developer",
-    "flutter-developer",
-    "react-native-developer",
+    "mobile-developer",
 ):
     REGIONAL_ROLE_MEDIANS[_mobile_slug] = (
         *MOBILE_REGIONAL,

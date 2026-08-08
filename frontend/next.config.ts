@@ -17,6 +17,16 @@ const professionRedirects = {
   "nlp-engineer": "ai-engineer",
   "postgresql-dba": "database-administrator",
   "ruby-developer": "backend-developer",
+  "android-developer": "mobile-developer",
+  "ios-developer": "mobile-developer",
+  "flutter-developer": "mobile-developer",
+  "react-native-developer": "mobile-developer",
+  "sdet": "qa-automation",
+  "sre": "devops-engineer",
+  "platform-engineer": "devops-engineer",
+  "mlops-engineer": "machine-learning-engineer",
+  "penetration-tester": "information-security-specialist",
+  "unity-developer": "game-developer",
 } as const;
 
 const nextConfig: NextConfig = {

@@ -340,7 +340,7 @@ describe("analytics components", () => {
     expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();
   });
 
-  it("uses the latest coherent exact-role date from the main salary graph", () => {
+  it("uses the latest complete ranked HH snapshot from the main salary graph", () => {
     const official = {
       source_name: "Работа России",
       source_url: "https://trudvsem.ru/opendata/api",
@@ -405,12 +405,12 @@ describe("analytics components", () => {
     render(<SalaryBenchmarks data={benchmark} official={official} />);
 
     expect(screen.queryByText(/перевёрнутую зарплатную градацию/)).not.toBeInTheDocument();
-    expect(screen.getByText("63 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getByText("97 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getByText("166 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getAllByText("точная профессия · единый срез")).toHaveLength(3);
-    expect(screen.getAllByText("23 июля 2026 г.")).toHaveLength(3);
-    expect(screen.queryByText("100 тыс. ₽")).not.toBeInTheDocument();
+    expect(screen.getByText("100 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("120 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("170 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getAllByText("модель HH · единый срез")).toHaveLength(3);
+    expect(screen.getAllByText("24 июля 2026 г.")).toHaveLength(3);
+    expect(screen.queryByText("97 тыс. ₽")).not.toBeInTheDocument();
     expect(screen.queryByText("Вилки «Работы России»")).not.toBeInTheDocument();
   });
 
@@ -894,8 +894,8 @@ describe("analytics components", () => {
 
   it("renders the responsive career journey as an accessible visual", () => {
     render(<CareerTransformationHero />);
-    expect(screen.getByRole("img", { name: "Кандидат идёт по световому маршруту из данных HeadHunter к принятому оферу" })).toBeInTheDocument();
-    expect(screen.getByText("данные HH превращаются в маршрут")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Световой поток данных собирается в человека и ведёт его через уровни Junior, Middle и Senior к принятому оферу" })).toBeInTheDocument();
+    expect(screen.getByText("вакансии становятся маршрутом")).toBeInTheDocument();
     expect(screen.getByText("Офер принят")).toBeInTheDocument();
   });
 });

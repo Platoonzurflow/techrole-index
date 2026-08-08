@@ -84,8 +84,6 @@ export function selectCoherentSalarySnapshot(
       junior?.average != null
       && middle?.average != null
       && senior?.average != null
-      && middle.average >= junior.average * 1.4
-      && senior.average >= middle.average * 1.3
     ) {
       return { date, points: { junior, middle, senior } };
     }
@@ -228,7 +226,7 @@ export function SalaryBenchmarks({
           <h2 id="salary-benchmark-title" className="mt-2 text-2xl font-semibold">{usesHhSalary ? "Зарплата Junior, Middle и Senior" : "Фактические доходы специалистов"}</h2>
           <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{usesHhSalary ? official?.salary_methodology_note : data.methodology_note}</p>
         </div>
-        <span className="badge confidence-medium">{usesHhSalary ? "gross · RUB · точная профессия" : coverageLabels[data.coverage]}</span>
+        <span className="badge confidence-medium">{usesHhSalary ? "вся зарплатная выборка · gross RUB" : coverageLabels[data.coverage]}</span>
       </div>
 
       {headline && !usesHhSalary ? (
@@ -253,7 +251,7 @@ export function SalaryBenchmarks({
           <div className="market-stage-copy">
             <p className="eyebrow">Главный график</p>
             <h3 className="mt-2 text-2xl font-semibold">Как менялась зарплата в вакансиях HH</h3>
-            <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">Среднее полной gross-вилки в RUB за скользящие 30 дней. Каждый уровень использует только совпадения этой профессии; открытое исследование появляется пунктиром только при недостаточной выборке.</p>
+            <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">Все зарплаты профессии нормализуются в gross RUB, ранжируются и делятся на три сегмента в пропорциях фактических требований HH к опыту. Линии показывают среднее сегмента за скользящие 30 дней.</p>
           </div>
           <div className="mt-5"><OfficialSalaryChart data={official} benchmark={data} maxPeriodDays={historyDays} /></div>
         </article>
@@ -261,7 +259,7 @@ export function SalaryBenchmarks({
 
       {usesHhSalary && official ? (
         <div className="salary-hh-source mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.48)] p-4 text-sm">
-          <p className="text-muted"><strong className="text-foreground">Источник: {official.source_name}</strong><br />Полные gross-вилки в RUB; минимум {official.salary_min_sample} наблюдений. Исследования используются только как явно подписанный резерв.</p>
+          <p className="text-muted"><strong className="text-foreground">Источник: {official.source_name}</strong><br />В модели {official.salary_disclosed_count.toLocaleString("ru-RU")} зарплатных вакансий: gross и приведённые к gross net-вилки, включая односторонние. Минимум {official.salary_min_sample} наблюдений на сегмент.</p>
           <a className="button-secondary" href={official.source_url} target="_blank" rel="noreferrer">Документация HH <ExternalLink size={14} /></a>
         </div>
       ) : (
@@ -321,7 +319,7 @@ export function SalaryBySeniority({
             ? pointValue(reference)
             : "Источник не найден";
         const basis = useObserved
-          ? `Единый срез главного графика: Middle ≥ Junior × 1,4; Senior ≥ Middle × 1,3`
+          ? `Расчётный сегмент · ${Math.round((observed?.salary_coverage ?? 0) * 100)}% зарплатной выборки`
           : reference
             ? `Ориентир исследования · ${metricLabel(reference)} · ${reference.label}`
             : "Нет проверяемого среза";
@@ -332,7 +330,7 @@ export function SalaryBySeniority({
               <h4 className="text-lg font-semibold">{levelLabels[seniority]}</h4>
               <span className={`badge ${useObserved ? "confidence-medium" : ""}`}>
                 {useObserved
-                  ? "точная профессия · единый срез"
+                  ? "модель HH · единый срез"
                   : "нет согласованного среза HH"}
               </span>
             </div>
@@ -341,7 +339,7 @@ export function SalaryBySeniority({
             <dl className="mt-5 grid gap-3 border-t border-line pt-4 text-sm">
               <div><dt className="text-muted">Источник</dt><dd className="mt-1 font-medium">{sourceName}</dd></div>
               <div><dt className="text-muted">Период</dt><dd className="mt-1">{period}</dd></div>
-              <div><dt className="text-muted">Выборка главного графика</dt><dd className="mt-1 font-mono">n={historyPoint?.sample_size ?? 0}</dd></div>
+              <div><dt className="text-muted">Выборка сегмента</dt><dd className="mt-1 font-mono">n={historyPoint?.sample_size ?? 0} из {official.salary_disclosed_count.toLocaleString("ru-RU")}</dd></div>
               {!useObserved && source ? (
                 <div><dt className="text-muted">Данные исследования</dt><dd className="mt-1">{reference?.sample_size ? `n=${reference.sample_size}` : source.total_sample_size ? `вся база n=${source.total_sample_size.toLocaleString("ru-RU")}` : "публичный агрегат"} · {taxLabel(source.tax_status)}</dd></div>
               ) : (
@@ -351,8 +349,8 @@ export function SalaryBySeniority({
             {!useObserved ? (
               <p className="mt-4 text-xs leading-5 text-muted">
                 {observed?.median != null
-                  ? "В главном графике пока нет одной даты с достаточной выборкой и заданным разрывом между всеми тремя уровнями."
-                  : `В наблюдаемом срезе меньше ${official.salary_min_sample} полных вилок.`} Поэтому сумма взята из указанного открытого исследования.
+                  ? "В главном графике пока нет одной даты с достаточной выборкой всех трёх сегментов."
+                  : `В наблюдаемом срезе меньше ${official.salary_min_sample} зарплатных записей.`} Поэтому сумма взята из указанного открытого исследования.
               </p>
             ) : null}
           </article>

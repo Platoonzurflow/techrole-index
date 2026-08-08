@@ -26,11 +26,13 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
         category = ProfessionCategory(slug="quality", name_ru="Тестирование")
         national = Region(code="ru", name_ru="Россия")
         moscow = Region(code="msk", name_ru="Москва")
+        junior = SeniorityLevel(code="junior", name_ru="Junior", sort_order=1)
         middle = SeniorityLevel(code="middle", name_ru="Middle", sort_order=2)
+        senior = SeniorityLevel(code="senior", name_ru="Senior", sort_order=3)
         source = VacancySource(
             code="hh_api", name="HH API", provider_type="HhApiProvider", enabled=True
         )
-        db.add_all([category, national, moscow, middle, source])
+        db.add_all([category, national, moscow, junior, middle, senior, source])
         db.flush()
         profession = Profession(
             slug="qa-engineer",
@@ -63,7 +65,14 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
                 remote_share=Decimal("0"),
             )
         )
-        for index in range(3):
+        for index in range(15):
+            experience = (
+                "noExperience"
+                if index < 2
+                else "between1And3"
+                if index < 9
+                else "between3And6"
+            )
             db.add(
                 Vacancy(
                     source_id=source.id,
@@ -74,10 +83,11 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
                     salary_gross=True,
                     salary_from=Decimal("100000"),
                     salary_to=Decimal("200000"),
-                    published_at=now - timedelta(days=index),
+                    published_at=now - timedelta(days=index % 3),
                     first_seen_at=now,
                     last_seen_at=now,
                     is_remote=index == 0,
+                    experience_code=experience,
                     profession_id=profession.id,
                     seniority_id=middle.id,
                 )
@@ -92,17 +102,18 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
                 ProfessionMetricDaily.metric_date == now.date(),
                 ProfessionMetricDaily.profession_id == profession.id,
                 ProfessionMetricDaily.region_id == national.id,
+                ProfessionMetricDaily.seniority_id == middle.id,
             )
         )
 
         assert result.profession_count == 1
-        assert result.vacancy_count == 3
-        assert result.metric_rows == 6
+        assert result.vacancy_count == 15
+        assert result.metric_rows == 18
         assert latest is not None
-        assert latest.vacancy_count == 3
-        assert latest.salary_count == 3
+        assert latest.vacancy_count == 5
+        assert latest.salary_count == 5
         assert latest.salary_median == Decimal("150000")
-        assert latest.remote_share == Decimal("0.33333")
+        assert latest.remote_share == Decimal("0.06667")
         retained = db.scalar(
             select(ProfessionMetricDaily).where(
                 ProfessionMetricDaily.metric_date == retained_date,

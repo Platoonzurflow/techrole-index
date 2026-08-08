@@ -49,8 +49,8 @@ SKILL_ROLE_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\bllm\b",
         r"\bgenerative\s+ai\b",
     ),
-    "mlops-engineer": (r"\bmlops\b",),
     "machine-learning-engineer": (
+        r"\bmlops\b",
         r"\bpytorch\b",
         r"\btensorflow\b",
         r"\bscikit[- ]learn\b",
@@ -62,12 +62,16 @@ SKILL_ROLE_PATTERNS: dict[str, tuple[str, ...]] = {
         r"\betl\b",
         r"\bdbt\b",
     ),
-    "react-native-developer": (r"\breact\s+native\b",),
-    "flutter-developer": (r"\bflutter\b", r"\bdart\b"),
-    "android-developer": (r"\bandroid\b",),
-    "ios-developer": (r"\bios\b", r"\bswift\b", r"\bobjective-c\b"),
-    "unity-developer": (r"\bunity\b",),
-    "game-developer": (r"\bunreal\s+engine\b",),
+    "mobile-developer": (
+        r"\breact\s+native\b",
+        r"\bflutter\b",
+        r"\bdart\b",
+        r"\bandroid\b",
+        r"\bios\b",
+        r"\bswift\b",
+        r"\bobjective-c\b",
+    ),
+    "game-developer": (r"\bunreal\s+engine\b", r"\bunity\b"),
     "erp-specialist": (r"\babap\b", r"\bsap\b"),
     "1c-developer": (r"(?:^|\s)1[сc](?:\s|$)", r"\b1[сc]:предприятие\b"),
     "dotnet-developer": (r"\.net\b", r"\basp\.net\b", r"c#"),
@@ -146,9 +150,10 @@ class RuleBasedClassifier:
             matches -= {"cpp-developer", "python-developer", "machine-learning-engineer"}
         if "ai-engineer" in matches:
             matches -= {"python-developer", "machine-learning-engineer"}
-        if "mlops-engineer" in matches:
+        if "machine-learning-engineer" in matches:
             matches -= {"python-developer", "go-developer", "machine-learning-engineer"}
-        if "android-developer" in matches:
+            matches.add("machine-learning-engineer")
+        if "mobile-developer" in matches:
             matches.discard("java-developer")
         if "embedded-developer" in matches:
             matches.discard("cpp-developer")

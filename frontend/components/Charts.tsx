@@ -315,24 +315,6 @@ export function OfficialSalaryChart({
   const benchmarkByLevel = new Map(
     (benchmark ? salaryBenchmarkLevelPoints(benchmark) : []).map((point) => [point.seniority, point]),
   );
-  const observedValues = new Map(
-    salaryLevelOrder.map((level) => [
-      level,
-      new Map(
-        data.salary_history
-          .filter((item) => item.seniority === level && item.average != null)
-          .map((item) => [item.date, item.average as number]),
-      ),
-    ]),
-  );
-  const hasInversion = dates.some((date) => {
-    const junior = observedValues.get("junior")?.get(date);
-    const middle = observedValues.get("middle")?.get(date);
-    const senior = observedValues.get("senior")?.get(date);
-    return (junior != null && middle != null && junior > middle)
-      || (middle != null && senior != null && middle > senior);
-  });
-
   const salarySeries: LineSeriesOption[] = [];
   for (const level of salaryLevelOrder) {
     const points = data.salary_history.filter((item) => item.seniority === level);
@@ -385,7 +367,7 @@ export function OfficialSalaryChart({
   if (salarySeries.length === 0) {
     return (
       <div className="grid min-h-48 place-items-center rounded-2xl border border-dashed border-line p-6 text-center" role="status">
-        <div><p className="font-semibold">Недостаточно данных для графика</p><p className="mt-2 text-sm text-muted">Нужно не менее {data.salary_min_sample} полных RUB-вилок одного уровня по профессии или её направлению.</p></div>
+        <div><p className="font-semibold">Недостаточно данных для графика</p><p className="mt-2 text-sm text-muted">Нужно не менее {data.salary_min_sample} совместимых зарплатных записей на каждый расчётный сегмент.</p></div>
       </div>
     );
   }
@@ -427,7 +409,7 @@ export function OfficialSalaryChart({
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted">RUB в месяц · среднее за {data.salary_history_window_days ?? 30} дней с ограничениями</span>
+        <span className="text-xs text-muted">gross RUB в месяц · вся зарплатная выборка · окно {data.salary_history_window_days ?? 30} дней</span>
       </div>
       {visibleSummaries.length ? (
         <div className="chart-kpis">
@@ -439,13 +421,13 @@ export function OfficialSalaryChart({
           ))}
         </div>
       ) : null}
-      <Chart option={option} label={`Скользящее среднее зарплаты за ${data.salary_history_window_days ?? 30} дней с ограничениями по уровням; видимый период ${visiblePeriodDays} дней`} heightClass="h-[25rem]" />
+      <Chart option={option} label={`Расчётные зарплатные сегменты за окно ${data.salary_history_window_days ?? 30} дней; видимый период ${visiblePeriodDays} дней`} heightClass="h-[25rem]" />
       {usesReference && (
         <div className="chart-explanation mt-3 space-y-2 text-sm text-muted">
           <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>
         </div>
       )}
-      <p className="chart-explanation mt-3 text-sm text-muted">{hasInversion ? "В текущем периоде есть пересечение. " : ""}Линии наблюдений могут пересекаться, потому что выборки уровней имеют разный состав. Значения не переставляются искусственно; для карьерного порядка используйте непротиворечивые карточки уровней выше.</p>
+      <p className="chart-explanation mt-3 text-sm text-muted">Каждый срез использует все совместимые зарплаты HH: значения нормализуются в gross RUB, упорядочиваются и делятся на Junior, Middle и Senior в пропорциях требований к опыту по этой профессии.</p>
     </div>
   );
 }

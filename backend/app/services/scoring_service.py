@@ -9,9 +9,11 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.data.salary_benchmarks import scoring_salary_benchmark
+from app.domain.salary_segments import SalarySegmentInput, comparable_gross_salary_points
 from app.domain.scoring import SCORING_VERSION, ScoreInputs, calculate_score
 from app.domain.trends import calculate_trend
 from app.models import (
+    CurrencyRateSnapshot,
     Profession,
     ProfessionCategory,
     ProfessionMetricDaily,
@@ -35,9 +37,10 @@ def _hh_score_dataset(
     """Build one comparable score input row from each profession's own HH records.
 
     No category vacancy counts, salary rows, remote shares or experience shares are
-    borrowed. When fewer than five exact gross RUB salary midpoints are available,
-    salary gets the neutral median of eligible peers so missing disclosure cannot
-    create either a reward or a penalty; data quality still records the small sample.
+    borrowed. Salary uses the same all-disclosures gross-normalisation as the public
+    salary bands. When fewer than five compatible points are available, salary gets
+    the neutral median of eligible peers so missing disclosure cannot create either a
+    reward or a penalty; data quality still records the small sample.
     """
 
     source_id = db.scalar(
@@ -98,18 +101,31 @@ def _hh_score_dataset(
         .where(Profession.is_active.is_(True))
         .order_by(Profession.id)
     ).all()
+    currency_rates: dict[str, Decimal] = {"RUB": Decimal(1)}
+    for snapshot in db.scalars(
+        select(CurrencyRateSnapshot).order_by(CurrencyRateSnapshot.requested_date.desc())
+    ).all():
+        currency_rates.setdefault(snapshot.currency, snapshot.rate_to_rub)
+
+    def to_rub(value: Decimal | None, currency: str | None) -> Decimal | None:
+        rate = currency_rates.get(str(currency or "").upper())
+        return value * rate if value is not None and rate is not None else None
+
     own_salary_medians: dict[int, float] = {}
     for profession_id, profession_rows in grouped.items():
-        midpoints = [
-            float((row.salary_from + row.salary_to) / 2)
-            for row in profession_rows
-            if row.currency == "RUB"
-            and row.salary_gross is True
-            and row.salary_from is not None
-            and row.salary_to is not None
-        ]
-        if len(midpoints) >= HH_MIN_SALARY_SAMPLE:
-            own_salary_medians[profession_id] = float(median(midpoints))
+        points = comparable_gross_salary_points(
+            [
+                SalarySegmentInput(
+                    lower=to_rub(row.salary_from, row.currency),
+                    upper=to_rub(row.salary_to, row.currency),
+                    gross=row.salary_gross,
+                    experience_code=row.experience_code,
+                )
+                for row in profession_rows
+            ]
+        )
+        if len(points) >= HH_MIN_SALARY_SAMPLE:
+            own_salary_medians[profession_id] = float(median(points))
 
     eligible_salary_peers = list(own_salary_medians.values())
     if eligible_salary_peers:
