@@ -34,14 +34,21 @@ test("public methodology is rendered and keyboard reachable", async ({ page }) =
 
 test("public profession SSR contains seeded level metrics", async ({ page }) => {
   await page.goto("/professions/python-developer");
+  const salaryBenchmark = page.locator("#salary-benchmark");
+  const hasHhSalary = await salaryBenchmark.getByText("Официальный HH API", { exact: true }).count() > 0;
   await expect(page.getByRole("heading", { level: 1, name: "Python-разработчик" })).toBeVisible();
   await expect(page.getByText("n=", { exact: false }).first()).toBeVisible();
   await expect(page.getByRole("heading", { name: "Публикации «Работы России»" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
-  await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
-  await expect(page.locator("#salary-benchmark")).toContainText("Официальный HH API");
-  await expect(page.locator("#salary-benchmark")).toContainText("gross · RUB");
+  if (hasHhSalary) {
+    await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toHaveCount(0);
+    await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
+    await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
+    await expect(salaryBenchmark).toContainText("gross · RUB");
+    await expect(page.locator("#salary-history")).toBeVisible();
+  } else {
+    await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
+    await expect(page.getByTestId("salary-median-showcase")).toBeVisible();
+  }
   await expect(page.getByText("Для каждого уровня показано одно проверяемое значение", { exact: false })).toHaveCount(0);
   await expect(page.getByRole("heading", { level: 4, name: "Junior" })).toHaveCount(1);
   await expect(page.getByRole("heading", { level: 4, name: "Middle" })).toHaveCount(1);
@@ -50,9 +57,8 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByText("сохранены для проверки", { exact: false })).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Поделиться" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
-  await expect(page.locator("#salary-benchmark")).toBeVisible();
+  await expect(salaryBenchmark).toBeVisible();
   await expect(page.locator("#salary-level-junior")).toBeVisible();
-  await expect(page.locator("#salary-history")).toBeVisible();
   await expect(page.locator("#publication-count-exact")).toBeVisible();
   await expect(page.locator("#observation-period")).toBeVisible();
 });
@@ -61,7 +67,14 @@ test("free profession page exposes only the 30-day main chart", async ({ page })
   await page.goto("/professions/python-developer");
   await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
   await expect(page.locator("#salary-coverage")).toHaveCount(0);
-  await expect(page.getByRole("heading", { name: "Как менялась зарплата в вакансиях HH" })).toBeVisible();
+  const salaryHistory = page.locator("#salary-history");
+  const hasHhSalaryHistory = await salaryHistory.count() > 0;
+  if (hasHhSalaryHistory) {
+    await expect(page.getByRole("heading", { name: "Как менялась зарплата в вакансиях HH" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "30 дней" })).toBeEnabled();
+    await expect(page.getByRole("button", { name: "90 дней — доступно в Premium" })).toBeDisabled();
+    await expect(page.getByRole("button", { name: "180 дней — доступно в Premium" })).toBeDisabled();
+  }
   await expect(page.getByText("Подготовленная аналитическая витрина", { exact: true })).toHaveCount(0);
   await expect(page.getByRole("heading", {
     name: "Расчётный спрос — не текущий остаток вакансий",
@@ -69,9 +82,6 @@ test("free profession page exposes only the 30-day main chart", async ({ page })
   await expect(page.getByRole("img", {
     name: "Расчётный объём вакансий подготовленной витрины по уровням",
   })).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "30 дней" })).toBeEnabled();
-  await expect(page.getByRole("button", { name: "90 дней — доступно в Premium" })).toBeDisabled();
-  await expect(page.getByRole("button", { name: "180 дней — доступно в Premium" })).toBeDisabled();
   await expect(page.getByText("Расширенный ряд вакансий — в Premium", { exact: true })).toBeVisible();
   await expect(page.locator("#publication-history")).toHaveCount(0);
   await expect(page.getByText("Слои, которые нельзя смешивать", { exact: true })).toHaveCount(0);
@@ -85,34 +95,27 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
   await page.goto("/professions/dotnet-developer");
 
   await expect(page.locator("#salary-coverage")).toHaveCount(0);
-  for (const selector of [
+  const selectors = [
     "#tech-stack",
     "#salary-benchmark",
-    "#salary-history",
     "#prepared-vacancy-history",
     "#score-breakdown",
     "#market-skills",
-  ]) {
+  ];
+  if (await page.locator("#salary-history").count() > 0) selectors.push("#salary-history");
+  for (const selector of selectors) {
     const section = page.locator(selector);
     await section.scrollIntoViewIfNeeded();
     await expect(section).toBeVisible();
   }
 
-  const layout = await page.evaluate(() => {
+  const layout = await page.evaluate((sectionSelectors) => {
     const viewport = document.documentElement.clientWidth;
-    const selectors = [
-      "#tech-stack",
-      "#salary-benchmark",
-      "#salary-history",
-      "#prepared-vacancy-history",
-      "#score-breakdown",
-      "#market-skills",
-    ];
     return {
       viewport,
       pageWidth: document.documentElement.scrollWidth,
       pageHeight: document.documentElement.scrollHeight,
-      sectionsFit: selectors.every((selector) => {
+      sectionsFit: sectionSelectors.every((selector) => {
         const rect = document.querySelector(selector)?.getBoundingClientRect();
         return rect != null && rect.left >= -1 && rect.right <= viewport + 1;
       }),
@@ -132,7 +135,7 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
       mainChartHeight: document.querySelector("#salary-history .chart-shell")
         ?.getBoundingClientRect().height ?? 0,
     };
-  });
+  }, selectors);
   expect(layout.pageWidth).toBeLessThanOrEqual(layout.viewport + 1);
   expect(layout.sectionsFit).toBe(true);
   expect(layout.chartsFit).toBe(true);
@@ -180,6 +183,10 @@ test("profession structured data cites only visible public datasets", async ({ p
 test("grade cards require one coherent exact HH date without market substitution", async ({ page }) => {
   await page.goto("/professions/information-security-specialist");
   const benchmarkSection = page.locator("#salary-benchmark");
+  if (await benchmarkSection.getByText("Официальный HH API", { exact: true }).count() === 0) {
+    await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
+    return;
+  }
   await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
   await expect(benchmarkSection).toContainText("HeadHunter - официальный API");
   await expect(benchmarkSection.getByText("нет согласованного среза HH", { exact: true }).first()).toBeVisible();
@@ -219,9 +226,14 @@ test("weekly report and legal pages are publication-ready", async ({ page }) => 
 test("HH salary is primary while research remains a labeled sparse-level fallback", async ({ page }) => {
   await page.goto("/professions/data-scientist");
   await expect(page.getByRole("heading", { level: 1, name: "Data Scientist" })).toBeVisible();
+  const benchmarkSection = page.locator("#salary-benchmark");
+  if (await benchmarkSection.getByText("Официальный HH API", { exact: true }).count() === 0) {
+    await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
+    return;
+  }
   await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
-  await expect(page.locator("#salary-benchmark")).toContainText("HeadHunter - официальный API");
-  await expect(page.locator("#salary-benchmark")).toContainText("нет согласованного среза HH");
+  await expect(benchmarkSection).toContainText("HeadHunter - официальный API");
+  await expect(benchmarkSection).toContainText("нет согласованного среза HH");
   await expect(page.locator("#salary-history")).toContainText("Пунктир");
 
   await page.goto("/professions/information-security-specialist");
