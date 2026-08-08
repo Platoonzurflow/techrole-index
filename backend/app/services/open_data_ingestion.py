@@ -148,41 +148,43 @@ def _ensure_source_query(
     return stored
 
 
-def _store_hh_query_match(
+def _store_hh_query_matches(
     db: Session,
     *,
-    vacancy: Vacancy,
-    profession: Profession,
     run_id: int,
-    query: str,
+    matches: dict[tuple[int, int], list[str]],
     observed_at: datetime,
 ) -> None:
-    stored = db.scalar(
-        select(VacancyProfessionMatch).where(
-            VacancyProfessionMatch.vacancy_id == vacancy.id,
-            VacancyProfessionMatch.profession_id == profession.id,
-        )
-    )
-    if stored is None:
-        db.add(
-            VacancyProfessionMatch(
-                vacancy_id=vacancy.id,
-                profession_id=profession.id,
-                last_run_id=run_id,
-                match_method="hh-name-exact-v1",
-                matched_queries=[query],
-                first_seen_at=observed_at,
-                last_seen_at=observed_at,
+    if not matches:
+        return
+    profession_ids = {profession_id for _, profession_id in matches}
+    existing = {
+        (item.vacancy_id, item.profession_id): item
+        for item in db.scalars(
+            select(VacancyProfessionMatch).where(
+                VacancyProfessionMatch.profession_id.in_(profession_ids)
             )
         )
-        return
-    queries = [] if stored.last_run_id != run_id else list(stored.matched_queries or [])
-    if query not in queries:
-        queries.append(query)
-    stored.last_run_id = run_id
-    stored.match_method = "hh-name-exact-v1"
-    stored.matched_queries = queries
-    stored.last_seen_at = observed_at
+    }
+    for (vacancy_id, profession_id), queries in matches.items():
+        stored = existing.get((vacancy_id, profession_id))
+        if stored is None:
+            db.add(
+                VacancyProfessionMatch(
+                    vacancy_id=vacancy_id,
+                    profession_id=profession_id,
+                    last_run_id=run_id,
+                    match_method="hh-name-exact-v1",
+                    matched_queries=queries,
+                    first_seen_at=observed_at,
+                    last_seen_at=observed_at,
+                )
+            )
+            continue
+        stored.last_run_id = run_id
+        stored.match_method = "hh-name-exact-v1"
+        stored.matched_queries = queries
+        stored.last_seen_at = observed_at
 
 
 def _queries_for_profession(
@@ -344,6 +346,7 @@ def _ingest_vacancy_data(
     cutoff = now - timedelta(days=options.history_days)
     future_limit = now + timedelta(days=1)
     processed_external_ids: set[str] = set()
+    hh_query_matches: dict[tuple[int, int], list[str]] = {}
     oldest_published_at: datetime | None = None
     newest_published_at: datetime | None = None
     try:
@@ -394,14 +397,11 @@ def _ingest_vacancy_data(
                                     )
                                 )
                                 if duplicate is not None:
-                                    _store_hh_query_match(
-                                        db,
-                                        vacancy=duplicate,
-                                        profession=profession,
-                                        run_id=run.id,
-                                        query=query,
-                                        observed_at=now,
+                                    match_queries = hh_query_matches.setdefault(
+                                        (duplicate.id, profession.id), []
                                     )
+                                    if query not in match_queries:
+                                        match_queries.append(query)
                                     query_match_observations += 1
                             continue
                         processed_external_ids.add(record.external_id)
@@ -505,14 +505,11 @@ def _ingest_vacancy_data(
                         }
                         db.flush()
                         if options.source_code == "hh_api":
-                            _store_hh_query_match(
-                                db,
-                                vacancy=vacancy,
-                                profession=profession,
-                                run_id=run.id,
-                                query=query,
-                                observed_at=now,
+                            match_queries = hh_query_matches.setdefault(
+                                (vacancy.id, profession.id), []
                             )
+                            if query not in match_queries:
+                                match_queries.append(query)
                             query_match_observations += 1
 
                         snapshot = db.scalar(
@@ -568,6 +565,13 @@ def _ingest_vacancy_data(
     if refreshed_run is None:
         raise RuntimeError("Ingestion run disappeared")
     run = refreshed_run
+    if options.source_code == "hh_api" and not query_errors and not errors:
+        _store_hh_query_matches(
+            db,
+            run_id=run.id,
+            matches=hh_query_matches,
+            observed_at=now,
+        )
     run.finished_at = datetime.now(timezone.utc)
     run.records_seen = seen
     run.records_changed = changed

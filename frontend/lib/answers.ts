@@ -1,4 +1,5 @@
 import type { ObservedPublicationMetric } from "@/lib/observed-publication-data";
+import { observedPublicationPeriod } from "@/lib/market-period";
 import type { OpenDataCatalogItem } from "@/lib/types";
 
 export type AnswerOpenDataItem = Omit<OpenDataCatalogItem, "category_slug" | "period_days"> & {
@@ -81,8 +82,9 @@ export function buildAnswerSummary(
     }).sort((left, right) => right.sample_size - left.sample_size || left.name.localeCompare(right.name, "ru")).slice(0, 5),
   }));
   const hhItems = items.filter((item) => item.hh_market_data != null);
-  const hhDateFrom = hhItems.map((item) => item.hh_market_data?.date_from).filter((value): value is string => Boolean(value)).sort().at(0) ?? null;
-  const hhDateTo = hhItems.map((item) => item.hh_market_data?.date_to).filter((value): value is string => Boolean(value)).sort().at(-1) ?? null;
+  const hhPeriods = hhItems.flatMap((item) => item.hh_market_data ? [observedPublicationPeriod(item.hh_market_data)] : []);
+  const hhDateFrom = hhPeriods.map((item) => item.dateFrom).sort().at(0) ?? null;
+  const hhDateTo = hhPeriods.map((item) => item.dateTo).sort().at(-1) ?? null;
   const hhTopProfessions = hhItems
     .filter((item) => (item.hh_market_data?.total_publications ?? 0) > 0)
     .sort((left, right) => (right.hh_market_data?.total_publications ?? 0) - (left.hh_market_data?.total_publications ?? 0) || left.name_ru.localeCompare(right.name_ru, "ru"))

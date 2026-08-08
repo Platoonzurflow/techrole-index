@@ -254,6 +254,8 @@ class HhMarketCatalogSummary(BaseModel):
     period_days: int
     date_from: date
     date_to: date
+    observed_date_from: date | None = None
+    observed_date_to: date | None = None
     total_publications: int
     salary_disclosed_count: int
     salary_gross_count: int

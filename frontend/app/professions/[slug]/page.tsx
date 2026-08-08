@@ -3,11 +3,12 @@ import Link from "next/link";
 import { ArrowRight, CalendarDays, Layers3, MapPin, Wifi } from "lucide-react";
 import { Paywall } from "@/components/Paywall";
 import { SalaryBenchmarks } from "@/components/SalaryBenchmarks";
-import { HhEmployerDashboard, OfficialSalaryChart, PublicationChart, VacancyChart } from "@/components/Charts";
+import { HhEmployerDashboard, PublicationChart, VacancyChart } from "@/components/Charts";
 import { TrendBadge } from "@/components/TrendBadge";
 import { ShareActions } from "@/components/ShareActions";
 import { api, safeApi } from "@/lib/api";
 import { compact, percent } from "@/lib/format";
+import { observedPublicationPeriod } from "@/lib/market-period";
 import { headlineSalaryBenchmarkMaximum } from "@/lib/salary-benchmark-data";
 import type {
   MetricPoint,
@@ -97,13 +98,12 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
   const canonicalUrl = `${siteUrl}/professions/${slug}`;
   const stackItems = profession.tech_stack?.flatMap((group) => group.items) ?? [];
-  const salaryHistoryUsesCategory = profession.official_open_data?.salary_history.some(
-    (item) => item.average != null && item.scope === "category",
-  ) ?? false;
-  const salaryHistoryUsesMarket = profession.official_open_data?.salary_history.some(
-    (item) => item.average != null && item.scope === "market",
-  ) ?? false;
   const hhEnrichment = profession.hh_market_data?.hh_enrichment;
+  const hhObservedPeriod = profession.hh_market_data
+    ? observedPublicationPeriod(profession.hh_market_data)
+    : null;
+  const hhObservedFrom = hhObservedPeriod?.dateFrom;
+  const hhObservedTo = hhObservedPeriod?.dateTo;
   const hhFacetGroups = hhEnrichment ? [
     { title: "Формат работы", items: hhEnrichment.work_formats },
     { title: "Опыт", items: hhEnrichment.experience_levels },
@@ -221,7 +221,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         url: `${canonicalUrl}#hh-market-data`,
         inLanguage: "ru-RU",
         isAccessibleForFree: true,
-        temporalCoverage: `${profession.hh_market_data.date_from}/${profession.hh_market_data.date_to}`,
+        temporalCoverage: `${hhObservedFrom}/${hhObservedTo}`,
         spatialCoverage: { "@type": "Country", name: "Россия" },
         creator: { "@type": "Organization", name: "HeadHunter", url: profession.hh_market_data.source_url },
         includedInDataCatalog: { "@id": `${siteUrl}/#catalog` },
@@ -288,8 +288,9 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
       {profession.salary_benchmark ? (
         <SalaryBenchmarks
           data={profession.salary_benchmark}
-          official={profession.official_open_data}
+          official={profession.hh_market_data ?? profession.official_open_data}
           comparisonMaximum={salaryBenchmarkMaximum}
+          historyDays={profession.history_days ?? 30}
         />
       ) : null}
 
@@ -297,31 +298,19 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         <section id="official-open-data" className="market-showcase mt-10 p-5 sm:p-8" aria-labelledby="official-open-data-title">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
-              <p className="eyebrow">Динамика рынка</p>
-              <h2 id="official-open-data-title" className="mt-2 text-3xl font-semibold">Зарплата и динамика рынка</h2>
+              <p className="eyebrow">Дополнительный официальный слой</p>
+              <h2 id="official-open-data-title" className="mt-2 text-3xl font-semibold">Публикации «Работы России»</h2>
               <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.official_open_data.methodology_note}</p>
             </div>
             <a className="button-secondary" href={profession.official_open_data.source_url} rel="noreferrer">Документация источника</a>
           </div>
-          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <div id="publication-count-exact" className="scroll-mt-24"><p className="text-sm text-muted">Публикации «Работы России»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
             <div id="publication-count-category" className="scroll-mt-24"><p className="text-sm text-muted">Направление в «Работе России»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
-            <div id="salary-disclosed-count" className="scroll-mt-24"><p className="text-sm text-muted">С границей зарплаты</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.salary_disclosed_count)}</p></div>
-            <div id="complete-salary-range-count" className="scroll-mt-24"><p className="text-sm text-muted">С полной RUB-вилкой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.complete_salary_range_count ?? 0)}</p></div>
             <div id="remote-publication-count" className="scroll-mt-24"><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
           </div>
-          <article id="salary-history" className="market-stage market-stage-primary salary-main-stage mt-7 scroll-mt-24">
-            <div className="market-stage-copy">
-              <p className="eyebrow">Главный график</p>
-              <h3 className="mt-2 text-2xl font-semibold">Как менялась наблюдаемая зарплата</h3>
-              <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">Среднее полной RUB-вилки в скользящем 30-дневном окне с ограничениями. Охват каждого ряда указан в легенде; пунктиром показан статичный ориентир только там, где наблюдений всё ещё недостаточно.</p>
-            </div>
-            <div className="mt-5"><OfficialSalaryChart data={profession.official_open_data} benchmark={profession.salary_benchmark} maxPeriodDays={profession.history_days ?? 30} /></div>
-          </article>
           <div className="market-footnote mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
             <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>
-            {salaryHistoryUsesCategory ? <p className="mt-2">В зарплатной динамике хотя бы один уровень использует направление из-за малой точной выборки.</p> : null}
-            {salaryHistoryUsesMarket ? <p className="mt-2">Если данных направления тоже недостаточно, уровень показывает общий IT-рынок и подписывает этот охват отдельно.</p> : null}
           </div>
         </section>
       ) : null}
@@ -331,7 +320,8 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <p className="eyebrow">Официальный HH API</p>
-              <h2 id="hh-market-data-title" className="mt-2 text-3xl font-semibold">Расширенный снимок вакансий за {profession.hh_market_data.period_days} дней</h2>
+              <h2 id="hh-market-data-title" className="mt-2 text-3xl font-semibold">Снимок вакансий HH</h2>
+              <p className="mt-2 text-xs font-medium text-muted">Наблюдаемые публикации: {hhObservedFrom} — {hhObservedTo}</p>
               <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.hh_market_data.methodology_note}</p>
             </div>
             <a className="button-secondary" href={profession.hh_market_data.source_url} rel="noreferrer">Документация HH API</a>

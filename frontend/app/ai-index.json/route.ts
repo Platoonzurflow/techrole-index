@@ -2,6 +2,7 @@ import { api } from "@/lib/api";
 import { conditionalResponse } from "@/lib/conditional-response";
 import { insightCitationUrls } from "@/lib/insight-citation";
 import { insights } from "@/lib/insights";
+import { observedPublicationPeriod } from "@/lib/market-period";
 import type { DataProvenance, OpenDataCatalogItem, ProfessionSummary } from "@/lib/types";
 
 interface Source {
@@ -97,6 +98,9 @@ export async function GET(request: Request) {
     },
     entities: professions.map((item) => {
       const observed = openDataBySlug.get(item.slug);
+      const hhObservedPeriod = observed?.hh_market_data
+        ? observedPublicationPeriod(observed.hh_market_data)
+        : null;
       return {
         type: "Occupation",
         slug: item.slug,
@@ -142,6 +146,8 @@ export async function GET(request: Request) {
           period_days: observed.hh_market_data.period_days,
           date_from: observed.hh_market_data.date_from,
           date_to: observed.hh_market_data.date_to,
+          observed_date_from: hhObservedPeriod?.dateFrom ?? null,
+          observed_date_to: hhObservedPeriod?.dateTo ?? null,
           count: observed.hh_market_data.total_publications,
           salary_disclosed_count: observed.hh_market_data.salary_disclosed_count,
           salary_gross_count: observed.hh_market_data.salary_gross_count,

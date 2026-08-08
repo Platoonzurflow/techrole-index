@@ -222,6 +222,8 @@ export interface OpenDataCatalogItem {
     period_days: number;
     date_from: string;
     date_to: string;
+    observed_date_from?: string;
+    observed_date_to?: string;
     total_publications: number;
     salary_disclosed_count: number;
     salary_gross_count: number;

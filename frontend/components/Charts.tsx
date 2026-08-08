@@ -337,7 +337,7 @@ export function OfficialSalaryChart({
   for (const level of salaryLevelOrder) {
     const points = data.salary_history.filter((item) => item.seniority === level);
     const visiblePoints = points.filter((item) => item.average != null).length;
-    if (visiblePoints >= data.salary_min_sample) {
+    if (visiblePoints > 0) {
       const scope = points.find((item) => item.average != null)?.scope ?? points[0]?.scope ?? "profession";
       const scopeLabel = scope === "category"
         ? "направление"

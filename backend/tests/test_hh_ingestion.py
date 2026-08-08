@@ -52,6 +52,22 @@ class FakeHhProvider:
         )
 
 
+class SnapshotGuardHhProvider(FakeHhProvider):
+    def __init__(self, db: Session, expected_run_id: int) -> None:
+        self.db = db
+        self.expected_run_id = expected_run_id
+
+    def fetch(
+        self, query: str, region_code: str, *, limit: int = 100, offset: int = 0
+    ) -> Iterator[VacancyRecord]:
+        if offset:
+            match = self.db.scalar(select(VacancyProfessionMatch))
+            assert match is not None
+            assert match.last_run_id == self.expected_run_id
+            return
+        yield from super().fetch(query, region_code, limit=limit, offset=offset)
+
+
 def test_hh_ingestion_is_source_isolated_and_preserves_gross() -> None:
     engine = create_engine("sqlite://")
     Base.metadata.create_all(engine)
@@ -149,7 +165,11 @@ def test_hh_ingestion_is_source_isolated_and_preserves_gross() -> None:
                 },
             }
             db.commit()
-            ingest_hh_data(db, provider=FakeHhProvider(), sleep=lambda _: None)
+            ingest_hh_data(
+                db,
+                provider=SnapshotGuardHhProvider(db, summary.run_id),
+                sleep=lambda _: None,
+            )
             db.refresh(vacancy)
             assert vacancy.raw_payload["details"]["employer"]["name"] == "Example Corp"
 

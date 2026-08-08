@@ -11,7 +11,14 @@ from sqlalchemy import delete, func, insert, select
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.data.salary_benchmarks import salary_benchmark_for
+from app.domain.salary_history import (
+    SALARY_HISTORY_MINIMUM_RATIO,
+    salary_history_reference,
+)
 from app.models import (
+    Profession,
+    ProfessionCategory,
     ProfessionMetricDaily,
     Region,
     SeniorityLevel,
@@ -98,7 +105,7 @@ def refresh_hh_profession_metrics(
 
     date_to = observed_to.date()
     available_from = observed_from.date()
-    requested_history = history_days or settings.hh_history_days
+    requested_history = history_days or min(settings.hh_history_days, 180)
     date_from = max(available_from, date_to - timedelta(days=requested_history - 1))
     load_from = date_from - timedelta(days=rolling_window_days - 1)
     start_at = datetime.combine(load_from, time.min, tzinfo=timezone.utc)
@@ -131,6 +138,19 @@ def refresh_hh_profession_metrics(
     seniority_ids = {
         item.code: item.id for item in db.scalars(select(SeniorityLevel)).all()
     }
+    salary_floors: dict[tuple[int, int], float] = {}
+    for profession_id, profession_slug, category_slug in db.execute(
+        select(Profession.id, Profession.slug, ProfessionCategory.slug)
+        .join(ProfessionCategory, Profession.category_id == ProfessionCategory.id)
+        .where(Profession.is_active.is_(True))
+    ).all():
+        reference, _ = salary_history_reference(
+            salary_benchmark_for(profession_slug, category_slug)
+        )
+        for seniority_code, ratio in SALARY_HISTORY_MINIMUM_RATIO.items():
+            seniority_id = seniority_ids.get(seniority_code)
+            if seniority_id is not None:
+                salary_floors[(profession_id, seniority_id)] = reference * ratio
     experience_seniority = {
         "noexperience": "junior",
         "between1and3": "middle",
@@ -172,13 +192,23 @@ def refresh_hh_profession_metrics(
             ]
             if not window:
                 continue
-            salary_rows = [
+            complete_salary_rows = [
                 item
                 for item in window
                 if item.currency == "RUB"
                 and item.salary_gross is True
                 and item.salary_from is not None
                 and item.salary_to is not None
+            ]
+            minimum_salary = salary_floors.get((profession_id, seniority_id), 0.0)
+            salary_rows = [
+                item
+                for item in complete_salary_rows
+                if float(
+                    (cast(Decimal, item.salary_from) + cast(Decimal, item.salary_to))
+                    / 2
+                )
+                >= minimum_salary
             ]
             midpoints = [
                 float(
@@ -224,7 +254,17 @@ def refresh_hh_profession_metrics(
                 }
             )
 
-    db.execute(delete(ProfessionMetricDaily))
+    retention_from = date_to - timedelta(days=requested_history - 1)
+    db.execute(
+        delete(ProfessionMetricDaily).where(
+            ProfessionMetricDaily.metric_date >= date_from
+        )
+    )
+    db.execute(
+        delete(ProfessionMetricDaily).where(
+            ProfessionMetricDaily.metric_date < retention_from
+        )
+    )
     if rows:
         db.execute(insert(ProfessionMetricDaily), rows)
     db.commit()

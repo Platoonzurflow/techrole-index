@@ -29,6 +29,7 @@ def test_dagster_midnight_moscow_schedule_is_enabled() -> None:
         "materialize_observed_publication_metrics",
         "materialize_hh_publication_metrics",
         "refresh_hh_profession_metric_windows",
+        "recompute_hh_profession_scores",
         "notify_search_engines",
     }
 

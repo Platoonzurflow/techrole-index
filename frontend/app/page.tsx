@@ -35,16 +35,15 @@ export default async function HomePage() {
   return (
     <>
       <section className="cinematic-hero">
-        <div className="cinematic-glow cinematic-glow-one" aria-hidden="true" />
-        <div className="cinematic-glow cinematic-glow-two" aria-hidden="true" />
+        <CareerTransformationHero />
         <div className="shell cinematic-grid">
           <div className="cinematic-copy reveal">
             <div className="flex flex-wrap items-center gap-3">
               <span className="cinematic-eyebrow"><Database size={15} /> Аналитика рынка IT-профессий</span>
               <span className="cinematic-status"><span className="live-dot" /> Показатели с датой обновления</span>
             </div>
-            <h1>Сравните IT-профессии. <span>Выберите направление по данным.</span></h1>
-            <p>TechRole Index показывает зарплаты Junior, Middle и Senior, количество вакансий, недельную динамику и востребованный стек. Сервис помогает понять, какое направление подходит именно для вашего следующего карьерного шага.</p>
+            <h1>Из поиска <span>к первому оферу</span></h1>
+            <p>Выберите профессию и пройдите по данным: зарплаты Junior, Middle и Senior, спрос, компании и навыки из вакансий HH.</p>
 
             <ProfessionSearch suggestions={professions} />
             <p className="mt-2 text-xs text-muted">Можно искать по русскому или английскому названию; подсказки появляются после загрузки каталога.</p>
@@ -54,13 +53,12 @@ export default async function HomePage() {
               {quickDirections.map(([label, slug]) => <Link key={slug} href={`/professions?category=${slug}`}>{label}</Link>)}
             </div>
 
-            <div className="cinematic-stats">
-              {[["50", "профессий"], ["180", "дней наблюдений"], ["3", "уровня опыта"]].map(([value, label]) => (
+            <div className="cinematic-stats" aria-label="Охват аналитики">
+              {[["50", "профессий"], ["180", "дней истории"], ["3", "уровня опыта"]].map(([value, label]) => (
                 <div key={label}><strong>{value}</strong><span>{label}</span></div>
               ))}
             </div>
           </div>
-          <div className="reveal" style={{ animationDelay: "120ms" }}><CareerTransformationHero /></div>
         </div>
       </section>
 

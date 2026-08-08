@@ -1,5 +1,6 @@
 import { api } from "@/lib/api";
 import { conditionalResponse } from "@/lib/conditional-response";
+import { observedPublicationPeriod } from "@/lib/market-period";
 import type { OpenDataCatalogItem as OpenDataItem } from "@/lib/types";
 
 export async function GET(request: Request) {
@@ -110,7 +111,7 @@ export async function GET(request: Request) {
           name: "Классифицированные вакансии в снимке HH API",
           value: item.hh_market_data.total_publications,
           unitText: "вакансия",
-          description: `${item.hh_market_data.date_from} — ${item.hh_market_data.date_to}; поисковый снимок, не полная историческая база.`,
+          description: `${observedPublicationPeriod(item.hh_market_data).dateFrom} — ${observedPublicationPeriod(item.hh_market_data).dateTo}; наблюдаемые публикации поискового снимка, не полная историческая база.`,
         }, {
           "@type": "PropertyValue",
           name: "HH-вакансии с указанной gross-зарплатой",

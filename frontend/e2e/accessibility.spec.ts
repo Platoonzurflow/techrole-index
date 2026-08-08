@@ -106,15 +106,14 @@ test("representative pages do not overflow a narrow viewport", async ({ page }) 
 test("reduced motion removes long and repeating animation", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await openPublicPage(page, "/");
-  const scene = page.locator(".career-scene");
-  await scene.focus();
+  await expect(page.locator(".career-journey-visual")).toBeVisible();
 
   const motion = await page.evaluate(() => {
     const seconds = (value: string) => value.split(",").map((part) => {
       const token = part.trim();
       return token.endsWith("ms") ? Number.parseFloat(token) / 1000 : Number.parseFloat(token);
     });
-    const elements = [document.documentElement, ...document.querySelectorAll(".reveal, .career-scene, .money-note")];
+    const elements = [document.documentElement, ...document.querySelectorAll(".reveal, .career-journey-image, .career-journey-offer")];
     return elements.map((element) => {
       const style = getComputedStyle(element);
       return {

@@ -1,5 +1,5 @@
 from collections import Counter, defaultdict
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
 from statistics import fmean
 from typing import Any, Literal
 
@@ -13,6 +13,13 @@ from app.data.salary_benchmarks import salary_benchmark_catalog, salary_benchmar
 from app.data.tech_stacks import tech_stack_for
 from app.database import get_db
 from app.domain.salary import SalaryInput, calculate_salary_statistics
+from app.domain.salary_history import (
+    SALARY_HISTORY_MINIMUM_RATIO,
+    SALARY_HISTORY_MINIMUM_SOURCE_DATES,
+    SALARY_HISTORY_WINDOW_DAYS,
+    SalaryHistorySeniority,
+    salary_history_reference,
+)
 from app.domain.time_windows import utc_calendar_window
 from app.domain.trends import Trend, calculate_all_trends, calculate_trend
 from app.models import (
@@ -55,48 +62,6 @@ profession_cache = RedisJsonCache(
     ttl_seconds=settings.catalog_cache_ttl_seconds,
 )
 
-SalaryHistorySeniority = Literal["junior", "middle", "senior"]
-SalaryHistoryReferenceScope = Literal[
-    "exact_role", "related_role", "technology", "category", "market_level"
-]
-
-SALARY_HISTORY_MINIMUM_RATIO: dict[SalaryHistorySeniority, float] = {
-    "junior": 0.4,
-    "middle": 0.7,
-    "senior": 1.0,
-}
-SALARY_HISTORY_WINDOW_DAYS = 30
-SALARY_HISTORY_MINIMUM_SOURCE_DATES = 3
-
-
-def _salary_history_reference(
-    benchmark: dict[str, Any],
-) -> tuple[float, SalaryHistoryReferenceScope]:
-    """Choose the visible national median used to trim implausibly low history points.
-
-    The rule never changes the reference layer itself. It prefers a median for the
-    exact role, then a technology or related-role median, and finally the published
-    category/general-IT reference already shown on the profession page.
-    """
-    points = benchmark["points"]
-    for scope in ("exact_role", "technology", "related_role", "category", "market_level"):
-        point = next(
-            (
-                item
-                for item in points
-                if item["scope"] == scope
-                and item["geography"] == "russia"
-                and item["seniority"] is None
-                and item["metric"] == "median"
-                and item["value"] is not None
-            ),
-            None,
-        )
-        if point is not None:
-            return float(point["value"]), scope
-    raise ValueError("Salary benchmark has no national median reference")
-
-
 @router.get(
     "/salary-benchmarks",
     response_model=list[SalaryBenchmarkCatalogItem],
@@ -117,6 +82,17 @@ def open_data_publications(db: Session = Depends(get_db)):
     window = utc_calendar_window(now, days=period_days)
     date_to = window.date_to
     date_from = window.date_from
+    cache_parts = {
+        "date_to": date_to.isoformat(),
+        "min_salary_sample": settings.min_salary_sample,
+        "period_days": period_days,
+    }
+    cached = profession_cache.get("open_data_catalog", cache_parts)
+    if isinstance(cached, list):
+        try:
+            return [OpenDataCatalogItem.model_validate(item) for item in cached]
+        except ValidationError:
+            pass
     source_id = db.scalar(select(VacancySource.id).where(VacancySource.code == "trudvsem_open"))
     if source_id is None:
         return []
@@ -143,8 +119,18 @@ def open_data_publications(db: Session = Depends(get_db)):
     ).all()
     publications: list[OpenDataCatalogItem] = []
     for profession_id, slug, name_ru, category_slug, total, last_ingested_at in rows:
-        official = _official_open_data_summary(db, profession_id, period_days)
-        hh = _hh_market_summary(db, profession_id)
+        official = _official_open_data_summary(
+            db,
+            profession_id,
+            period_days,
+            include_salary_history=False,
+        )
+        hh = _hh_market_summary(db, profession_id, include_salary_history=False)
+        hh_observed_dates = (
+            [item.date for item in hh.daily_publications if item.count > 0]
+            if hh is not None
+            else []
+        )
         publications.append(
             OpenDataCatalogItem(
                 slug=slug,
@@ -164,6 +150,8 @@ def open_data_publications(db: Session = Depends(get_db)):
                         period_days=hh.period_days,
                         date_from=hh.date_from,
                         date_to=hh.date_to,
+                        observed_date_from=min(hh_observed_dates) if hh_observed_dates else None,
+                        observed_date_to=max(hh_observed_dates) if hh_observed_dates else None,
                         total_publications=hh.total_publications,
                         salary_disclosed_count=hh.salary_disclosed_count,
                         salary_gross_count=hh.salary_gross_count,
@@ -183,6 +171,11 @@ def open_data_publications(db: Session = Depends(get_db)):
                 ),
             )
         )
+    profession_cache.set(
+        "open_data_catalog",
+        cache_parts,
+        [item.model_dump(mode="json") for item in publications],
+    )
     return publications
 
 
@@ -218,6 +211,7 @@ def _source_market_summary(
     methodology_note: str,
     period_days: int = 180,
     include_category_context: bool = False,
+    include_salary_history: bool = True,
     match_run_id: int | None = None,
 ) -> OfficialOpenDataSummary:
     profession_context = db.execute(
@@ -226,7 +220,7 @@ def _source_market_summary(
         .where(Profession.id == profession_id)
     ).one()
     profession_slug, category_slug, category_id = profession_context
-    history_reference_median, history_reference_scope = _salary_history_reference(
+    history_reference_median, history_reference_scope = salary_history_reference(
         salary_benchmark_for(profession_slug, category_slug)
     )
     history_minimum_salary: dict[SalaryHistorySeniority, float] = {
@@ -455,9 +449,11 @@ def _source_market_summary(
         else "insufficient"
     )
 
-    history_dates = [
-        date_from + timedelta(days=index) for index in range(period_days)
-    ]
+    history_dates = (
+        [date_from + timedelta(days=index) for index in range(period_days)]
+        if include_salary_history
+        else []
+    )
 
     def fetch_history_rows(
         scope: Literal["profession", "category", "market"],
@@ -560,10 +556,10 @@ def _source_market_summary(
     history_rows_by_scope: dict[
         Literal["profession", "category", "market"],
         dict[str, list[tuple[Any, ...]]],
-    ] = {
-        "profession": fetch_history_rows("profession"),
-    }
-    if include_category_context:
+    ] = {}
+    if include_salary_history:
+        history_rows_by_scope["profession"] = fetch_history_rows("profession")
+    if include_salary_history and include_category_context:
         history_rows_by_scope["category"] = fetch_history_rows("category")
         history_rows_by_scope["market"] = fetch_history_rows("market")
     history_candidates = {
@@ -589,7 +585,7 @@ def _source_market_summary(
             points = candidates[seniority_code]
             visible_points = sum(point.average is not None for point in points)
             if (
-                visible_points >= settings.min_salary_sample
+                visible_points > 0
                 and len(qualifying_dates) >= SALARY_HISTORY_MINIMUM_SOURCE_DATES
             ):
                 selected_points = points
@@ -655,6 +651,7 @@ def _official_open_data_summary(
     period_days: int = 180,
     *,
     include_category_context: bool = False,
+    include_salary_history: bool = True,
 ) -> OfficialOpenDataSummary:
     return _source_market_summary(
         db,
@@ -666,6 +663,7 @@ def _official_open_data_summary(
         salary_basis=None,
         period_days=period_days,
         include_category_context=include_category_context,
+        include_salary_history=include_salary_history,
         salary_methodology_note=(
             "Динамика рассчитана по RUB-записям с двумя границами вилки после "
             "воспроизводимой нижней отсечки относительно видимой зарплатной медианы: "
@@ -684,11 +682,66 @@ def _official_open_data_summary(
     )
 
 
+def _hh_metric_salary_history(
+    db: Session,
+    profession_id: int,
+    *,
+    date_to: date,
+    days: int = 180,
+) -> list[OfficialSalaryHistoryPoint]:
+    national_region_id = db.scalar(select(Region.id).where(Region.code == "ru"))
+    if national_region_id is None:
+        return []
+    cutoff = date_to - timedelta(days=days - 1)
+    rows = db.execute(
+        select(
+            ProfessionMetricDaily.metric_date,
+            SeniorityLevel.code,
+            ProfessionMetricDaily.salary_average,
+            ProfessionMetricDaily.sample_size,
+        )
+        .join(
+            SeniorityLevel,
+            SeniorityLevel.id == ProfessionMetricDaily.seniority_id,
+        )
+        .where(
+            ProfessionMetricDaily.profession_id == profession_id,
+            ProfessionMetricDaily.region_id == national_region_id,
+            ProfessionMetricDaily.gross.is_(True),
+            ProfessionMetricDaily.metric_date >= cutoff,
+            ProfessionMetricDaily.metric_date <= date_to,
+            SeniorityLevel.code.in_(("junior", "middle", "senior")),
+        )
+        .order_by(ProfessionMetricDaily.metric_date, SeniorityLevel.sort_order)
+    ).all()
+    eligible_levels = {
+        seniority_code
+        for _, seniority_code, average, sample_size in rows
+        if average is not None and sample_size >= settings.min_salary_sample
+    }
+    return [
+        OfficialSalaryHistoryPoint(
+            date=metric_date,
+            seniority=seniority_code,
+            average=(
+                float(average)
+                if average is not None and sample_size >= settings.min_salary_sample
+                else None
+            ),
+            sample_size=sample_size,
+            scope="profession",
+        )
+        for metric_date, seniority_code, average, sample_size in rows
+        if seniority_code in eligible_levels
+    ]
+
+
 def _hh_market_summary(
     db: Session,
     profession_id: int,
     *,
     include_category_context: bool = False,
+    include_salary_history: bool = True,
 ) -> OfficialOpenDataSummary | None:
     source = db.scalar(select(VacancySource).where(VacancySource.code == "hh_api"))
     if source is None or not source.enabled:
@@ -702,8 +755,9 @@ def _hh_market_summary(
         source_url=settings.hh_terms_url,
         salary_gross_status="reported_per_vacancy",
         salary_basis=True,
-        period_days=settings.hh_history_days,
+        period_days=min(settings.hh_history_days, 180),
         include_category_context=include_category_context,
+        include_salary_history=include_salary_history,
         match_run_id=match_run_id,
         salary_methodology_note=(
             "Зарплатные показатели рассчитаны только по вакансиям в RUB, где API явно "
@@ -723,8 +777,18 @@ def _hh_market_summary(
             "в «Другие компании»."
         ),
     )
+    accumulated_salary_history = (
+        _hh_metric_salary_history(
+            db,
+            profession_id,
+            date_to=summary.date_to,
+        )
+        if include_salary_history
+        else []
+    )
     return summary.model_copy(
         update={
+            "salary_history": accumulated_salary_history or summary.salary_history,
             "hh_enrichment": _hh_market_enrichment_summary(
                 db,
                 profession_id,
@@ -732,7 +796,7 @@ def _hh_market_summary(
                 date_from=summary.date_from,
                 date_to=summary.date_to,
                 match_run_id=match_run_id,
-            )
+            ),
         }
     )
 

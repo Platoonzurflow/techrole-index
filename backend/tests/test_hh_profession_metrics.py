@@ -4,6 +4,7 @@ from decimal import Decimal
 from sqlalchemy import create_engine, select
 from sqlalchemy.orm import Session
 
+from app.api.professions import _hh_metric_salary_history
 from app.models import (
     Base,
     Profession,
@@ -40,6 +41,28 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
         )
         db.add(profession)
         db.flush()
+        retained_date = now.date() - timedelta(days=5)
+        db.add(
+            ProfessionMetricDaily(
+                metric_date=retained_date,
+                profession_id=profession.id,
+                seniority_id=middle.id,
+                region_id=national.id,
+                gross=True,
+                vacancy_count=5,
+                salary_count=5,
+                salary_coverage=Decimal("1"),
+                salary_median=Decimal("140000"),
+                salary_average=Decimal("140000"),
+                salary_p25=Decimal("140000"),
+                salary_p75=Decimal("140000"),
+                lower_bound_median=Decimal("120000"),
+                upper_bound_median=Decimal("160000"),
+                sample_size=5,
+                confidence_level="low",
+                remote_share=Decimal("0"),
+            )
+        )
         for index in range(3):
             db.add(
                 Vacancy(
@@ -80,4 +103,23 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
         assert latest.salary_count == 3
         assert latest.salary_median == Decimal("150000")
         assert latest.remote_share == Decimal("0.33333")
+        retained = db.scalar(
+            select(ProfessionMetricDaily).where(
+                ProfessionMetricDaily.metric_date == retained_date,
+                ProfessionMetricDaily.profession_id == profession.id,
+                ProfessionMetricDaily.region_id == national.id,
+            )
+        )
+        assert retained is not None
+        assert retained.salary_average == Decimal("140000")
+        accumulated_history = _hh_metric_salary_history(
+            db,
+            profession.id,
+            date_to=now.date(),
+            days=10,
+        )
+        assert any(
+            point.date == retained_date and point.average == 140000
+            for point in accumulated_history
+        )
     engine.dispose()

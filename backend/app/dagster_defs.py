@@ -30,6 +30,7 @@ from app.services.salary_source_audit import (
     audit_habr_calculator_public_medians,
     record_salary_source_audit,
 )
+from app.services.scoring_service import recompute_scores
 from app.services.telegram_digest import send_weekly_digest
 
 
@@ -323,6 +324,27 @@ def refresh_hh_profession_metric_windows(context, materialization_result: dict) 
     return result
 
 
+@op(name="recompute_hh_profession_scores")
+def recompute_hh_profession_scores(context, metric_result: dict) -> dict:
+    if metric_result.get("status") != "success":
+        return {"status": "skipped", "reason": "metric_refresh_not_complete"}
+    try:
+        with SessionLocal() as db:
+            profession_count = recompute_scores(db)
+    except Exception as exc:
+        context.log.exception("HH profession score refresh failed")
+        raise Failure(
+            description="HH profession score refresh failed",
+            metadata={"status": "failed", "error": type(exc).__name__},
+        ) from exc
+    result = {
+        "status": "success" if profession_count else "skipped",
+        "professions_recalculated": profession_count,
+    }
+    context.log.info(json.dumps(result, ensure_ascii=False))
+    return result
+
+
 @op(name="notify_search_engines")
 def notify_search_engines(context, materialization_result: dict) -> dict:
     if materialization_result.get("status") != "success":
@@ -349,7 +371,8 @@ def nightly_market_pipeline():
     hh_materialization_result = materialize_hh_publication_metrics(
         hh_ingestion_result, hh_enrichment_result
     )
-    refresh_hh_profession_metric_windows(hh_materialization_result)
+    hh_metric_result = refresh_hh_profession_metric_windows(hh_materialization_result)
+    recompute_hh_profession_scores(hh_metric_result)
     notify_search_engines(materialization_result)
 
 

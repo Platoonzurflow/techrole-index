@@ -340,7 +340,7 @@ describe("analytics components", () => {
     expect(screen.queryByText("Недостаточно данных")).not.toBeInTheDocument();
   });
 
-  it("uses the same latest values and scopes as the main salary graph", () => {
+  it("uses the latest coherent exact-role date from the main salary graph", () => {
     const official = {
       source_name: "Работа России",
       source_url: "https://trudvsem.ru/opendata/api",
@@ -363,9 +363,12 @@ describe("analytics components", () => {
         { seniority: "senior" as const, vacancy_count: 23, salary_count: 23, salary_coverage: 1, sample_size: 23, median: 89300, confidence_level: "high" as const },
       ],
       salary_history: [
+        { date: "2026-07-24", seniority: "junior" as const, average: 100000, sample_size: 8, scope: "profession" as const },
+        { date: "2026-07-24", seniority: "middle" as const, average: 120000, sample_size: 9, scope: "profession" as const },
+        { date: "2026-07-24", seniority: "senior" as const, average: 170000, sample_size: 10, scope: "profession" as const },
         { date: "2026-07-23", seniority: "junior" as const, average: 63000, sample_size: 7, scope: "profession" as const },
         { date: "2026-07-23", seniority: "middle" as const, average: 97000, sample_size: 6, scope: "profession" as const },
-        { date: "2026-07-23", seniority: "senior" as const, average: 166000, sample_size: 12, scope: "market" as const },
+        { date: "2026-07-23", seniority: "senior" as const, average: 166000, sample_size: 12, scope: "profession" as const },
       ],
       salary_history_window_days: 30,
       salary_history_reference_median: 200000,
@@ -405,7 +408,9 @@ describe("analytics components", () => {
     expect(screen.getByText("63 тыс. ₽")).toBeInTheDocument();
     expect(screen.getByText("97 тыс. ₽")).toBeInTheDocument();
     expect(screen.getByText("166 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getByText("общий IT-рынок")).toBeInTheDocument();
+    expect(screen.getAllByText("точная профессия · единый срез")).toHaveLength(3);
+    expect(screen.getAllByText("23 июля 2026 г.")).toHaveLength(3);
+    expect(screen.queryByText("100 тыс. ₽")).not.toBeInTheDocument();
     expect(screen.queryByText("Вилки «Работы России»")).not.toBeInTheDocument();
   });
 
@@ -887,16 +892,10 @@ describe("analytics components", () => {
     expect(screen.getByRole("button", { name: "Отправить обращение" })).toBeEnabled();
   });
 
-  it("offers a keyboard and touch trigger for the career scene", () => {
+  it("renders the responsive career journey as an accessible visual", () => {
     render(<CareerTransformationHero />);
-    const scene = screen.getByRole("button", { name: "Показать карьерную трансформацию: деньги, деловой образ, сумка для ноутбука и офер" });
-    expect(screen.queryByText("Наведите или нажмите")).not.toBeInTheDocument();
-    expect(screen.queryByText("Интерактивная карьерная сцена")).not.toBeInTheDocument();
-    expect(screen.getByText("Ищу работу")).toBeInTheDocument();
-    expect(screen.getByText("Вышел на новую работу")).toBeInTheDocument();
-    expect(scene).toHaveAttribute("aria-pressed", "false");
-    fireEvent.click(scene);
-    expect(scene).toHaveAttribute("aria-pressed", "true");
-    expect(scene).toHaveClass("is-active");
+    expect(screen.getByRole("img", { name: "Кандидат идёт по световому маршруту из данных HeadHunter к принятому оферу" })).toBeInTheDocument();
+    expect(screen.getByText("данные HH превращаются в маршрут")).toBeInTheDocument();
+    expect(screen.getByText("Офер принят")).toBeInTheDocument();
   });
 });

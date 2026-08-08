@@ -1,5 +1,6 @@
 import { ExternalLink } from "lucide-react";
 
+import { OfficialSalaryChart } from "@/components/Charts";
 import { rub } from "@/lib/format";
 import {
   headlineSalaryBenchmarkPoint,
@@ -46,6 +47,51 @@ export function officialSalaryLevelsAreCoherent(official: OfficialOpenDataSummar
     .filter((value): value is number => value != null);
   return values.length === salaryLevelOrder.length
     && values.every((value, index) => index === 0 || value >= values[index - 1]);
+}
+
+type SalaryHistoryPoint = OfficialOpenDataSummary["salary_history"][number];
+type SalaryLevel = SalaryHistoryPoint["seniority"];
+
+export type CoherentSalarySnapshot = {
+  date: string;
+  points: Record<SalaryLevel, SalaryHistoryPoint>;
+};
+
+export function selectCoherentSalarySnapshot(
+  official: OfficialOpenDataSummary,
+): CoherentSalarySnapshot | undefined {
+  const pointsByDate = new Map<string, Partial<Record<SalaryLevel, SalaryHistoryPoint>>>();
+
+  for (const point of official.salary_history) {
+    if (
+      point.average == null
+      || point.sample_size < official.salary_min_sample
+      || (point.scope != null && point.scope !== "profession")
+    ) continue;
+
+    const points = pointsByDate.get(point.date) ?? {};
+    const current = points[point.seniority];
+    if (!current || point.sample_size > current.sample_size) points[point.seniority] = point;
+    pointsByDate.set(point.date, points);
+  }
+
+  for (const date of [...pointsByDate.keys()].sort((left, right) => right.localeCompare(left))) {
+    const points = pointsByDate.get(date)!;
+    const junior = points.junior;
+    const middle = points.middle;
+    const senior = points.senior;
+    if (
+      junior?.average != null
+      && middle?.average != null
+      && senior?.average != null
+      && middle.average >= junior.average * 1.4
+      && senior.average >= middle.average * 1.3
+    ) {
+      return { date, points: { junior, middle, senior } };
+    }
+  }
+
+  return undefined;
 }
 
 function pointValue(point: SalaryBenchmarkPoint) {
@@ -163,35 +209,37 @@ export function SalaryBenchmarks({
   data,
   official,
   comparisonMaximum,
+  historyDays = 30,
 }: {
   data: SalaryBenchmarkSummary;
   official?: OfficialOpenDataSummary;
   comparisonMaximum?: number;
+  historyDays?: number;
 }) {
   const headline = headlineSalaryBenchmarkPoint(data);
   const levels = salaryBenchmarkLevelPoints(data);
+  const usesHhSalary = official?.salary_gross_status === "reported_per_vacancy";
 
   return (
     <section id="salary-benchmark" className="salary-benchmark-section panel mt-10 scroll-mt-24 p-6 sm:p-8" aria-labelledby="salary-benchmark-title">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="eyebrow">Зарплатные ориентиры</p>
-          <h2 id="salary-benchmark-title" className="mt-2 text-2xl font-semibold">Фактические доходы специалистов</h2>
-          <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{data.methodology_note}</p>
+          <p className="eyebrow">{usesHhSalary ? "Официальный HH API" : "Зарплатные ориентиры"}</p>
+          <h2 id="salary-benchmark-title" className="mt-2 text-2xl font-semibold">{usesHhSalary ? "Зарплата Junior, Middle и Senior" : "Фактические доходы специалистов"}</h2>
+          <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{usesHhSalary ? official?.salary_methodology_note : data.methodology_note}</p>
         </div>
-        <span className="badge confidence-medium">{coverageLabels[data.coverage]}</span>
+        <span className="badge confidence-medium">{usesHhSalary ? "gross · RUB · точная профессия" : coverageLabels[data.coverage]}</span>
       </div>
 
-      {headline ? (
+      {headline && !usesHhSalary ? (
         <SalaryMedianShowcase
           point={headline}
           maximum={Math.max(comparisonMaximum ?? headline.value ?? 0, headline.value ?? 0)}
         />
       ) : null}
 
-      {levels.length ? (
+      {official || levels.length ? (
         <div className="mt-8">
-          <h3 className="text-lg font-semibold">Зарплата Junior, Middle и Senior</h3>
           {official ? (
             <SalaryBySeniority official={official} benchmark={data} />
           ) : (
@@ -200,8 +248,25 @@ export function SalaryBenchmarks({
         </div>
       ) : null}
 
-      <div className="salary-source-grid mobile-card-rail mt-8 grid gap-3 lg:grid-cols-2">
-        {data.sources.map((source) => (
+      {usesHhSalary && official ? (
+        <article id="salary-history" className="market-stage market-stage-primary salary-main-stage mt-7 scroll-mt-24">
+          <div className="market-stage-copy">
+            <p className="eyebrow">Главный график</p>
+            <h3 className="mt-2 text-2xl font-semibold">Как менялась зарплата в вакансиях HH</h3>
+            <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">Среднее полной gross-вилки в RUB за скользящие 30 дней. Каждый уровень использует только совпадения этой профессии; открытое исследование появляется пунктиром только при недостаточной выборке.</p>
+          </div>
+          <div className="mt-5"><OfficialSalaryChart data={official} benchmark={data} maxPeriodDays={historyDays} /></div>
+        </article>
+      ) : null}
+
+      {usesHhSalary && official ? (
+        <div className="salary-hh-source mt-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-[rgb(var(--panel-rgb)/.48)] p-4 text-sm">
+          <p className="text-muted"><strong className="text-foreground">Источник: {official.source_name}</strong><br />Полные gross-вилки в RUB; минимум {official.salary_min_sample} наблюдений. Исследования используются только как явно подписанный резерв.</p>
+          <a className="button-secondary" href={official.source_url} target="_blank" rel="noreferrer">Документация HH <ExternalLink size={14} /></a>
+        </div>
+      ) : (
+        <div className="salary-source-grid mobile-card-rail mt-8 grid gap-3 lg:grid-cols-2">
+          {data.sources.map((source) => (
           <article id={`salary-source-${source.id}`} key={source.id} className="salary-source-card scroll-mt-24 rounded-2xl border border-line p-4 text-sm">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div><h3 className="font-semibold">{source.name}</h3><p className="mt-1 text-muted">{source.period} · {taxLabel(source.tax_status)}{source.total_sample_size ? ` · n=${source.total_sample_size.toLocaleString("ru-RU")}` : ""}</p></div>
@@ -209,8 +274,9 @@ export function SalaryBenchmarks({
             </div>
             <p className="mt-3 leading-6 text-muted">{source.methodology_note}</p>
           </article>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </section>
   );
 }
@@ -228,21 +294,18 @@ export function SalaryBySeniority({
   const officialByLevel = new Map(
     official.salary_by_seniority.map((item) => [item.seniority, item]),
   );
-  const latestHistoryByLevel = new Map(
-    salaryLevelOrder.map((seniority) => [
-      seniority,
-      [...official.salary_history]
-        .reverse()
-        .find((item) => item.seniority === seniority && item.average != null),
-    ]),
-  );
+  const coherentSnapshot = selectCoherentSalarySnapshot(official);
+  const snapshotPeriod = coherentSnapshot
+    ? new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })
+        .format(new Date(`${coherentSnapshot.date}T00:00:00Z`))
+    : undefined;
 
   return (
     <>
       <div className="salary-level-grid mobile-card-rail mt-5 grid gap-4 lg:grid-cols-3">
       {salaryLevelOrder.map((seniority) => {
         const observed = officialByLevel.get(seniority);
-        const historyPoint = latestHistoryByLevel.get(seniority);
+        const historyPoint = coherentSnapshot?.points[seniority];
         const reference = benchmarkByLevel.get(seniority);
         const useObserved = historyPoint?.average != null;
         const source = reference
@@ -250,7 +313,7 @@ export function SalaryBySeniority({
           : undefined;
         const sourceName = useObserved ? official.source_name : source?.name;
         const period = useObserved
-          ? `${official.date_from} — ${official.date_to}`
+          ? snapshotPeriod
           : source?.period;
         const value = useObserved
           ? `${Math.round(historyPoint!.average! / 1000)} тыс. ₽`
@@ -258,9 +321,9 @@ export function SalaryBySeniority({
             ? pointValue(reference)
             : "Источник не найден";
         const basis = useObserved
-          ? `Среднее полной RUB-вилки за скользящие ${official.salary_history_window_days ?? 30} дней`
+          ? `Единый срез главного графика: Middle ≥ Junior × 1,4; Senior ≥ Middle × 1,3`
           : reference
-            ? `${metricLabel(reference)} · ${reference.label}`
+            ? `Ориентир исследования · ${metricLabel(reference)} · ${reference.label}`
             : "Нет проверяемого среза";
 
         return (
@@ -269,12 +332,8 @@ export function SalaryBySeniority({
               <h4 className="text-lg font-semibold">{levelLabels[seniority]}</h4>
               <span className={`badge ${useObserved ? "confidence-medium" : ""}`}>
                 {useObserved
-                  ? historyPoint!.scope === "category"
-                    ? "направление"
-                    : historyPoint!.scope === "market"
-                      ? "общий IT-рынок"
-                      : "точная профессия"
-                  : scopeLabels[reference?.scope ?? "market_level"]}
+                  ? "точная профессия · единый срез"
+                  : "нет согласованного среза HH"}
               </span>
             </div>
             <p className="mt-5 text-sm text-muted">{basis}</p>
@@ -286,13 +345,13 @@ export function SalaryBySeniority({
               {!useObserved && source ? (
                 <div><dt className="text-muted">Данные исследования</dt><dd className="mt-1">{reference?.sample_size ? `n=${reference.sample_size}` : source.total_sample_size ? `вся база n=${source.total_sample_size.toLocaleString("ru-RU")}` : "публичный агрегат"} · {taxLabel(source.tax_status)}</dd></div>
               ) : (
-                <div><dt className="text-muted">Налоговый статус</dt><dd className="mt-1">gross/net не указан</dd></div>
+                <div><dt className="text-muted">Налоговый статус</dt><dd className="mt-1">{official.salary_gross_status === "reported_per_vacancy" ? "до вычета налогов (gross)" : "gross/net не указан"}</dd></div>
               )}
             </dl>
             {!useObserved ? (
               <p className="mt-4 text-xs leading-5 text-muted">
                 {observed?.median != null
-                  ? "В главном графике пока нет устойчивой точки для этого уровня."
+                  ? "В главном графике пока нет одной даты с достаточной выборкой и заданным разрывом между всеми тремя уровнями."
                   : `В наблюдаемом срезе меньше ${official.salary_min_sample} полных вилок.`} Поэтому сумма взята из указанного открытого исследования.
               </p>
             ) : null}

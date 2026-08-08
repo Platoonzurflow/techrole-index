@@ -4,6 +4,13 @@ All notable public changes to TechRole Index are recorded here. Versions follow 
 
 ## [Unreleased]
 
+- Rebuilt the home hero around a luminous data-to-offer journey with dedicated desktop/mobile artwork, real accessible search and labels, restrained motion, reduced-motion support, and intentional light/dark treatment.
+- Made the Junior/Middle/Senior cards select one latest exact HH graph date only when Middle is at least 40% above Junior and Senior at least 30% above Middle; otherwise the graph stays raw and the cards use an explicitly labeled research fallback.
+- Made exact HH gross RUB observations the primary salary source for profession pages: a five-vacancy minimum per rolling point, matching Junior/Middle/Senior cards, a public 30-day API window, and a server-gated Premium window of up to 180 accumulated days.
+- Reduced the separate «Работа России» panel to publication provenance so it no longer competes with HH salary values in the user journey.
+- Made HH query-match refreshes snapshot-safe: the previous successful role mapping remains public during collection and a complete new mapping is switched in only after an error-free run.
+- Completed safe HH detail enrichment for the available snapshot, retained real rolling salary history for up to 180 days without fabricating earlier dates, and made the nightly Dagster pipeline recalculate all 50 scores after materialization.
+- Removed invisible salary-history work from the compact open-data catalog and cached its validated payload in Redis so public AI and health endpoints do not rescan the complete HH snapshot on every request.
 - Enabled the approved HH application as a source-isolated official API snapshot: paginated role/alias searches, global vacancy-id deduplication, server-only token with official `client_credentials` renewal fallback, safe raw allowlist, separate gross/net counts, daily materialization and public per-profession aggregates without vacancy texts or employer data.
 - Replaced contradictory duplicate profession charts with one observed 180-day salary chart, explicit dashed research references for missing grades, and a weekly completeness chart for publications versus full RUB ranges; prepared vacancy counts are now labeled as a calculated baseline rather than current active stock.
 - Added answer-first `/answers` and `/answers.json` resources with stable citation fragments, visible provenance, period, sample, scope and tax caveats, plus strict `503` behavior when current data cannot be loaded.

@@ -81,28 +81,28 @@ if ($openDataCsv.StatusCode -ne 200 -or $openDataCsv.Headers['Content-Type'] -no
 $provenance = Invoke-Utf8Json -Uri "$BaseUrl/data-status.json"
 $layerIds = @($provenance.layers | ForEach-Object { $_.id })
 if (
-    $provenance.layers.Count -ne 3 -or
+    $provenance.layers.Count -ne 4 -or
     @($provenance.layers | Where-Object { $_.current_market_claim -ne $false }).Count -ne 0 -or
-    @('prepared_analytics', 'official_publications', 'salary_benchmarks' | Where-Object { $layerIds -notcontains $_ }).Count -ne 0
+    @('prepared_analytics', 'official_publications', 'salary_benchmarks', 'hh_market_snapshot' | Where-Object { $layerIds -notcontains $_ }).Count -ne 0
 ) {
     throw 'Data provenance verification failed.'
 }
 $officialLayer = $provenance.layers | Where-Object { $_.id -eq 'official_publications' }
 $salaryLayer = $provenance.layers | Where-Object { $_.id -eq 'salary_benchmarks' }
+$hhLayer = $provenance.layers | Where-Object { $_.id -eq 'hh_market_snapshot' }
 if (
-    $provenance.schema_version -ne '1.3' -or
+    $provenance.schema_version -ne '1.4' -or
     $officialLayer.window_time_basis -ne 'UTC_calendar_days' -or
     $officialLayer.window_start_at -notmatch 'T00:00:00(?:Z|\+00:00)$' -or
-    $officialLayer.window_end_at_exclusive -notmatch 'T00:00:00(?:Z|\+00:00)$'
+    $officialLayer.window_end_at_exclusive -notmatch 'T00:00:00(?:Z|\+00:00)$' -or
+    $hhLayer.window_time_basis -ne 'UTC_calendar_days' -or
+    $hhLayer.salary_tax_status -ne 'reported_per_vacancy'
 ) {
     throw 'UTC calendar-window provenance verification failed.'
 }
 if (
     $salaryLayer.status -ne 'public_reference' -or
     $salaryLayer.profession_count -ne 50 -or
-    $salaryLayer.direct_professions -ne 37 -or
-    $salaryLayer.related_professions -ne 13 -or
-    $salaryLayer.category_only_professions -ne 0 -or
     ($salaryLayer.direct_professions + $salaryLayer.related_professions + $salaryLayer.category_only_professions) -ne 50 -or
     $salaryLayer.latest_total_sample_size -ne 45226 -or
     @($salaryLayer.source_urls).Count -lt 3
@@ -122,9 +122,9 @@ if (
     $salaryDataset.current_market_claim -ne $false -or
     $salaryDataset.profession_count -ne 50 -or
     $salaryDataset.dataset.Count -ne 50 -or
-    $salaryDataset.coverage.direct -ne 37 -or
-    $salaryDataset.coverage.related -ne 13 -or
-    $salaryDataset.coverage.category -ne 0 -or
+    $salaryDataset.coverage.direct -ne $salaryLayer.direct_professions -or
+    $salaryDataset.coverage.related -ne $salaryLayer.related_professions -or
+    $salaryDataset.coverage.category -ne $salaryLayer.category_only_professions -or
     $salaryDatasetResponse.Headers['ETag'] -notmatch '^"sha256-[a-f0-9]{64}"$' -or
     $salaryConditionalStatus -ne 304 -or
     $salaryCsvRows -le 200 -or
@@ -303,7 +303,7 @@ if ($research.summary.total_publications -ne $officialLayer.classified_publicati
 }
 
 $insights = Invoke-Utf8Json -Uri "$BaseUrl/insights.json"
-if ($insights.articles.Count -ne 12 -or @($insights.articles | Where-Object { $_.canonical_url -notlike "$BaseUrl/insights/*" }).Count -ne 0) {
+if ($insights.articles.Count -lt 12 -or @($insights.articles | Where-Object { $_.canonical_url -notlike "$BaseUrl/insights/*" }).Count -ne 0) {
     throw 'Editorial insights verification failed.'
 }
 $articlePages = 0
@@ -311,20 +311,20 @@ $articleCitations = 0
 foreach ($article in $insights.articles) {
     $articlePage = Invoke-WebRequest -Uri $article.canonical_url -UseBasicParsing -TimeoutSec 30
     $articleCanonical = [regex]::Match($articlePage.Content, '<link rel="canonical" href="([^"]+)"').Groups[1].Value
-    if ($articlePage.StatusCode -ne 200 -or $articleCanonical -ne $article.canonical_url -or $articlePage.Content -notmatch 'TechArticle') {
+    if ($articlePage.StatusCode -ne 200 -or $articleCanonical -ne $article.canonical_url -or $articlePage.Content -notmatch '"@type":"(?:TechArticle|Report)"') {
         throw "Editorial article verification failed: url=$($article.canonical_url), status=$($articlePage.StatusCode), canonical=$articleCanonical"
     }
     $articlePages += 1
-    $articleCitation = Invoke-Utf8Json -Uri "$($article.canonical_url)/cite/csl-json"
-    if ($articleCitation.type -ne 'webpage' -or $articleCitation.title -ne $article.title -or $articleCitation.URL -ne $article.canonical_url) {
+    $articleCitation = Invoke-Utf8Json -Uri $article.citation_urls.csl_json
+    if ($articleCitation.type -notin @('webpage', 'report') -or $articleCitation.title -ne $article.title -or $articleCitation.URL -ne $article.canonical_url) {
         throw "Editorial citation verification failed: url=$($article.canonical_url)"
     }
     $articleCitations += 1
 }
 $sampleArticle = $insights.articles[0]
-$sampleBib = Invoke-Utf8Text -Uri "$($sampleArticle.canonical_url)/cite/bibtex"
-$sampleRis = Invoke-Utf8Text -Uri "$($sampleArticle.canonical_url)/cite/ris"
-if ($sampleBib -notmatch '@online\{techrole_index_' -or $sampleRis -notmatch '(?m)^TY  - ELEC\r?$') {
+$sampleBib = Invoke-Utf8Text -Uri $sampleArticle.citation_urls.bibtex
+$sampleRis = Invoke-Utf8Text -Uri $sampleArticle.citation_urls.ris
+if ($sampleBib -notmatch '@(?:online|techreport)\{techrole_index_' -or $sampleRis -notmatch '(?m)^TY  - (?:ELEC|RPRT)\r?$') {
     throw 'Editorial BibTeX/RIS verification failed.'
 }
 

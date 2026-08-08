@@ -1,6 +1,7 @@
 import { api } from "@/lib/api";
 import { conditionalResponse } from "@/lib/conditional-response";
 import { insights } from "@/lib/insights";
+import { observedPublicationPeriod } from "@/lib/market-period";
 import type { OpenDataCatalogItem, ProfessionSummary } from "@/lib/types";
 
 interface Source {
@@ -30,6 +31,9 @@ export async function GET(request: Request) {
   const openDataBySlug = new Map(openData.map((item) => [item.slug, item]));
   const professionLines = professions.map((item) => {
     const observed = openDataBySlug.get(item.slug);
+    const hhObservedPeriod = observed?.hh_market_data
+      ? observedPublicationPeriod(observed.hh_market_data)
+      : null;
     const salary = observed?.salary_by_seniority.map((slice) =>
       `${slice.seniority}: ${slice.median == null ? `Недостаточно данных (n=${slice.sample_size})` : `${Math.round(slice.median).toLocaleString("ru-RU")} ${observed.salary_currency}/месяц, n=${slice.sample_size}`}`,
     ).join("; ");
@@ -50,7 +54,7 @@ export async function GET(request: Request) {
       `- Публичный технологический стек: ${siteUrl}/professions/${item.slug}#tech-stack-title`,
       `- Официальный открытый источник: ${observed ? `${observed.total_publications} классифицированных публикаций за ${observed.date_from} - ${observed.date_to}` : "данные ещё не загружены"}`,
       `- Зарплатные вилки официального источника: ${salary ?? "Недостаточно данных"}; midpoint полных вилок, gross/net не определён`,
-      `- Снимок HH API: ${observed?.hh_market_data ? `${observed.hh_market_data.total_publications} классифицированных вакансий за ${observed.hh_market_data.date_from} - ${observed.hh_market_data.date_to}; зарплата указана у ${observed.hh_market_data.salary_disclosed_count}, gross ${observed.hh_market_data.salary_gross_count}, net ${observed.hh_market_data.salary_net_count}, налоговый статус неизвестен у ${observed.hh_market_data.salary_tax_unknown_count}, удалённых ${observed.hh_market_data.remote_count}` : "данные ещё не загружены"}`,
+      `- Снимок HH API: ${observed?.hh_market_data ? `${observed.hh_market_data.total_publications} классифицированных вакансий с наблюдаемыми публикациями за ${hhObservedPeriod?.dateFrom} - ${hhObservedPeriod?.dateTo}; зарплата указана у ${observed.hh_market_data.salary_disclosed_count}, gross ${observed.hh_market_data.salary_gross_count}, net ${observed.hh_market_data.salary_net_count}, налоговый статус неизвестен у ${observed.hh_market_data.salary_tax_unknown_count}, удалённых ${observed.hh_market_data.remote_count}` : "данные ещё не загружены"}`,
       `- Gross-вилки HH по уровням: ${hhSalary ?? "Недостаточно данных"}; официальный поисковый снимок, не полная историческая база`,
       `- Работодатели HH (топ-5 и остальные): ${hhEmployers || "подробные карточки ещё не обработаны"}`,
       `- Навыки в подробных карточках HH: ${hhSkills || "подробные карточки ещё не обработаны"}`,

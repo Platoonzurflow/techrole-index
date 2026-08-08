@@ -297,10 +297,10 @@ def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
     observed_at = datetime.now(timezone.utc) - timedelta(days=10)
     observations = [
         ("junior", 5, "30000", "50000"),
-        ("middle", 3, "140000", "150000"),
-        ("middle", 3, "160000", "180000"),
-        ("senior", 3, "200000", "220000"),
-        ("senior", 3, "230000", "250000"),
+        ("middle", 5, "140000", "150000"),
+        ("middle", 5, "160000", "180000"),
+        ("senior", 5, "200000", "220000"),
+        ("senior", 5, "230000", "250000"),
     ]
     external_index = 0
     for seniority, count, salary_from, salary_to in observations:
@@ -334,12 +334,12 @@ def test_salary_history_filters_low_midpoints_without_changing_raw_counts():
     response = client.get("/api/v1/professions/role-0?days=180")
     assert response.status_code == 200
     official = response.json()["official_open_data"]
-    assert official["total_publications"] == 37
-    assert official["complete_salary_range_count"] == 37
+    assert official["total_publications"] == 45
+    assert official["complete_salary_range_count"] == 45
     expected_history = {
         "junior": (150000, 20),
-        "middle": (170000, 3),
-        "senior": (240000, 3),
+        "middle": (170000, 5),
+        "senior": (240000, 5),
     }
     for seniority, (expected_average, expected_sample) in expected_history.items():
         points = [
