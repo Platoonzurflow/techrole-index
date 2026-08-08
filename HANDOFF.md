@@ -1,15 +1,18 @@
 # TechRole Index - полный handoff проекта
 
-Последнее обновление: 2026-08-08, Europe/Moscow.
+Последнее обновление: 2026-08-09, Europe/Moscow.
 
 Этот файл предназначен для нового чата или разработчика, который продолжит проект без истории текущего диалога. Перед любыми изменениями необходимо полностью прочитать `AGENTS.md`, затем этот файл, `DECISIONS.md` и профильный документ из списка ниже.
 
-## Актуальный production-релиз (2026-08-08)
+## Актуальный production-релиз (2026-08-09)
 
-- Релиз `fd9ef06f` развёрнут именно на постоянном `https://techrole.ru`, а не только в Tailscale preview. Все девять production-сервисов healthy; внешний HTTPS smoke подтвердил главную, readiness API, обе hero-картинки, страницу профессии и sitemap. Локальные пользовательские изменения `infra/Caddyfile` и `infra/Caddyfile.pre-faktvybor-20260727` на VDS сохранены.
-- Главный экран заменён выбранной светлой Möbius-композицией «Из поиска к первому оферу»: отдельные desktop/mobile изображения лежат в `frontend/public/media`, текст и поиск остаются настоящим HTML, есть лёгкое движение, `prefers-reduced-motion` и отдельное затемнение для тёмной темы. Production standalone теперь явно копирует `public`, иначе эти изображения возвращали бы 404.
-- Карточки Junior/Middle/Senior ищут последнюю единую дату главного точного HH-графика, где у всех трёх уровней `n≥5`, `Middle ≥ Junior × 1,4` и `Senior ≥ Middle × 1,3`. Разные даты и market/category scope не смешиваются. На текущем снимке ни у одной роли ещё нет такой полной тройки, поэтому карточки честно показывают подписанный единый исследовательский резерв, а исходные HH-линии не переставляются и остаются на графике.
-- Полный gate: Ruff, mypy, 153 backend tests; ESLint, TypeScript, 73 frontend tests; production build 103 pages; 46 Playwright passed и 1 sandbox payment intentionally skipped. Staged secret scan — без находок. Перед deploy создан и gzip-проверен backup `/opt/techrole-index/backups/predeploy-1d37e29c-20260808T200523Z.sql.gz` с SHA-256 sidecar и mode `600`.
+- Релиз `d8e46620` развёрнут на постоянном `https://techrole.ru`; migration `0014` применена. Все девять production-сервисов healthy, readiness и главная отвечают `200`. Пользовательские изменения `infra/Caddyfile` и `infra/Caddyfile.pre-faktvybor-20260727` на VDS сохранены.
+- Главная зарплатная модель теперь использует все сопоставимые раскрытия HH конкретной профессии: валюты переводятся по сохранённому курсу ЦБ, net приводится к gross по прогрессивной шкале НДФЛ, односторонние вилки восстанавливаются консервативно. Полная ранжированная выборка делится на Junior/Middle/Senior непрерывными границами, а размеры сегментов следуют собственному распределению требований к опыту роли. Карточки, главный и Premium-графики используют одну модель; их `n` в сумме равен полному числу зарплатных раскрытий.
+- Для системного администратора production-снимок содержит 2 389 вакансий и 1 468 зарплат: Junior `n=148`, средняя gross 39,3 тыс. ₽; Middle `n=769`, 88,0 тыс. ₽; Senior `n=551`, 184,2 тыс. ₽. Во всех 50 профессиях есть зарплатная выборка, всего 14 511 profession-salary наблюдений; у всех ролей сумма трёх сегментов совпадает с собственным HH-счётчиком.
+- Десять слабо наблюдаемых ролей заменены более массовыми IT/digital-профессиями: Mobile Developer, администратор информационных систем, IT sales, специалист по автоматизации, внедрению, web design, SEO, internet marketing, оператор БД и руководитель разработки. Старые URL дают `308` на логически близкие сохранённые роли.
+- Главная сцена больше не является картинкой: Canvas-частицы в реальном времени собирают силуэт человека, реагируют на pointer/touch, SVG-поток проходит через Junior/Middle/Senior к оферу, а светлая/тёмная темы, mobile density и `prefers-reduced-motion` обработаны отдельно.
+- Полный HH run №36: 66 120 строк выдачи, 23 685 уникальных вакансий, 30 696 связей с 50 профессиями, detail-enrichment завершён без ошибок. Материализованы 10 231 HH-срез и 17 482 строки profession metrics; оценки `v1.2.0` пересчитаны для всех 50 ролей на 2026-08-08. IndexNow принял 90 canonical URL.
+- Полный gate прошёл локально и в GitHub: Ruff, mypy, 153 pytest; ESLint, TypeScript, 73 Vitest; production build; production security contract, Compose config, 46 Playwright passed, 1 sandbox payment intentionally skipped, public crawl, citation metadata и Secret scan. Первый hosted E2E cold start превысил только lab TTFB budget; полный повтор прошёл без изменений кода. Перед deploy создан и gzip-проверен backup `/opt/techrole-index/backups/predeploy-d8e46620-20260808T230710Z.sql.gz` с SHA-256 sidecar и mode `600`.
 
 ## Актуальный релиз профессий и HH (2026-08-06)
 
