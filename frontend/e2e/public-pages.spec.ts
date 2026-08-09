@@ -313,7 +313,7 @@ test("cinematic hero exposes the journey visual and profession search", async ({
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: /Из поиска к первому оферу/ })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Интерактивная планета показывает путь через этапы Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают светящееся ядро с офером" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Интерактивная планета с металлическими флагами Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают обсидиановое ядро с золотой гравировкой Офер" })).toBeVisible();
   await expect(page.getByText("Подготовка", { exact: true })).toBeVisible();
   await expect(page.getByText("Проекты", { exact: true })).toBeVisible();
   await expect(page.getByText("Интервью", { exact: true })).toBeVisible();
@@ -332,7 +332,7 @@ test("light and dark career scenes have distinct intentional palettes", async ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
     sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
-    note: getComputedStyle(node.querySelector(".career-3d-stage-note")!).backgroundColor,
+    flag: getComputedStyle(node.querySelector(".career-3d-flag-banner")!).backgroundImage,
   }));
   expect(lightPalette.color).toBe("rgb(20, 20, 22)");
 
@@ -341,12 +341,12 @@ test("light and dark career scenes have distinct intentional palettes", async ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
     sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
-    note: getComputedStyle(node.querySelector(".career-3d-stage-note")!).backgroundColor,
+    flag: getComputedStyle(node.querySelector(".career-3d-flag-banner")!).backgroundImage,
   }));
   expect(darkPalette.background).not.toBe(lightPalette.background);
   expect(darkPalette.color).not.toBe(lightPalette.color);
   expect(darkPalette.sceneBackground).not.toBe(lightPalette.sceneBackground);
-  expect(darkPalette.note).not.toBe(lightPalette.note);
+  expect(darkPalette.flag).not.toBe(lightPalette.flag);
 });
 
 test("catalog search controls use the dark palette", async ({ page }) => {
@@ -449,7 +449,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
 
   const dataScene = page.locator(".career-journey-visual");
   await expect(dataScene).toBeVisible();
-  await expect(dataScene).toHaveAttribute("data-motion", "interactive-brand-planet-journey");
+  await expect(dataScene).toHaveAttribute("data-motion", "interactive-obsidian-flag-planet");
   const sceneLayout = await dataScene.evaluate((node) => {
     const scene = node.getBoundingClientRect();
     const planet = node.querySelector(".career-3d-planet-stage")!.getBoundingClientRect();

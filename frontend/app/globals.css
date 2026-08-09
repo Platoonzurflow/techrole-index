@@ -2514,3 +2514,264 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .career-3d-stage-arrow { opacity: .9; }
   .career-planet-3d-universe[data-interacting="true"] .career-3d-stage-arrow { opacity: .14; }
 }
+
+/* Career journey v7: sculptural metal flags and an obsidian offer core. */
+.career-planet-3d-universe {
+  --flag-metal-bright: #fff2c9;
+  --flag-metal-mid: #d2ad70;
+  --flag-metal-deep: #7a552f;
+  --flag-underside: #db4a52;
+  --flag-pole-light: #f8ddb1;
+  --flag-pole-dark: #282329;
+  --flag-ink: #231b19;
+}
+
+.dark .career-planet-3d-universe {
+  --flag-metal-bright: #f5dfb1;
+  --flag-metal-mid: #b99052;
+  --flag-metal-deep: #5f4022;
+  --flag-underside: #ed555d;
+  --flag-pole-light: #e5bd75;
+  --flag-pole-dark: #111116;
+  --flag-ink: #171215;
+}
+
+.career-3d-stage-flag {
+  --flag-rotation: 0deg;
+  --flag-delay: 0s;
+  position: absolute;
+  z-index: 7;
+  width: clamp(10.4rem, 15.5vw, 13.2rem);
+  height: clamp(7.8rem, 11.8vw, 9.8rem);
+  opacity: .98;
+  filter: drop-shadow(0 18px 18px rgb(42 24 27 / .2));
+  transform: translate(-50%, -50%) rotate(var(--flag-rotation));
+  transform-origin: 13% 88%;
+  animation: career-3d-flag-float 5.6s ease-in-out var(--flag-delay) infinite;
+  transition: opacity .35s ease, filter .35s ease, transform .48s cubic-bezier(.22,.8,.22,1);
+  pointer-events: none;
+}
+
+.career-3d-stage-flag-one {
+  --flag-rotation: -12deg;
+  --flag-delay: -1.1s;
+  top: 31%;
+  left: 31%;
+}
+
+.career-3d-stage-flag-two {
+  --flag-rotation: 0deg;
+  --flag-delay: -2.9s;
+  top: 17%;
+  left: 50%;
+}
+
+.career-3d-stage-flag-three {
+  --flag-rotation: 12deg;
+  --flag-delay: -4.4s;
+  top: 31%;
+  left: 69%;
+}
+
+.career-3d-flag-pole {
+  position: absolute;
+  z-index: 2;
+  top: 4%;
+  left: 10%;
+  width: clamp(.22rem, .36vw, .34rem);
+  height: 88%;
+  border: 1px solid rgb(56 38 28 / .72);
+  border-radius: 999px;
+  background:
+    linear-gradient(90deg, var(--flag-pole-dark) 0 22%, var(--flag-pole-light) 42%, #fff0c8 52%, #8b6338 66%, var(--flag-pole-dark) 82% 100%);
+  box-shadow:
+    inset 1px 0 0 rgb(255 255 255 / .58),
+    inset -1px 0 1px rgb(0 0 0 / .46),
+    0 7px 13px rgb(25 18 20 / .28);
+}
+
+.career-3d-flag-finial {
+  position: absolute;
+  top: -.58rem;
+  left: 50%;
+  width: .72rem;
+  height: .72rem;
+  border: 1px solid #63451f;
+  background: linear-gradient(135deg, #fff4c7 5%, #bb8640 42%, #5b3a18 72%, #e5b564 100%);
+  box-shadow: inset 1px 1px 0 rgb(255 255 255 / .68), 0 3px 8px rgb(25 15 13 / .28);
+  clip-path: polygon(50% 0, 92% 50%, 50% 100%, 8% 50%);
+  content: "";
+  transform: translateX(-50%);
+}
+
+.career-3d-flag-collar {
+  position: absolute;
+  top: 8%;
+  left: 50%;
+  width: .72rem;
+  height: .25rem;
+  border: 1px solid #60421f;
+  border-radius: 999px;
+  background: linear-gradient(#f8d99c, #825927);
+  box-shadow: 0 2px 5px rgb(35 20 17 / .22);
+  transform: translateX(-50%);
+}
+
+.career-3d-flag-base {
+  position: absolute;
+  bottom: -.22rem;
+  left: 50%;
+  width: 1.28rem;
+  height: .48rem;
+  border: 1px solid #62431f;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at 48% 25%, #ffe6ab, #a66e2e 48%, #3c2818 82%);
+  box-shadow: 0 6px 11px rgb(42 20 23 / .26);
+  transform: translateX(-50%);
+}
+
+.career-3d-flag-banner {
+  position: absolute;
+  z-index: 3;
+  top: 11%;
+  left: 11%;
+  display: grid;
+  width: 87%;
+  height: 42%;
+  place-items: center;
+  overflow: hidden;
+  border-left: 1px solid #65451f;
+  background:
+    linear-gradient(156deg, rgb(255 255 255 / .54) 0 9%, transparent 10% 48%, rgb(85 46 22 / .18) 49% 51%, transparent 52%),
+    linear-gradient(168deg, var(--flag-metal-bright) 0 35%, var(--flag-metal-mid) 58%, var(--flag-metal-deep) 100%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / .8),
+    inset 0 -2px 0 rgb(87 48 22 / .56),
+    0 11px 18px rgb(47 27 28 / .2);
+  clip-path: polygon(0 0, 100% 8%, 79% 52%, 100% 91%, 0 100%);
+  transform: perspective(520px) rotateY(-2deg);
+  transform-origin: left center;
+  animation: career-3d-flag-wave 3.4s ease-in-out var(--flag-delay) infinite;
+}
+
+.career-3d-flag-banner::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background: linear-gradient(169deg, transparent 0 61%, var(--flag-underside) 62% 100%);
+  clip-path: polygon(0 58%, 100% 10%, 79% 52%, 100% 91%, 0 100%);
+  content: "";
+  opacity: .94;
+}
+
+.career-3d-flag-banner::after {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  background: repeating-linear-gradient(92deg, rgb(255 255 255 / .05) 0 1px, rgb(70 40 20 / .035) 1px 3px, transparent 3px 7px);
+  content: "";
+  mix-blend-mode: soft-light;
+}
+
+.career-3d-flag-label {
+  position: relative;
+  z-index: 4;
+  max-width: 76%;
+  margin: 0 15% 8% 4%;
+  overflow: hidden;
+  color: var(--flag-ink);
+  font-size: clamp(.68rem, 1.05vw, .88rem);
+  font-weight: 900;
+  letter-spacing: -.035em;
+  line-height: 1;
+  text-overflow: clip;
+  text-shadow: 0 1px 0 rgb(255 255 255 / .38);
+  white-space: nowrap;
+}
+
+.career-3d-flag-fold {
+  position: absolute;
+  z-index: 5;
+  top: 31%;
+  right: 3%;
+  width: 22%;
+  height: 51%;
+  background: linear-gradient(145deg, #fff1c9 0 45%, #8e6436 47% 52%, #d9b679 54% 100%);
+  box-shadow: -3px 3px 6px rgb(67 38 24 / .18);
+  clip-path: polygon(100% 0, 0 51%, 100% 100%, 43% 53%);
+  opacity: .96;
+}
+
+.career-3d-core-engraving {
+  color: transparent;
+  background: linear-gradient(180deg, #fff1bd 0%, #d7a24f 31%, #73491e 49%, #e6b864 68%, #fff3c7 100%);
+  background-clip: text;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(1.42rem, 3vw, 2.72rem);
+  font-weight: 600;
+  letter-spacing: .17em;
+  -webkit-background-clip: text;
+  -webkit-text-stroke: .7px #573412;
+  filter: drop-shadow(0 1px 0 rgb(255 245 207 / .62)) drop-shadow(0 6px 10px rgb(0 0 0 / .72));
+  text-shadow: none;
+}
+
+.dark .career-3d-core-engraving {
+  color: transparent;
+  background: linear-gradient(180deg, #fff4c9 0%, #d6a14d 30%, #6a411a 50%, #e5b15b 70%, #fff0b7 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-stroke-color: #4a2d10;
+  filter: drop-shadow(0 1px 0 rgb(255 245 205 / .7)) drop-shadow(0 0 12px rgb(220 159 72 / .34)) drop-shadow(0 7px 12px rgb(0 0 0 / .82));
+}
+
+.career-planet-3d-universe[data-interacting="true"] .career-3d-stage-flag {
+  opacity: .42;
+  filter: blur(.45px) drop-shadow(0 15px 16px rgb(31 17 20 / .18));
+  animation-play-state: paused;
+  transform: translate(-50%, -50%) rotate(var(--flag-rotation)) translateY(-3px) scale(.97);
+}
+
+.career-planet-3d-universe[data-interacting="true"] .career-3d-flag-banner {
+  animation-play-state: paused;
+}
+
+@keyframes career-3d-flag-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--flag-rotation)) translateY(0); }
+  50% { transform: translate(-50%, -50%) rotate(var(--flag-rotation)) translateY(-4px); }
+}
+
+@keyframes career-3d-flag-wave {
+  0%, 100% { transform: perspective(520px) rotateY(-3deg) skewY(0); }
+  50% { transform: perspective(520px) rotateY(4deg) skewY(.7deg) translateY(-1px); }
+}
+
+@media (max-width: 767px) {
+  .career-3d-stage-flag {
+    width: 8.15rem;
+    height: 6.3rem;
+  }
+  .career-3d-stage-flag-one { top: 41%; left: 35%; }
+  .career-3d-stage-flag-two { top: 36%; left: 50%; }
+  .career-3d-stage-flag-three { top: 41%; left: 65%; }
+  .career-3d-flag-pole { width: .2rem; }
+  .career-3d-flag-finial { top: -.4rem; width: .5rem; height: .5rem; }
+  .career-3d-flag-collar { width: .5rem; height: .19rem; }
+  .career-3d-flag-base { width: .88rem; height: .35rem; }
+  .career-3d-flag-label {
+    margin-right: 16%;
+    font-size: .54rem;
+  }
+  .career-3d-core-engraving {
+    top: 47%;
+    font-size: 1.16rem;
+    letter-spacing: .14em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .career-3d-stage-flag,
+  .career-3d-flag-banner { animation: none !important; }
+  .career-3d-stage-flag { opacity: .98; }
+  .career-planet-3d-universe[data-interacting="true"] .career-3d-stage-flag { opacity: .42; }
+}

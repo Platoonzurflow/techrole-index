@@ -8,17 +8,17 @@ const CareerPlanetScene = dynamic(
   { ssr: false },
 );
 
-function JourneyArrow({ label, position }: { label: string; position: "one" | "two" | "three" }) {
+function JourneyFlag({ label, position }: { label: string; position: "one" | "two" | "three" }) {
   return (
-    <div className={`career-3d-stage-arrow career-3d-stage-arrow-${position}`}>
-      <svg viewBox="0 0 190 82" aria-hidden="true">
-        <path className="career-3d-stage-arrow-shadow" d="M9 58 C43 9 119 8 174 52" />
-        <path className="career-3d-stage-arrow-line" pathLength="100" d="M9 58 C43 9 119 8 174 52" />
-        <path className="career-3d-stage-arrow-head" d="m155 37 20 15-23 7" />
-      </svg>
-      <span className="career-3d-stage-thread" />
-      <span className="career-3d-stage-note">
-        <span>{label}</span>
+    <div className={`career-3d-stage-flag career-3d-stage-flag-${position}`}>
+      <span className="career-3d-flag-pole">
+        <span className="career-3d-flag-finial" />
+        <span className="career-3d-flag-collar" />
+        <span className="career-3d-flag-base" />
+      </span>
+      <span className="career-3d-flag-banner">
+        <span className="career-3d-flag-label">{label}</span>
+        <span className="career-3d-flag-fold" />
       </span>
     </div>
   );
@@ -72,10 +72,10 @@ export function CareerTransformationHero() {
     <figure
       id="career-transformation"
       className="career-journey-visual career-planet-universe career-planet-3d-universe"
-      data-motion="interactive-brand-planet-journey"
+      data-motion="interactive-obsidian-flag-planet"
       data-interacting={planetInteracting ? "true" : "false"}
       role="img"
-      aria-label="Интерактивная планета показывает путь через этапы Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают светящееся ядро с офером"
+      aria-label="Интерактивная планета с металлическими флагами Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают обсидиановое ядро с золотой гравировкой Офер"
     >
       <div className="career-3d-planet-stage" aria-hidden="true">
         {sceneReady ? (
@@ -90,9 +90,9 @@ export function CareerTransformationHero() {
           </div>
         )}
 
-        <JourneyArrow label="Подготовка" position="one" />
-        <JourneyArrow label="Проекты" position="two" />
-        <JourneyArrow label="Интервью" position="three" />
+        <JourneyFlag label="Подготовка" position="one" />
+        <JourneyFlag label="Проекты" position="two" />
+        <JourneyFlag label="Интервью" position="three" />
 
         <div className="career-3d-core-engraving" data-testid="career-planet-core">
           Офер

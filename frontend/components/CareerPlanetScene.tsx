@@ -122,6 +122,7 @@ function PlanetSystem({
 }) {
   const root = useRef<THREE.Group>(null);
   const innerMaterial = useRef<THREE.MeshPhysicalMaterial>(null);
+  const coreVeinMaterial = useRef<THREE.MeshBasicMaterial>(null);
   const coreLight = useRef<THREE.PointLight>(null);
   const tileRefs = useRef<Array<THREE.Mesh | null>>([]);
   const tiles = useMemo(() => buildTiles(), []);
@@ -143,8 +144,8 @@ function PlanetSystem({
   const acceleration = useRef(new THREE.Vector3());
   const lastInteraction = useRef(false);
   const coreColors = useMemo(() => ({
-    closed: new THREE.Color(dark ? "#17161d" : "#6f2732"),
-    open: new THREE.Color(dark ? "#ff5462" : "#ff7580"),
+    closed: new THREE.Color(dark ? "#08090c" : "#211d20"),
+    open: new THREE.Color(dark ? "#100c08" : "#18120d"),
   }), [dark]);
   const { size } = useThree();
   const compact = size.width < 680;
@@ -245,14 +246,22 @@ function PlanetSystem({
     if (innerMaterial.current) {
       innerMaterial.current.emissiveIntensity = THREE.MathUtils.damp(
         innerMaterial.current.emissiveIntensity,
-        maxImpact * 3.4,
+        maxImpact * 0.08,
         maxImpact > 0 ? 9 : 4.5,
         delta,
       );
       innerMaterial.current.color.lerpColors(coreColors.closed, coreColors.open, maxImpact);
       innerMaterial.current.opacity = THREE.MathUtils.damp(
         innerMaterial.current.opacity,
-        0.42 + maxImpact * 0.5,
+        0.82 + maxImpact * 0.12,
+        8,
+        delta,
+      );
+    }
+    if (coreVeinMaterial.current) {
+      coreVeinMaterial.current.opacity = THREE.MathUtils.damp(
+        coreVeinMaterial.current.opacity,
+        0.012 + maxImpact * 0.105,
         8,
         delta,
       );
@@ -260,7 +269,7 @@ function PlanetSystem({
     if (coreLight.current) {
       coreLight.current.intensity = THREE.MathUtils.damp(
         coreLight.current.intensity,
-        maxImpact * 7.2,
+        maxImpact * 0.7,
         8,
         delta,
       );
@@ -281,31 +290,47 @@ function PlanetSystem({
           <icosahedronGeometry args={[1.34, 5]} />
           <meshPhysicalMaterial
             ref={innerMaterial}
-            color={dark ? "#17161d" : "#6f2732"}
-            emissive={dark ? "#ff4554" : "#ff6875"}
+            color={dark ? "#08090c" : "#211d20"}
+            emissive="#d49a46"
             emissiveIntensity={0}
-            roughness={0.24}
-            metalness={0.18}
-            clearcoat={0.58}
-            clearcoatRoughness={0.18}
+            roughness={0.22}
+            metalness={0.34}
+            clearcoat={0.76}
+            clearcoatRoughness={0.12}
             transparent
-            opacity={0.48}
+            opacity={0.82}
           />
         </mesh>
         <mesh scale={0.82}>
           <icosahedronGeometry args={[1.34, 3]} />
           <meshPhysicalMaterial
-            color={dark ? "#43141f" : "#8b2330"}
-            emissive={dark ? "#ff5260" : "#ff7780"}
-            emissiveIntensity={dark ? 0.42 : 0.28}
-            roughness={0.2}
-            metalness={0.22}
-            clearcoat={0.7}
+            color={dark ? "#050506" : "#100e0f"}
+            emissive="#a86f29"
+            emissiveIntensity={dark ? 0.12 : 0.08}
+            roughness={0.18}
+            metalness={0.44}
+            clearcoat={0.78}
             transparent
-            opacity={0.68}
+            opacity={0.94}
           />
         </mesh>
-        <pointLight ref={coreLight} color={dark ? "#ff5361" : "#ff7b84"} intensity={0} distance={7} decay={1.6} />
+        <mesh scale={1.006}>
+          <icosahedronGeometry args={[1.34, 2]} />
+          <meshBasicMaterial
+            ref={coreVeinMaterial}
+            color="#dca554"
+            wireframe
+            transparent
+            opacity={0.012}
+            depthWrite={false}
+            toneMapped={false}
+          />
+        </mesh>
+        <mesh position={[0, 0, 0.64]}>
+          <torusGeometry args={[1.14, 0.032, 12, 96]} />
+          <meshPhysicalMaterial color="#c68b3d" emissive="#8f591d" emissiveIntensity={0.2} roughness={0.24} metalness={0.9} clearcoat={0.72} />
+        </mesh>
+        <pointLight ref={coreLight} color="#e8ad58" intensity={0} distance={6.5} decay={1.7} />
         {tiles.map((tile, index) => {
           const palette = tile.land ? land : ocean;
           const color = palette[Math.min(palette.length - 1, Math.floor(tile.shade * palette.length))];

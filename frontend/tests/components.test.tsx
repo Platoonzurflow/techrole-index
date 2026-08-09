@@ -892,7 +892,7 @@ describe("analytics components", () => {
 
   it("renders the responsive career journey as an accessible visual", () => {
     render(<CareerTransformationHero />);
-    expect(screen.getByRole("img", { name: "Интерактивная планета показывает путь через этапы Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают светящееся ядро с офером" })).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Интерактивная планета с металлическими флагами Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают обсидиановое ядро с золотой гравировкой Офер" })).toBeInTheDocument();
     expect(screen.getByText("Подготовка")).toBeInTheDocument();
     expect(screen.getByText("Проекты")).toBeInTheDocument();
     expect(screen.getByText("Интервью")).toBeInTheDocument();
