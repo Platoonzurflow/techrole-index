@@ -2,7 +2,7 @@
 
 import { RoundedBox, Sparkles } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useMemo, useRef } from "react";
+import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 
 type TileData = {
@@ -15,8 +15,16 @@ type TileData = {
   size: [number, number, number];
   land: boolean;
   shade: number;
-  openStrength: number;
   drift: number;
+};
+
+type TileMotion = {
+  offset: THREE.Vector3;
+  velocity: THREE.Vector3;
+  target: THREE.Vector3;
+  rotation: number;
+  rotationVelocity: number;
+  scale: number;
 };
 
 const PLANET_RADIUS = 1.66;
@@ -30,13 +38,6 @@ function seeded(seed: number) {
 function ease(value: number) {
   const clamped = THREE.MathUtils.clamp(value, 0, 1);
   return clamped * clamped * (3 - 2 * clamped);
-}
-
-function openingAt(phase: number) {
-  if (phase < 0.57) return 0;
-  if (phase < 0.7) return ease((phase - 0.57) / 0.13);
-  if (phase < 0.86) return 1;
-  return 1 - ease((phase - 0.86) / 0.14);
 }
 
 function buildTiles(): TileData[] {
@@ -85,7 +86,6 @@ function buildTiles(): TileData[] {
         + Math.cos(longitude * 1.1 - latitude * 3.4)
         + Math.sin(longitude * 4.2 + latitude * 2.3) * 0.42
       );
-      const openStrength = THREE.MathUtils.clamp((ring.latitude + 12) / 88, 0, 1);
       tiles.push({
         id: `${ring.latitude}-${index}`,
         position,
@@ -100,7 +100,6 @@ function buildTiles(): TileData[] {
         ],
         land: continentSignal > 0.72 || (continentSignal > 0.25 && radial.z > 0.7),
         shade: seeded(serial + 44),
-        openStrength,
         drift: seeded(serial + 54) - 0.5,
       });
       serial += 1;
@@ -280,61 +279,166 @@ function Explorer({ route, reducedMotion }: { route: THREE.CatmullRomCurve3; red
   );
 }
 
-function PlanetSystem({ dark, reducedMotion }: { dark: boolean; reducedMotion: boolean }) {
+function PlanetSystem({
+  dark,
+  pointerPosition,
+  pointerActive,
+  reducedMotion,
+  onInteractionChange,
+}: {
+  dark: boolean;
+  pointerPosition: RefObject<THREE.Vector2>;
+  pointerActive: boolean;
+  reducedMotion: boolean;
+  onInteractionChange?: (interacting: boolean) => void;
+}) {
   const root = useRef<THREE.Group>(null);
   const innerMaterial = useRef<THREE.MeshPhysicalMaterial>(null);
   const coreLight = useRef<THREE.PointLight>(null);
   const tileRefs = useRef<Array<THREE.Mesh | null>>([]);
   const tiles = useMemo(() => buildTiles(), []);
+  const tileMotions = useMemo<TileMotion[]>(() => tiles.map(() => ({
+    offset: new THREE.Vector3(),
+    velocity: new THREE.Vector3(),
+    target: new THREE.Vector3(),
+    rotation: 0,
+    rotationVelocity: 0,
+    scale: 1,
+  })), [tiles]);
+  const worldCenter = useRef(new THREE.Vector3());
+  const worldScale = useRef(new THREE.Vector3());
+  const worldSphere = useRef(new THREE.Sphere());
+  const worldHit = useRef(new THREE.Vector3());
+  const localHit = useRef(new THREE.Vector3());
+  const hitDirection = useRef(new THREE.Vector3());
+  const surfaceAway = useRef(new THREE.Vector3());
+  const acceleration = useRef(new THREE.Vector3());
+  const lastInteraction = useRef(false);
   const coreColors = useMemo(() => ({
     closed: new THREE.Color(dark ? "#112f3d" : "#225b69"),
     open: new THREE.Color(dark ? "#8d2d45" : "#f16470"),
   }), [dark]);
-  const { pointer, size } = useThree();
+  const { size } = useThree();
   const compact = size.width < 680;
   const route = useMemo(() => planetRoute(compact), [compact]);
   const routeGeometry = useMemo(() => new THREE.TubeGeometry(route, 80, 0.025, 8, false), [route]);
 
-  useFrame(({ clock }) => {
+  useEffect(() => () => onInteractionChange?.(false), [onInteractionChange]);
+
+  useFrame(({ camera, clock, raycaster }, frameDelta) => {
     const elapsed = reducedMotion ? CYCLE_SECONDS * 0.78 : clock.elapsedTime;
-    const phase = (elapsed % CYCLE_SECONDS) / CYCLE_SECONDS;
-    const opening = reducedMotion ? 0.82 : openingAt(phase);
+    const delta = Math.min(frameDelta, 1 / 30);
+    let maxImpact = 0;
+    let hasPointerHit = false;
+
     if (root.current) {
       root.current.rotation.y = THREE.MathUtils.lerp(
         root.current.rotation.y,
-        -0.12 + pointer.x * 0.09 + Math.sin(elapsed * 0.2) * 0.025,
+        -0.12 + pointerPosition.current.x * 0.09 + Math.sin(elapsed * 0.2) * 0.025,
         0.045,
       );
       root.current.rotation.x = THREE.MathUtils.lerp(
         root.current.rotation.x,
-        pointer.y * -0.035,
+        pointerPosition.current.y * -0.035,
         0.045,
       );
+      root.current.updateWorldMatrix(true, false);
+
+      if (pointerActive) {
+        root.current.getWorldPosition(worldCenter.current);
+        root.current.getWorldScale(worldScale.current);
+        worldSphere.current.set(
+          worldCenter.current,
+          PLANET_RADIUS * Math.max(worldScale.current.x, worldScale.current.y, worldScale.current.z) * 1.05,
+        );
+        raycaster.setFromCamera(pointerPosition.current, camera);
+        hasPointerHit = Boolean(raycaster.ray.intersectSphere(worldSphere.current, worldHit.current));
+        if (hasPointerHit) {
+          localHit.current.copy(worldHit.current);
+          root.current.worldToLocal(localHit.current);
+          hitDirection.current.copy(localHit.current).normalize();
+        }
+      }
     }
-    if (innerMaterial.current) {
-      innerMaterial.current.emissiveIntensity = THREE.MathUtils.lerp(
-        innerMaterial.current.emissiveIntensity,
-        opening * 2.9,
-        0.08,
-      );
-      innerMaterial.current.color.lerpColors(coreColors.closed, coreColors.open, opening);
-      innerMaterial.current.opacity = 0.42 + opening * 0.5;
-    }
-    if (coreLight.current) coreLight.current.intensity = opening * 6.5;
 
     tiles.forEach((tile, index) => {
       const mesh = tileRefs.current[index];
       if (!mesh) return;
-      const lift = opening * tile.openStrength;
-      const outward = 0.025 + lift * (0.09 + tile.openStrength * 0.13);
-      const rise = lift * (0.12 + tile.openStrength * 0.4);
-      const sideways = lift * tile.drift * 0.2;
-      mesh.position.copy(tile.position)
-        .addScaledVector(tile.radial, outward)
-        .addScaledVector(tile.tangent, sideways);
-      mesh.position.y += rise;
-      mesh.quaternion.copy(tile.quaternion).slerp(tile.openQuaternion, lift * 0.78);
+      const motion = tileMotions[index];
+      motion.target.set(0, 0, 0);
+      let impact = 0;
+
+      if (hasPointerHit) {
+        const chordDistance = tile.radial.distanceTo(hitDirection.current);
+        const proximity = THREE.MathUtils.clamp(1 - chordDistance / 1.18, 0, 1);
+        impact = ease(proximity) * (reducedMotion ? 0.28 : 1);
+        maxImpact = Math.max(maxImpact, impact);
+
+        if (impact > 0) {
+          const alignment = tile.radial.dot(hitDirection.current);
+          surfaceAway.current.copy(tile.radial)
+            .addScaledVector(hitDirection.current, -alignment);
+          if (surfaceAway.current.lengthSq() < 0.0001) {
+            surfaceAway.current.copy(tile.tangent);
+          } else {
+            surfaceAway.current.normalize();
+          }
+
+          const outward = impact * (0.3 + tile.shade * 0.34);
+          const sideways = impact * (0.56 + (1 - tile.shade) * 0.42);
+          motion.target
+            .addScaledVector(tile.radial, outward)
+            .addScaledVector(surfaceAway.current, sideways)
+            .addScaledVector(tile.tangent, tile.drift * impact * 0.24);
+        }
+      }
+
+      const spring = reducedMotion ? 54 : (impact > 0 ? 66 : 46);
+      const damping = reducedMotion ? 15 : (impact > 0 ? 10.5 : 7.4);
+      acceleration.current.copy(motion.target).sub(motion.offset).multiplyScalar(spring);
+      motion.velocity.addScaledVector(acceleration.current, delta);
+      motion.velocity.multiplyScalar(Math.exp(-damping * delta));
+      motion.offset.addScaledVector(motion.velocity, delta);
+
+      const rotationTarget = impact * (0.72 + tile.shade * 0.38);
+      motion.rotationVelocity += (rotationTarget - motion.rotation) * spring * delta;
+      motion.rotationVelocity *= Math.exp(-damping * delta);
+      motion.rotation += motion.rotationVelocity * delta;
+      motion.scale = THREE.MathUtils.damp(motion.scale, 1 + impact * 0.035, impact > 0 ? 14 : 7, delta);
+
+      mesh.position.copy(tile.position).add(motion.offset);
+      mesh.quaternion.copy(tile.quaternion).slerp(tile.openQuaternion, motion.rotation);
+      mesh.scale.setScalar(motion.scale);
     });
+
+    const interacting = hasPointerHit && maxImpact > 0.44;
+    if (interacting !== lastInteraction.current) {
+      lastInteraction.current = interacting;
+      onInteractionChange?.(interacting);
+    }
+    if (innerMaterial.current) {
+      innerMaterial.current.emissiveIntensity = THREE.MathUtils.damp(
+        innerMaterial.current.emissiveIntensity,
+        maxImpact * 3.4,
+        maxImpact > 0 ? 9 : 4.5,
+        delta,
+      );
+      innerMaterial.current.color.lerpColors(coreColors.closed, coreColors.open, maxImpact);
+      innerMaterial.current.opacity = THREE.MathUtils.damp(
+        innerMaterial.current.opacity,
+        0.42 + maxImpact * 0.5,
+        8,
+        delta,
+      );
+    }
+    if (coreLight.current) {
+      coreLight.current.intensity = THREE.MathUtils.damp(
+        coreLight.current.intensity,
+        maxImpact * 7.2,
+        8,
+        delta,
+      );
+    }
   });
 
   const ocean = dark ? ["#2d7888", "#398b99", "#4a9eaa"] : ["#2f8290", "#3b92a0", "#52a6ac"];
@@ -406,42 +510,110 @@ function PlanetSystem({ dark, reducedMotion }: { dark: boolean; reducedMotion: b
 export function CareerPlanetScene({
   dark,
   reducedMotion,
+  onInteractionChange,
 }: {
   dark: boolean;
   reducedMotion: boolean;
+  onInteractionChange?: (interacting: boolean) => void;
 }) {
+  const [pointerActive, setPointerActive] = useState(false);
+  const canvasElement = useRef<HTMLCanvasElement>(null);
+  const pointerPosition = useRef(new THREE.Vector2());
+  const touchReleaseTimer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    const updatePointer = (event: MouseEvent | PointerEvent) => {
+      const rect = canvasElement.current?.getBoundingClientRect();
+      if (!rect || rect.width === 0 || rect.height === 0) return;
+      const localX = event.clientX - rect.left;
+      const localY = event.clientY - rect.top;
+      pointerPosition.current.set(
+        (localX / rect.width) * 2 - 1,
+        -((localY / rect.height) * 2 - 1),
+      );
+      const distance = Math.hypot(localX - rect.width / 2, localY - rect.height / 2);
+      const interactionRadius = Math.min(rect.width, rect.height) * (rect.width < 680 ? 0.34 : 0.32);
+      const inside = localX >= 0
+        && localY >= 0
+        && localX <= rect.width
+        && localY <= rect.height
+        && distance <= interactionRadius;
+      if (inside && touchReleaseTimer.current !== undefined) {
+        window.clearTimeout(touchReleaseTimer.current);
+        touchReleaseTimer.current = undefined;
+      }
+      setPointerActive(inside);
+    };
+    const releasePointer = (event: PointerEvent) => {
+      if (event.pointerType !== "mouse") {
+        touchReleaseTimer.current = window.setTimeout(() => setPointerActive(false), 900);
+      }
+    };
+    const leaveWindow = (event: PointerEvent) => {
+      if (event.relatedTarget === null) setPointerActive(false);
+    };
+    const blurWindow = () => setPointerActive(false);
+    window.addEventListener("pointermove", updatePointer, { passive: true });
+    window.addEventListener("pointerdown", updatePointer, { passive: true });
+    window.addEventListener("pointerup", releasePointer, { passive: true });
+    window.addEventListener("pointerout", leaveWindow, { passive: true });
+    window.addEventListener("blur", blurWindow);
+    return () => {
+      window.removeEventListener("pointermove", updatePointer);
+      window.removeEventListener("pointerdown", updatePointer);
+      window.removeEventListener("pointerup", releasePointer);
+      window.removeEventListener("pointerout", leaveWindow);
+      window.removeEventListener("blur", blurWindow);
+      if (touchReleaseTimer.current !== undefined) window.clearTimeout(touchReleaseTimer.current);
+    };
+  }, []);
+
   return (
-    <Canvas
-      className="career-webgl-canvas"
-      camera={{ position: [0, 0.3, 12.2], fov: 34, near: 0.1, far: 40 }}
-      dpr={[1, 1.65]}
-      gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-      shadows={{ type: THREE.PCFSoftShadowMap }}
-      onCreated={({ gl }) => {
-        gl.outputColorSpace = THREE.SRGBColorSpace;
-        gl.toneMapping = THREE.ACESFilmicToneMapping;
-        gl.toneMappingExposure = dark ? 1.08 : 1.16;
-        gl.setClearColor(0x000000, 0);
-      }}
-    >
-      <ambientLight intensity={dark ? 0.8 : 1.25} color={dark ? "#bcd5ff" : "#e7f4ff"} />
-      <hemisphereLight args={[dark ? "#7899c8" : "#fff8ee", dark ? "#121722" : "#cfb9ae", dark ? 1.3 : 1.65]} />
-      <directionalLight
-        position={[-4, 6, 5]}
-        color="#fff5e8"
-        intensity={dark ? 2.3 : 3.1}
-        castShadow
-        shadow-mapSize-width={1024}
-        shadow-mapSize-height={1024}
-        shadow-camera-near={0.5}
-        shadow-camera-far={14}
-        shadow-camera-left={-4}
-        shadow-camera-right={4}
-        shadow-camera-top={4}
-        shadow-camera-bottom={-4}
+    <>
+      <span
+        className="career-webgl-state"
+        data-pointer-active={pointerActive ? "true" : "false"}
+        aria-hidden="true"
       />
-      <directionalLight position={[4, 1.5, 3]} color="#ef7180" intensity={dark ? 1.3 : 0.85} />
-      <PlanetSystem dark={dark} reducedMotion={reducedMotion} />
-    </Canvas>
+      <Canvas
+        ref={canvasElement}
+        className="career-webgl-canvas"
+        camera={{ position: [0, 0.3, 12.2], fov: 34, near: 0.1, far: 40 }}
+        dpr={[1, 1.65]}
+        gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
+        shadows={{ type: THREE.PCFSoftShadowMap }}
+        onCreated={({ gl }) => {
+          gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.toneMapping = THREE.ACESFilmicToneMapping;
+          gl.toneMappingExposure = dark ? 1.08 : 1.16;
+          gl.setClearColor(0x000000, 0);
+        }}
+      >
+        <ambientLight intensity={dark ? 0.8 : 1.25} color={dark ? "#bcd5ff" : "#e7f4ff"} />
+        <hemisphereLight args={[dark ? "#7899c8" : "#fff8ee", dark ? "#121722" : "#cfb9ae", dark ? 1.3 : 1.65]} />
+        <directionalLight
+          position={[-4, 6, 5]}
+          color="#fff5e8"
+          intensity={dark ? 2.3 : 3.1}
+          castShadow
+          shadow-mapSize-width={1024}
+          shadow-mapSize-height={1024}
+          shadow-camera-near={0.5}
+          shadow-camera-far={14}
+          shadow-camera-left={-4}
+          shadow-camera-right={4}
+          shadow-camera-top={4}
+          shadow-camera-bottom={-4}
+        />
+        <directionalLight position={[4, 1.5, 3]} color="#ef7180" intensity={dark ? 1.3 : 0.85} />
+        <PlanetSystem
+          dark={dark}
+          pointerPosition={pointerPosition}
+          pointerActive={pointerActive}
+          reducedMotion={reducedMotion}
+          onInteractionChange={onInteractionChange}
+        />
+      </Canvas>
+    </>
   );
 }

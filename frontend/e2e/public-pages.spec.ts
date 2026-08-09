@@ -473,6 +473,20 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   expect(sceneLayout.offerInside).toBe(true);
   expect(sceneLayout.backdrop).not.toContain("linear-gradient");
   expect(headingFit.scrollWidth).toBeLessThanOrEqual(headingFit.clientWidth + 1);
+
+  const pointerState = page.locator(".career-webgl-state");
+  await expect(pointerState).toHaveAttribute("data-pointer-active", "false", { timeout: 12_000 });
+  const planetBox = await page.locator(".career-3d-planet-stage").boundingBox();
+  expect(planetBox).not.toBeNull();
+  await page.mouse.move(
+    planetBox!.x + planetBox!.width / 2,
+    planetBox!.y + planetBox!.height / 2,
+  );
+  await expect(pointerState).toHaveAttribute("data-pointer-active", "true");
+  await expect(dataScene).toHaveAttribute("data-interacting", "true");
+  await page.mouse.move(20, 120);
+  await expect(pointerState).toHaveAttribute("data-pointer-active", "false");
+  await expect(dataScene).toHaveAttribute("data-interacting", "false");
 });
 
 test("mobile navigation keeps account reachable without horizontal page overflow", async ({ page }) => {

@@ -2009,8 +2009,8 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 }
 
 /* Career journey v5: real WebGL. The planet is assembled from independent,
-   rounded 3D tiles; the upper rings lift like the Igloo reference and expose
-   an emissive core. The DOM labels stay sharp at every device pixel ratio. */
+   rounded 3D tiles that scatter away from the pointer and spring back. The
+   DOM labels stay sharp at every device pixel ratio. */
 .career-planet-3d-universe::before { content: none; }
 .career-3d-planet-stage {
   position: absolute;
@@ -2051,8 +2051,10 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   inset: 0;
   width: 100% !important;
   height: 100% !important;
+  pointer-events: none !important;
   touch-action: pan-y;
 }
+.career-webgl-state { display: none; }
 .career-3d-planet-fallback {
   position: absolute;
   top: 50%;
@@ -2089,6 +2091,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   transform: translate(-50%, -50%);
   filter: drop-shadow(0 14px 18px rgb(25 42 48 / .17));
   animation: career-3d-sign-hide 16s ease-in-out infinite;
+  transition: opacity .32s ease, filter .32s ease;
   pointer-events: none;
 }
 .career-3d-stage-sign::after {
@@ -2137,8 +2140,17 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   opacity: 0;
   transform: translate(-50%, -50%) scale(.48) rotate(-8deg);
   backdrop-filter: blur(18px);
-  animation: career-3d-offer-reveal 16s cubic-bezier(.2,.8,.2,1) infinite;
+  transition: opacity .28s ease, transform .48s cubic-bezier(.16,.9,.28,1.28);
   pointer-events: none;
+}
+.career-planet-3d-universe[data-interacting="true"] .career-3d-stage-sign {
+  opacity: .08 !important;
+  animation-play-state: paused;
+  filter: blur(2px);
+}
+.career-planet-3d-universe[data-interacting="true"] .career-3d-core-offer {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1) rotate(0);
 }
 .career-3d-core-check {
   display: grid;
@@ -2176,12 +2188,6 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 @keyframes career-3d-sign-one { 0%, 4%, 18%, 56% { opacity: .55; } 9%, 15% { opacity: 1; filter: drop-shadow(0 12px 22px rgb(239 85 96 / .35)); } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .55; } }
 @keyframes career-3d-sign-two { 0%, 21%, 38%, 56% { opacity: .55; } 26%, 34% { opacity: 1; filter: drop-shadow(0 12px 22px rgb(239 85 96 / .35)); } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .55; } }
 @keyframes career-3d-sign-three { 0%, 41%, 56% { opacity: .55; } 46%, 54% { opacity: 1; filter: drop-shadow(0 12px 22px rgb(239 85 96 / .35)); } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .55; } }
-@keyframes career-3d-offer-reveal {
-  0%, 59%, 96%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.48) rotate(-8deg); }
-  70%, 87% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
-  92% { opacity: .7; transform: translate(-50%, -50%) scale(.86) rotate(2deg); }
-}
-
 @media (max-width: 767px) {
   .career-3d-planet-stage {
     top: 40%;
@@ -2196,7 +2202,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .career-3d-stage-sign-one { top: 54%; left: 33%; }
   .career-3d-stage-sign-two { top: 48%; left: 50%; }
   .career-3d-stage-sign-three { top: 54%; left: 67%; }
-  .career-3d-core-offer { top: 76%; min-width: 8.8rem; border-radius: 1rem; padding: .58rem .68rem; transform-origin: center; }
+  .career-3d-core-offer { top: 47%; min-width: 8.8rem; border-radius: 1rem; padding: .58rem .68rem; transform-origin: center; }
   .career-3d-core-check { width: 2rem; height: 2rem; border-radius: .68rem; }
   .career-3d-core-offer small { font-size: .5rem; }
   .career-3d-core-offer strong { font-size: .9rem; }

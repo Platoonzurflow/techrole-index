@@ -12,6 +12,7 @@ export function CareerTransformationHero() {
   const [sceneReady, setSceneReady] = useState(false);
   const [dark, setDark] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [planetInteracting, setPlanetInteracting] = useState(false);
 
   useEffect(() => {
     const motion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -56,12 +57,17 @@ export function CareerTransformationHero() {
       id="career-transformation"
       className="career-journey-visual career-planet-universe career-planet-3d-universe"
       data-motion="segmented-planet-core-journey"
+      data-interacting={planetInteracting ? "true" : "false"}
       role="img"
-      aria-label="Трёхмерный человек проходит по планете этапы Подготовка, Проекты и Интервью; отдельные плиты планеты поднимаются и открывают офер в светящемся ядре"
+      aria-label="Трёхмерный человек проходит по планете этапы Подготовка, Проекты и Интервью; при наведении курсора отдельные плиты разбегаются от него и открывают офер в светящемся ядре"
     >
       <div className="career-3d-planet-stage" aria-hidden="true">
         {sceneReady ? (
-          <CareerPlanetScene dark={dark} reducedMotion={reducedMotion} />
+          <CareerPlanetScene
+            dark={dark}
+            reducedMotion={reducedMotion}
+            onInteractionChange={setPlanetInteracting}
+          />
         ) : (
           <div className="career-3d-planet-fallback">
             <span /><span /><span /><span /><span /><span />
