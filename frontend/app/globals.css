@@ -2221,3 +2221,296 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .career-3d-stage-sign { opacity: 0; }
   .career-3d-core-offer { opacity: 1; transform: translate(-50%, -50%) scale(.92); }
 }
+
+/* Career journey v6: a theme-aware interactive planet with crafted paper
+   milestones. The WebGL tiles remain the interaction surface; the arrow and
+   engraving layers stay crisp and inexpensive on mobile. */
+.career-planet-3d-universe {
+  --journey-arrow: #665a5d;
+  --journey-arrow-soft: rgb(102 90 93 / .18);
+  --journey-thread: #7d6e70;
+  --journey-paper: #fffaf2;
+  --journey-paper-edge: #ddcfc1;
+  --journey-paper-fold: #eadbcf;
+  --journey-ink: #3d2d32;
+}
+
+.dark .career-planet-3d-universe {
+  --journey-arrow: #d9c6ac;
+  --journey-arrow-soft: rgb(217 198 172 / .2);
+  --journey-thread: #b9a991;
+  --journey-paper: #25232a;
+  --journey-paper-edge: #504b55;
+  --journey-paper-fold: #3a3640;
+  --journey-ink: #fff3ef;
+}
+
+.career-3d-planet-stage::before {
+  background: radial-gradient(circle, rgb(216 64 78 / .16), rgb(89 52 61 / .07) 43%, transparent 72%);
+}
+
+.dark .career-3d-planet-stage::before {
+  background: radial-gradient(circle, rgb(255 79 94 / .18), rgb(95 47 61 / .09) 44%, transparent 72%);
+}
+
+.career-3d-planet-fallback {
+  border-color: rgb(255 255 255 / .2);
+  background: radial-gradient(circle at 31% 23%, #a95b66, #6b3440 60%, #3b252c);
+  box-shadow: 0 38px 80px rgb(55 31 38 / .24), 0 0 48px rgb(204 64 78 / .2);
+}
+
+.career-3d-planet-fallback span {
+  border-color: rgb(255 255 255 / .12);
+  background: #e75a65;
+  box-shadow: 0 12px 22px rgb(48 22 29 / .22);
+}
+
+.career-3d-planet-fallback span:nth-child(even) { background: #4c333a; }
+
+.dark .career-3d-planet-fallback {
+  background: radial-gradient(circle at 31% 23%, #42434d, #24252d 61%, #121319);
+  box-shadow: 0 38px 80px rgb(0 0 0 / .46), 0 0 50px rgb(255 75 90 / .16);
+}
+
+.dark .career-3d-planet-fallback span { background: #b83b49; }
+.dark .career-3d-planet-fallback span:nth-child(even) { background: #202129; }
+
+.career-3d-stage-arrow {
+  --arrow-rotation: 0deg;
+  --arrow-delay: 0s;
+  position: absolute;
+  z-index: 6;
+  width: clamp(9.6rem, 14vw, 12rem);
+  height: clamp(7.1rem, 10.5vw, 9rem);
+  opacity: .92;
+  filter: drop-shadow(0 14px 18px rgb(39 24 28 / .12));
+  transform: translate(-50%, -50%) rotate(var(--arrow-rotation));
+  transform-origin: 50% 46%;
+  animation: career-3d-arrow-float 5.8s ease-in-out var(--arrow-delay) infinite;
+  transition: opacity .35s ease, filter .35s ease, transform .45s cubic-bezier(.22,.8,.22,1);
+  pointer-events: none;
+}
+
+.career-3d-stage-arrow-one {
+  --arrow-rotation: -11deg;
+  --arrow-delay: -.8s;
+  top: 29%;
+  left: 31%;
+}
+
+.career-3d-stage-arrow-two {
+  --arrow-rotation: 1deg;
+  --arrow-delay: -2.7s;
+  top: 18%;
+  left: 50%;
+}
+
+.career-3d-stage-arrow-three {
+  --arrow-rotation: 12deg;
+  --arrow-delay: -4.3s;
+  top: 29%;
+  left: 69%;
+}
+
+.career-3d-stage-arrow svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  fill: none;
+}
+
+.career-3d-stage-arrow-shadow,
+.career-3d-stage-arrow-line {
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.career-3d-stage-arrow-shadow {
+  stroke: var(--journey-arrow-soft);
+  stroke-width: 8;
+}
+
+.career-3d-stage-arrow-line {
+  stroke: var(--journey-arrow);
+  stroke-width: 3.2;
+  stroke-dasharray: 14 8;
+  animation: career-3d-arrow-travel 2.2s linear var(--arrow-delay) infinite;
+}
+
+.career-3d-stage-arrow-head {
+  stroke: var(--journey-arrow);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: career-3d-arrow-head 2.2s ease-in-out var(--arrow-delay) infinite;
+}
+
+.career-3d-stage-thread {
+  position: absolute;
+  top: 43%;
+  left: 50%;
+  width: 1px;
+  height: clamp(1.2rem, 2.2vw, 1.8rem);
+  background: linear-gradient(var(--journey-thread), rgb(118 84 90 / .22));
+  box-shadow: 1px 0 0 rgb(255 255 255 / .28);
+  transform: translateX(-50%);
+  transform-origin: top;
+}
+
+.career-3d-stage-thread::before,
+.career-3d-stage-thread::after {
+  position: absolute;
+  left: 50%;
+  border-radius: 50%;
+  background: var(--journey-arrow);
+  content: "";
+  transform: translateX(-50%);
+}
+
+.career-3d-stage-thread::before { top: -.13rem; width: .32rem; height: .32rem; }
+.career-3d-stage-thread::after { bottom: -.18rem; width: .25rem; height: .25rem; }
+
+.career-3d-stage-note {
+  position: absolute;
+  top: 61%;
+  left: 50%;
+  display: grid;
+  min-width: clamp(6rem, 9.5vw, 7.7rem);
+  min-height: clamp(2.25rem, 3.8vw, 3rem);
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid var(--journey-paper-edge);
+  border-radius: .26rem .26rem .72rem .3rem;
+  background:
+    linear-gradient(90deg, transparent 0 11%, rgb(194 79 90 / .08) 11.5% 12.2%, transparent 12.7%),
+    repeating-linear-gradient(180deg, transparent 0 .78rem, rgb(83 70 74 / .055) .82rem .86rem),
+    var(--journey-paper);
+  color: var(--journey-ink);
+  box-shadow: 0 14px 28px rgb(46 28 33 / .16), inset 0 1px 0 rgb(255 255 255 / .66);
+  transform: translateX(-50%) rotate(-1.7deg);
+  transform-origin: 50% -.8rem;
+  animation: career-3d-note-sway 3.7s ease-in-out var(--arrow-delay) infinite;
+}
+
+.career-3d-stage-note::before {
+  position: absolute;
+  top: -.22rem;
+  right: -.22rem;
+  width: .72rem;
+  height: .72rem;
+  border: 1px solid var(--journey-paper-edge);
+  background: linear-gradient(135deg, var(--journey-paper) 0 48%, var(--journey-paper-fold) 49% 100%);
+  box-shadow: -2px 2px 4px rgb(48 32 37 / .08);
+  content: "";
+  transform: rotate(45deg);
+}
+
+.career-3d-stage-note span {
+  position: relative;
+  z-index: 1;
+  padding: .55rem .8rem;
+  font-size: clamp(.66rem, .95vw, .82rem);
+  font-weight: 880;
+  letter-spacing: -.018em;
+  white-space: nowrap;
+}
+
+.career-3d-core-engraving {
+  position: absolute;
+  z-index: 8;
+  top: 51%;
+  left: 50%;
+  color: #ffe9df;
+  font-size: clamp(1.05rem, 2.1vw, 1.72rem);
+  font-weight: 950;
+  letter-spacing: .14em;
+  line-height: 1;
+  opacity: 0;
+  text-shadow:
+    0 -1px 0 rgb(84 18 31 / .92),
+    0 1px 0 rgb(255 255 255 / .42),
+    0 0 18px rgb(255 205 198 / .62),
+    0 7px 18px rgb(65 8 20 / .48);
+  text-transform: uppercase;
+  transform: translate(-50%, -50%) scale(.62);
+  transition: opacity .34s ease, transform .5s cubic-bezier(.16,.9,.28,1.24), letter-spacing .5s ease;
+  pointer-events: none;
+}
+
+.dark .career-3d-core-engraving {
+  color: #fff0e9;
+  text-shadow:
+    0 -1px 0 rgb(76 5 20 / .95),
+    0 1px 0 rgb(255 255 255 / .48),
+    0 0 23px rgb(255 107 120 / .88),
+    0 8px 22px rgb(0 0 0 / .6);
+}
+
+.career-planet-3d-universe[data-interacting="true"] .career-3d-stage-arrow {
+  opacity: .12;
+  filter: blur(1.6px);
+  animation-play-state: paused;
+  transform: translate(-50%, -50%) rotate(var(--arrow-rotation)) scale(.94);
+}
+
+.career-planet-3d-universe[data-interacting="true"] .career-3d-stage-arrow-line,
+.career-planet-3d-universe[data-interacting="true"] .career-3d-stage-arrow-head,
+.career-planet-3d-universe[data-interacting="true"] .career-3d-stage-note {
+  animation-play-state: paused;
+}
+
+.career-planet-3d-universe[data-interacting="true"] .career-3d-core-engraving {
+  opacity: 1;
+  letter-spacing: .2em;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+@keyframes career-3d-arrow-travel {
+  to { stroke-dashoffset: -44; }
+}
+
+@keyframes career-3d-arrow-head {
+  0%, 72%, 100% { opacity: .72; transform: translate(0); }
+  84% { opacity: 1; transform: translate(3px, 1px); }
+}
+
+@keyframes career-3d-arrow-float {
+  0%, 100% { transform: translate(-50%, -50%) rotate(var(--arrow-rotation)) translateY(0); }
+  50% { transform: translate(-50%, -50%) rotate(var(--arrow-rotation)) translateY(-5px); }
+}
+
+@keyframes career-3d-note-sway {
+  0%, 100% { transform: translateX(-50%) rotate(-2.2deg); }
+  50% { transform: translateX(-50%) rotate(2deg); }
+}
+
+@media (max-width: 767px) {
+  .career-3d-stage-arrow {
+    width: 8.6rem;
+    height: 6.3rem;
+  }
+  .career-3d-stage-arrow-one { top: 36%; left: 34%; }
+  .career-3d-stage-arrow-two { top: 29%; left: 50%; }
+  .career-3d-stage-arrow-three { top: 36%; left: 66%; }
+  .career-3d-stage-thread { top: 41%; height: 1.05rem; }
+  .career-3d-stage-note {
+    top: 56%;
+    min-width: 5.2rem;
+    min-height: 2rem;
+    border-radius: .22rem .22rem .56rem .26rem;
+  }
+  .career-3d-stage-note span { padding: .42rem .52rem; font-size: .56rem; }
+  .career-3d-core-engraving { top: 47%; font-size: 1rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .career-3d-stage-arrow,
+  .career-3d-stage-arrow-line,
+  .career-3d-stage-arrow-head,
+  .career-3d-stage-note { animation: none !important; }
+  .career-3d-stage-arrow { opacity: .9; }
+  .career-planet-3d-universe[data-interacting="true"] .career-3d-stage-arrow { opacity: .14; }
+}

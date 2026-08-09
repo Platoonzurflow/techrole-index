@@ -28,7 +28,6 @@ type TileMotion = {
 };
 
 const PLANET_RADIUS = 1.66;
-const CYCLE_SECONDS = 16;
 
 function seeded(seed: number) {
   const value = Math.sin(seed * 91.731 + 17.193) * 43758.5453;
@@ -108,177 +107,6 @@ function buildTiles(): TileData[] {
   return tiles;
 }
 
-function planetRoute(compact: boolean) {
-  return new THREE.CatmullRomCurve3(compact ? [
-    new THREE.Vector3(-1.35, -1.2, 2.04),
-    new THREE.Vector3(-0.78, -1, 2.08),
-    new THREE.Vector3(-0.05, -0.85, 2.1),
-    new THREE.Vector3(0.7, -1, 2.08),
-    new THREE.Vector3(1.34, -1.2, 2.04),
-  ] : [
-    new THREE.Vector3(-1.35, 0.98, 1.2),
-    new THREE.Vector3(-0.78, 1.39, 1.04),
-    new THREE.Vector3(-0.05, 1.56, 0.93),
-    new THREE.Vector3(0.7, 1.38, 1.05),
-    new THREE.Vector3(1.34, 0.93, 1.2),
-  ]);
-}
-
-function Explorer({ route, reducedMotion }: { route: THREE.CatmullRomCurve3; reducedMotion: boolean }) {
-  const group = useRef<THREE.Group>(null);
-  const body = useRef<THREE.Group>(null);
-  const leftArm = useRef<THREE.Group>(null);
-  const rightArm = useRef<THREE.Group>(null);
-  const leftLeg = useRef<THREE.Group>(null);
-  const rightLeg = useRef<THREE.Group>(null);
-  const point = useRef(new THREE.Vector3());
-  const tangent = useRef(new THREE.Vector3());
-
-  useFrame(({ clock }) => {
-    if (!group.current) return;
-    const phase = reducedMotion ? 0.34 : (clock.elapsedTime % CYCLE_SECONDS) / CYCLE_SECONDS;
-    const routeProgress = THREE.MathUtils.clamp(phase / 0.55, 0, 1);
-    route.getPointAt(routeProgress, point.current);
-    route.getTangentAt(routeProgress, tangent.current);
-    const stride = reducedMotion ? 0 : Math.sin(clock.elapsedTime * 10.5);
-    point.current.y += Math.abs(stride) * 0.025;
-    group.current.position.copy(point.current);
-    group.current.rotation.z = THREE.MathUtils.lerp(
-      group.current.rotation.z,
-      -Math.atan2(tangent.current.x, tangent.current.y) * 0.24,
-      0.1,
-    );
-    const visibleScale = phase < 0.58
-      ? 1
-      : phase < 0.64
-        ? 1 - ease((phase - 0.58) / 0.06)
-        : 0;
-    group.current.scale.setScalar(visibleScale * 1.18);
-    if (body.current) body.current.rotation.y = Math.sin(clock.elapsedTime * 2.1) * 0.04;
-    if (leftArm.current) leftArm.current.rotation.z = stride * 0.66;
-    if (rightArm.current) rightArm.current.rotation.z = -stride * 0.66;
-    if (leftLeg.current) leftLeg.current.rotation.z = -stride * 0.52;
-    if (rightLeg.current) rightLeg.current.rotation.z = stride * 0.52;
-  });
-
-  return (
-    <group ref={group} renderOrder={8}>
-      <mesh position={[0, -0.28, -0.02]} rotation={[-Math.PI / 2, 0, 0]}>
-        <circleGeometry args={[0.19, 24]} />
-        <meshBasicMaterial color="#102c37" transparent opacity={0.25} depthWrite={false} />
-      </mesh>
-      <group ref={body}>
-        <mesh position={[0, 0.34, 0.015]} castShadow>
-          <capsuleGeometry args={[0.105, 0.2, 8, 16]} />
-          <meshPhysicalMaterial color="#ef5560" roughness={0.42} clearcoat={0.35} />
-        </mesh>
-        <mesh position={[0, 0.36, 0.11]} scale={[0.7, 0.64, 0.25]}>
-          <sphereGeometry args={[0.1, 20, 12]} />
-          <meshStandardMaterial color="#fff4e9" roughness={0.6} />
-        </mesh>
-        <RoundedBox args={[0.19, 0.25, 0.1]} radius={0.035} smoothness={3} position={[0, 0.35, -0.11]} castShadow>
-          <meshStandardMaterial color="#243b4a" roughness={0.54} />
-        </RoundedBox>
-        <mesh position={[0, 0.67, 0.015]} castShadow>
-          <sphereGeometry args={[0.132, 28, 20]} />
-          <meshPhysicalMaterial color="#ffd2b3" roughness={0.56} clearcoat={0.12} />
-        </mesh>
-        <mesh position={[0, 0.72, -0.015]} scale={[1.04, 0.62, 1.02]} castShadow>
-          <sphereGeometry args={[0.134, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.68]} />
-          <meshStandardMaterial color="#1f3039" roughness={0.72} />
-        </mesh>
-        {[
-          [-0.095, 0.735, 0.025],
-          [-0.052, 0.78, 0.018],
-          [0, 0.795, 0.012],
-          [0.055, 0.778, 0.018],
-          [0.098, 0.735, 0.026],
-        ].map((position, index) => (
-          <mesh key={`hair-${index}`} position={position as [number, number, number]} castShadow>
-            <sphereGeometry args={[0.052, 14, 10]} />
-            <meshStandardMaterial color={index % 2 ? "#253944" : "#192a32"} roughness={0.8} />
-          </mesh>
-        ))}
-        <mesh position={[-0.132, 0.665, 0.015]}>
-          <sphereGeometry args={[0.025, 14, 10]} />
-          <meshStandardMaterial color="#f5b995" roughness={0.62} />
-        </mesh>
-        <mesh position={[0.132, 0.665, 0.015]}>
-          <sphereGeometry args={[0.025, 14, 10]} />
-          <meshStandardMaterial color="#f5b995" roughness={0.62} />
-        </mesh>
-        <mesh position={[-0.043, 0.685, 0.124]}>
-          <sphereGeometry args={[0.012, 12, 8]} />
-          <meshBasicMaterial color="#25323a" />
-        </mesh>
-        <mesh position={[0.043, 0.685, 0.124]}>
-          <sphereGeometry args={[0.012, 12, 8]} />
-          <meshBasicMaterial color="#25323a" />
-        </mesh>
-        <mesh position={[0, 0.635, 0.13]} scale={[1, 0.32, 0.35]}>
-          <sphereGeometry args={[0.03, 16, 8]} />
-          <meshBasicMaterial color="#b85b61" />
-        </mesh>
-        <mesh position={[0, 0.49, 0.105]} rotation={[0.08, 0, 0]}>
-          <torusGeometry args={[0.075, 0.018, 10, 24, Math.PI]} />
-          <meshStandardMaterial color="#fff2e6" roughness={0.52} />
-        </mesh>
-        <mesh position={[0, 0.36, 0.123]}>
-          <boxGeometry args={[0.012, 0.2, 0.008]} />
-          <meshStandardMaterial color="#c83e4a" roughness={0.5} />
-        </mesh>
-        <mesh position={[-0.064, 0.3, 0.128]}>
-          <sphereGeometry args={[0.012, 12, 8]} />
-          <meshStandardMaterial color="#fff5e9" roughness={0.45} />
-        </mesh>
-        <mesh position={[0.064, 0.3, 0.128]}>
-          <sphereGeometry args={[0.012, 12, 8]} />
-          <meshStandardMaterial color="#fff5e9" roughness={0.45} />
-        </mesh>
-
-        <group ref={leftArm} position={[-0.145, 0.46, 0]}>
-          <mesh position={[0, -0.11, 0]} castShadow>
-            <capsuleGeometry args={[0.035, 0.17, 6, 12]} />
-            <meshStandardMaterial color="#ef5560" roughness={0.48} />
-          </mesh>
-          <mesh position={[0, -0.235, 0.01]}>
-            <sphereGeometry args={[0.045, 16, 10]} />
-            <meshStandardMaterial color="#ffd2b3" roughness={0.6} />
-          </mesh>
-        </group>
-        <group ref={rightArm} position={[0.145, 0.46, 0]}>
-          <mesh position={[0, -0.11, 0]} castShadow>
-            <capsuleGeometry args={[0.035, 0.17, 6, 12]} />
-            <meshStandardMaterial color="#ef5560" roughness={0.48} />
-          </mesh>
-          <mesh position={[0, -0.235, 0.01]}>
-            <sphereGeometry args={[0.045, 16, 10]} />
-            <meshStandardMaterial color="#ffd2b3" roughness={0.6} />
-          </mesh>
-        </group>
-        <group ref={leftLeg} position={[-0.064, 0.2, 0]}>
-          <mesh position={[0, -0.15, 0]} castShadow>
-            <capsuleGeometry args={[0.047, 0.23, 7, 12]} />
-            <meshStandardMaterial color="#233946" roughness={0.62} />
-          </mesh>
-          <RoundedBox args={[0.105, 0.065, 0.17]} radius={0.025} smoothness={3} position={[0, -0.31, 0.045]} castShadow>
-            <meshStandardMaterial color="#121b22" roughness={0.75} />
-          </RoundedBox>
-        </group>
-        <group ref={rightLeg} position={[0.064, 0.2, 0]}>
-          <mesh position={[0, -0.15, 0]} castShadow>
-            <capsuleGeometry args={[0.047, 0.23, 7, 12]} />
-            <meshStandardMaterial color="#233946" roughness={0.62} />
-          </mesh>
-          <RoundedBox args={[0.105, 0.065, 0.17]} radius={0.025} smoothness={3} position={[0, -0.31, 0.045]} castShadow>
-            <meshStandardMaterial color="#121b22" roughness={0.75} />
-          </RoundedBox>
-        </group>
-      </group>
-    </group>
-  );
-}
-
 function PlanetSystem({
   dark,
   pointerPosition,
@@ -315,18 +143,16 @@ function PlanetSystem({
   const acceleration = useRef(new THREE.Vector3());
   const lastInteraction = useRef(false);
   const coreColors = useMemo(() => ({
-    closed: new THREE.Color(dark ? "#112f3d" : "#225b69"),
-    open: new THREE.Color(dark ? "#8d2d45" : "#f16470"),
+    closed: new THREE.Color(dark ? "#17161d" : "#6f2732"),
+    open: new THREE.Color(dark ? "#ff5462" : "#ff7580"),
   }), [dark]);
   const { size } = useThree();
   const compact = size.width < 680;
-  const route = useMemo(() => planetRoute(compact), [compact]);
-  const routeGeometry = useMemo(() => new THREE.TubeGeometry(route, 80, 0.025, 8, false), [route]);
 
   useEffect(() => () => onInteractionChange?.(false), [onInteractionChange]);
 
   useFrame(({ camera, clock, raycaster }, frameDelta) => {
-    const elapsed = reducedMotion ? CYCLE_SECONDS * 0.78 : clock.elapsedTime;
+    const elapsed = reducedMotion ? 0 : clock.elapsedTime;
     const delta = Math.min(frameDelta, 1 / 30);
     let maxImpact = 0;
     let hasPointerHit = false;
@@ -441,27 +267,45 @@ function PlanetSystem({
     }
   });
 
-  const ocean = dark ? ["#2d7888", "#398b99", "#4a9eaa"] : ["#2f8290", "#3b92a0", "#52a6ac"];
-  const land = dark ? ["#8caf78", "#9cbe87", "#b0cd99"] : ["#a8ca8b", "#bad99c", "#cbe3aa"];
+  const ocean = dark
+    ? ["#171820", "#22242d", "#30323d"]
+    : ["#442e35", "#5a3941", "#71434c"];
+  const land = dark
+    ? ["#8f2f3e", "#bd3e4c", "#ed5964"]
+    : ["#c9414e", "#e24e5a", "#fb6c76"];
 
   return (
     <group position={[0, compact ? 1.45 : 0.28, 0]} scale={compact ? 0.72 : 0.84}>
       <group ref={root}>
         <mesh castShadow receiveShadow>
-          <sphereGeometry args={[1.34, 64, 48]} />
+          <icosahedronGeometry args={[1.34, 5]} />
           <meshPhysicalMaterial
             ref={innerMaterial}
-            color={dark ? "#112f3d" : "#225b69"}
-            emissive="#ef5560"
+            color={dark ? "#17161d" : "#6f2732"}
+            emissive={dark ? "#ff4554" : "#ff6875"}
             emissiveIntensity={0}
-            roughness={0.3}
-            metalness={0.08}
-            clearcoat={0.38}
+            roughness={0.24}
+            metalness={0.18}
+            clearcoat={0.58}
+            clearcoatRoughness={0.18}
             transparent
-            opacity={0.42}
+            opacity={0.48}
           />
         </mesh>
-        <pointLight ref={coreLight} color="#ff6d75" intensity={0} distance={7} decay={1.6} />
+        <mesh scale={0.82}>
+          <icosahedronGeometry args={[1.34, 3]} />
+          <meshPhysicalMaterial
+            color={dark ? "#43141f" : "#8b2330"}
+            emissive={dark ? "#ff5260" : "#ff7780"}
+            emissiveIntensity={dark ? 0.42 : 0.28}
+            roughness={0.2}
+            metalness={0.22}
+            clearcoat={0.7}
+            transparent
+            opacity={0.68}
+          />
+        </mesh>
+        <pointLight ref={coreLight} color={dark ? "#ff5361" : "#ff7b84"} intensity={0} distance={7} decay={1.6} />
         {tiles.map((tile, index) => {
           const palette = tile.land ? land : ocean;
           const color = palette[Math.min(palette.length - 1, Math.floor(tile.shade * palette.length))];
@@ -489,20 +333,19 @@ function PlanetSystem({
             </RoundedBox>
           );
         })}
-        <mesh geometry={routeGeometry}>
-          <meshBasicMaterial color="#ff737d" transparent opacity={0.9} toneMapped={false} />
-        </mesh>
-        <Explorer route={route} reducedMotion={reducedMotion} />
       </group>
       <mesh position={[0, -1.82, -0.2]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <circleGeometry args={[2.25, 64]} />
         <shadowMaterial color={dark ? "#000000" : "#24363d"} transparent opacity={dark ? 0.42 : 0.18} />
       </mesh>
-      <mesh rotation={[Math.PI / 2.55, 0.12, 0]}>
-        <torusGeometry args={[2.15, 0.011, 6, 160]} />
-        <meshBasicMaterial color="#ef5560" transparent opacity={0.38} toneMapped={false} />
-      </mesh>
-      <Sparkles count={compact ? 34 : 62} scale={[5.3, 4.2, 3.2]} size={compact ? 2.2 : 2.8} speed={0.28} color="#ef6570" opacity={0.62} />
+      <Sparkles
+        count={compact ? 28 : 50}
+        scale={[5.1, 4, 3.1]}
+        size={compact ? 1.8 : 2.35}
+        speed={0.22}
+        color={dark ? "#ff7b85" : "#8f3440"}
+        opacity={dark ? 0.54 : 0.36}
+      />
     </group>
   );
 }
@@ -581,7 +424,7 @@ export function CareerPlanetScene({
         camera={{ position: [0, 0.3, 12.2], fov: 34, near: 0.1, far: 40 }}
         dpr={[1, 1.65]}
         gl={{ alpha: true, antialias: true, powerPreference: "high-performance" }}
-        shadows={{ type: THREE.PCFSoftShadowMap }}
+        shadows={{ type: THREE.PCFShadowMap }}
         onCreated={({ gl }) => {
           gl.outputColorSpace = THREE.SRGBColorSpace;
           gl.toneMapping = THREE.ACESFilmicToneMapping;
@@ -589,8 +432,8 @@ export function CareerPlanetScene({
           gl.setClearColor(0x000000, 0);
         }}
       >
-        <ambientLight intensity={dark ? 0.8 : 1.25} color={dark ? "#bcd5ff" : "#e7f4ff"} />
-        <hemisphereLight args={[dark ? "#7899c8" : "#fff8ee", dark ? "#121722" : "#cfb9ae", dark ? 1.3 : 1.65]} />
+        <ambientLight intensity={dark ? 0.72 : 1.2} color={dark ? "#ffdce1" : "#fff0e7"} />
+        <hemisphereLight args={[dark ? "#a77c89" : "#fff6ed", dark ? "#111118" : "#bea5a6", dark ? 1.25 : 1.6]} />
         <directionalLight
           position={[-4, 6, 5]}
           color="#fff5e8"

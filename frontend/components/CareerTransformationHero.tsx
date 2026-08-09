@@ -8,6 +8,22 @@ const CareerPlanetScene = dynamic(
   { ssr: false },
 );
 
+function JourneyArrow({ label, position }: { label: string; position: "one" | "two" | "three" }) {
+  return (
+    <div className={`career-3d-stage-arrow career-3d-stage-arrow-${position}`}>
+      <svg viewBox="0 0 190 82" aria-hidden="true">
+        <path className="career-3d-stage-arrow-shadow" d="M9 58 C43 9 119 8 174 52" />
+        <path className="career-3d-stage-arrow-line" pathLength="100" d="M9 58 C43 9 119 8 174 52" />
+        <path className="career-3d-stage-arrow-head" d="m155 37 20 15-23 7" />
+      </svg>
+      <span className="career-3d-stage-thread" />
+      <span className="career-3d-stage-note">
+        <span>{label}</span>
+      </span>
+    </div>
+  );
+}
+
 export function CareerTransformationHero() {
   const [sceneReady, setSceneReady] = useState(false);
   const [dark, setDark] = useState(false);
@@ -56,10 +72,10 @@ export function CareerTransformationHero() {
     <figure
       id="career-transformation"
       className="career-journey-visual career-planet-universe career-planet-3d-universe"
-      data-motion="segmented-planet-core-journey"
+      data-motion="interactive-brand-planet-journey"
       data-interacting={planetInteracting ? "true" : "false"}
       role="img"
-      aria-label="Трёхмерный человек проходит по планете этапы Подготовка, Проекты и Интервью; при наведении курсора отдельные плиты разбегаются от него и открывают офер в светящемся ядре"
+      aria-label="Интерактивная планета показывает путь через этапы Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают светящееся ядро с офером"
     >
       <div className="career-3d-planet-stage" aria-hidden="true">
         {sceneReady ? (
@@ -74,19 +90,12 @@ export function CareerTransformationHero() {
           </div>
         )}
 
-        <div className="career-3d-stage-sign career-3d-stage-sign-one">
-          <span>Подготовка</span>
-        </div>
-        <div className="career-3d-stage-sign career-3d-stage-sign-two">
-          <span>Проекты</span>
-        </div>
-        <div className="career-3d-stage-sign career-3d-stage-sign-three">
-          <span>Интервью</span>
-        </div>
+        <JourneyArrow label="Подготовка" position="one" />
+        <JourneyArrow label="Проекты" position="two" />
+        <JourneyArrow label="Интервью" position="three" />
 
-        <div className="career-3d-core-offer" data-testid="career-planet-core">
-          <span className="career-3d-core-check">✓</span>
-          <span><small>В центре маршрута</small><strong>Офер</strong></span>
+        <div className="career-3d-core-engraving" data-testid="career-planet-core">
+          Офер
         </div>
       </div>
       <span className="career-journey-shade" aria-hidden="true" />
