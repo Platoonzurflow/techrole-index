@@ -2007,3 +2007,211 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .career-planet-core { opacity: 1; transform: scale(.88); }
   .career-planet-walker { opacity: 0; }
 }
+
+/* Career journey v5: real WebGL. The planet is assembled from independent,
+   rounded 3D tiles; the upper rings lift like the Igloo reference and expose
+   an emissive core. The DOM labels stay sharp at every device pixel ratio. */
+.career-planet-3d-universe::before { content: none; }
+.career-3d-planet-stage {
+  position: absolute;
+  z-index: 2;
+  top: 5%;
+  right: -9%;
+  width: min(62vw, 54rem);
+  height: 91%;
+  isolation: isolate;
+  pointer-events: auto;
+}
+.career-planet-3d-universe .career-journey-shade {
+  background:
+    linear-gradient(90deg, #f8f5f2 0%, rgb(248 245 242 / .98) 28%, rgb(248 245 242 / .8) 39%, rgb(248 245 242 / .16) 54%, transparent 66%),
+    linear-gradient(0deg, rgb(248 245 242 / .38), transparent 28%);
+}
+.dark .career-planet-3d-universe .career-journey-shade {
+  background:
+    linear-gradient(90deg, #09090b 0%, rgb(9 9 11 / .98) 28%, rgb(9 9 11 / .82) 40%, rgb(9 9 11 / .22) 55%, transparent 68%),
+    linear-gradient(0deg, rgb(9 9 11 / .55), transparent 30%);
+}
+.career-3d-planet-stage::before {
+  position: absolute;
+  z-index: -1;
+  top: 20%;
+  left: 17%;
+  width: 68%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(239 85 96 / .14), rgb(78 148 164 / .07) 44%, transparent 72%);
+  filter: blur(25px);
+  content: "";
+  animation: career-3d-ambient 7s ease-in-out infinite;
+}
+.career-webgl-canvas {
+  position: absolute !important;
+  z-index: 1;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+  touch-action: pan-y;
+}
+.career-3d-planet-fallback {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(46vw, 28rem);
+  aspect-ratio: 1;
+  overflow: hidden;
+  border: 10px solid rgb(255 255 255 / .22);
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 24%, #68b8b8, #2e7485 62%, #173f55);
+  box-shadow: 0 38px 80px rgb(25 46 55 / .22), 0 0 42px rgb(77 161 171 / .24);
+  transform: translate(-50%, -50%);
+}
+.career-3d-planet-fallback span {
+  position: absolute;
+  width: 42%;
+  height: 21%;
+  border: 4px solid rgb(255 255 255 / .18);
+  border-radius: 18%;
+  background: #acd08e;
+  box-shadow: 0 12px 22px rgb(17 53 62 / .2);
+}
+.career-3d-planet-fallback span:nth-child(1) { top: 10%; left: 3%; transform: rotate(-18deg); }
+.career-3d-planet-fallback span:nth-child(2) { top: 4%; right: 2%; transform: rotate(16deg); }
+.career-3d-planet-fallback span:nth-child(3) { top: 37%; left: -9%; transform: rotate(7deg); }
+.career-3d-planet-fallback span:nth-child(4) { top: 35%; right: -8%; transform: rotate(-8deg); }
+.career-3d-planet-fallback span:nth-child(5) { bottom: 8%; left: 4%; transform: rotate(18deg); }
+.career-3d-planet-fallback span:nth-child(6) { right: 3%; bottom: 5%; transform: rotate(-17deg); }
+
+.career-3d-stage-sign {
+  position: absolute;
+  z-index: 6;
+  opacity: .62;
+  transform: translate(-50%, -50%);
+  filter: drop-shadow(0 14px 18px rgb(25 42 48 / .17));
+  animation: career-3d-sign-hide 16s ease-in-out infinite;
+  pointer-events: none;
+}
+.career-3d-stage-sign::after {
+  display: block;
+  width: 3px;
+  height: clamp(2.8rem, 6vw, 5.3rem);
+  margin: -.12rem auto 0;
+  border-radius: 999px;
+  background: linear-gradient(rgb(255 255 255 / .92), rgb(255 255 255 / .28));
+  box-shadow: 0 8px 14px rgb(20 49 58 / .18);
+  content: "";
+}
+.career-3d-stage-sign span {
+  display: block;
+  border: 1px solid rgb(35 62 69 / .13);
+  border-radius: .85rem;
+  background: rgb(255 255 255 / .82);
+  padding: .55rem .76rem;
+  color: #263c43;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .9), 0 16px 42px rgb(49 57 61 / .13);
+  font-size: clamp(.68rem, 1vw, .83rem);
+  font-weight: 850;
+  letter-spacing: -.015em;
+  backdrop-filter: blur(16px);
+  white-space: nowrap;
+}
+.career-3d-stage-sign-one { top: 31%; left: 34%; animation-name: career-3d-sign-one; }
+.career-3d-stage-sign-two { top: 24%; left: 51%; animation-name: career-3d-sign-two; }
+.career-3d-stage-sign-three { top: 31%; left: 68%; animation-name: career-3d-sign-three; }
+
+.career-3d-core-offer {
+  position: absolute;
+  z-index: 8;
+  top: 51%;
+  left: 50%;
+  display: flex;
+  min-width: 10.5rem;
+  align-items: center;
+  gap: .72rem;
+  border: 1px solid rgb(255 255 255 / .72);
+  border-radius: 1.35rem;
+  background: rgb(255 255 255 / .9);
+  padding: .72rem .9rem;
+  color: #2e252a;
+  box-shadow: 0 0 50px rgb(255 117 124 / .7), 0 24px 55px rgb(78 27 37 / .28), inset 0 1px 0 #fff;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.48) rotate(-8deg);
+  backdrop-filter: blur(18px);
+  animation: career-3d-offer-reveal 16s cubic-bezier(.2,.8,.2,1) infinite;
+  pointer-events: none;
+}
+.career-3d-core-check {
+  display: grid;
+  width: 2.45rem;
+  height: 2.45rem;
+  place-items: center;
+  border-radius: .82rem;
+  background: linear-gradient(145deg, #ff8a91, #e94350);
+  color: #fff;
+  box-shadow: 0 9px 24px rgb(239 85 96 / .38);
+  font-size: 1.2rem;
+  font-weight: 900;
+}
+.career-3d-core-offer > span:last-child { display: grid; gap: .08rem; }
+.career-3d-core-offer small { color: #806e74; font-size: .58rem; font-weight: 780; letter-spacing: .05em; text-transform: uppercase; }
+.career-3d-core-offer strong { font-size: 1.05rem; font-weight: 950; letter-spacing: -.025em; }
+
+.dark .career-3d-stage-sign span {
+  border-color: rgb(255 255 255 / .15);
+  background: rgb(16 20 27 / .78);
+  color: rgb(255 255 255 / .9);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .1), 0 18px 45px rgb(0 0 0 / .3);
+}
+.dark .career-3d-stage-sign::after { background: linear-gradient(rgb(255 255 255 / .68), rgb(255 255 255 / .12)); }
+.dark .career-3d-core-offer {
+  border-color: rgb(255 255 255 / .18);
+  background: rgb(17 17 22 / .9);
+  color: #fff;
+  box-shadow: 0 0 60px rgb(239 85 96 / .62), 0 26px 64px rgb(0 0 0 / .42), inset 0 1px 0 rgb(255 255 255 / .12);
+}
+.dark .career-3d-core-offer small { color: rgb(255 255 255 / .52); }
+
+@keyframes career-3d-ambient { 50% { opacity: .62; transform: scale(1.14); } }
+@keyframes career-3d-sign-hide { 0%, 56% { opacity: .62; } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .62; } }
+@keyframes career-3d-sign-one { 0%, 4%, 18%, 56% { opacity: .55; } 9%, 15% { opacity: 1; filter: drop-shadow(0 12px 22px rgb(239 85 96 / .35)); } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .55; } }
+@keyframes career-3d-sign-two { 0%, 21%, 38%, 56% { opacity: .55; } 26%, 34% { opacity: 1; filter: drop-shadow(0 12px 22px rgb(239 85 96 / .35)); } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .55; } }
+@keyframes career-3d-sign-three { 0%, 41%, 56% { opacity: .55; } 46%, 54% { opacity: 1; filter: drop-shadow(0 12px 22px rgb(239 85 96 / .35)); } 63%, 93% { opacity: 0; } 99%, 100% { opacity: .55; } }
+@keyframes career-3d-offer-reveal {
+  0%, 59%, 96%, 100% { opacity: 0; transform: translate(-50%, -50%) scale(.48) rotate(-8deg); }
+  70%, 87% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0); }
+  92% { opacity: .7; transform: translate(-50%, -50%) scale(.86) rotate(2deg); }
+}
+
+@media (max-width: 767px) {
+  .career-3d-planet-stage {
+    top: 40%;
+    right: auto;
+    left: 50%;
+    width: 42rem;
+    height: 35rem;
+    transform: translateX(-50%);
+  }
+  .career-3d-stage-sign span { border-radius: .68rem; padding: .4rem .5rem; font-size: .58rem; }
+  .career-3d-stage-sign::after { height: 3.2rem; }
+  .career-3d-stage-sign-one { top: 54%; left: 33%; }
+  .career-3d-stage-sign-two { top: 48%; left: 50%; }
+  .career-3d-stage-sign-three { top: 54%; left: 67%; }
+  .career-3d-core-offer { top: 76%; min-width: 8.8rem; border-radius: 1rem; padding: .58rem .68rem; transform-origin: center; }
+  .career-3d-core-check { width: 2rem; height: 2rem; border-radius: .68rem; }
+  .career-3d-core-offer small { font-size: .5rem; }
+  .career-3d-core-offer strong { font-size: .9rem; }
+  .career-planet-3d-universe .career-journey-shade {
+    background: linear-gradient(180deg, #f8f5f2 0%, rgb(248 245 242 / .98) 52%, rgb(248 245 242 / .9) 57%, rgb(248 245 242 / .28) 62%, transparent 70%);
+  }
+  .dark .career-planet-3d-universe .career-journey-shade {
+    background: linear-gradient(180deg, #09090b 0%, rgb(9 9 11 / .98) 52%, rgb(9 9 11 / .9) 57%, rgb(9 9 11 / .26) 62%, transparent 70%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .career-3d-planet-stage::before,
+  .career-3d-stage-sign,
+  .career-3d-core-offer { animation: none !important; }
+  .career-3d-stage-sign { opacity: 0; }
+  .career-3d-core-offer { opacity: 1; transform: translate(-50%, -50%) scale(.92); }
+}

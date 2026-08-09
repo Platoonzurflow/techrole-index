@@ -187,10 +187,8 @@ test("profession structured data cites only visible public datasets", async ({ p
 test("grade cards use one complete salary-ranked HH date without market substitution", async ({ page }) => {
   await page.goto("/professions/information-security-specialist");
   const benchmarkSection = page.locator("#salary-benchmark");
-  if (await benchmarkSection.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" }).count() === 0) {
-    await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
-    return;
-  }
+  await expect(page.locator("#salary-level-junior")).toBeVisible();
+  await expect(benchmarkSection.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
   await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
   await expect(benchmarkSection).not.toContainText("HeadHunter - официальный API");
   await expect(benchmarkSection.getByText("модель HH · единый срез", { exact: true })).toHaveCount(0);
@@ -311,11 +309,11 @@ test("cinematic hero exposes the journey visual and profession search", async ({
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: /Из поиска к первому оферу/ })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Человек идёт по планете через этапы Подготовка, Проекты и Интервью; планета раскрывается и показывает офер в ядре" })).toBeVisible();
-  await expect(page.getByText("Подготовка")).toBeVisible();
-  await expect(page.getByText("Проекты")).toBeVisible();
-  await expect(page.getByText("Интервью")).toBeVisible();
-  await expect(page.getByTestId("career-planet-core").getByText("Офер", { exact: true })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Трёхмерный человек проходит по планете этапы Подготовка, Проекты и Интервью; отдельные плиты планеты поднимаются и открывают офер в светящемся ядре" })).toBeVisible();
+  await expect(page.getByText("Подготовка", { exact: true })).toBeVisible();
+  await expect(page.getByText("Проекты", { exact: true })).toBeVisible();
+  await expect(page.getByText("Интервью", { exact: true })).toBeVisible();
+  await expect(page.getByTestId("career-planet-core").getByText("Офер", { exact: true })).toHaveCount(1);
   await page.getByLabel("Название профессии").fill("Python");
   await page.getByRole("button", { name: "Найти профессию" }).click();
   await expect(page).toHaveURL(/\/professions\?query=Python/);
@@ -330,7 +328,7 @@ test("light and dark career scenes have distinct intentional palettes", async ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
     sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
-    sign: getComputedStyle(node.querySelector(".career-planet-stage rect")!).fill,
+    sign: getComputedStyle(node.querySelector(".career-3d-stage-sign span")!).backgroundColor,
   }));
   expect(lightPalette.color).toBe("rgb(20, 20, 22)");
 
@@ -339,7 +337,7 @@ test("light and dark career scenes have distinct intentional palettes", async ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
     sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
-    sign: getComputedStyle(node.querySelector(".career-planet-stage rect")!).fill,
+    sign: getComputedStyle(node.querySelector(".career-3d-stage-sign span")!).backgroundColor,
   }));
   expect(darkPalette.background).not.toBe(lightPalette.background);
   expect(darkPalette.color).not.toBe(lightPalette.color);
@@ -447,11 +445,11 @@ test("homepage search and career journey stay aligned in the dark theme", async 
 
   const dataScene = page.locator(".career-journey-visual");
   await expect(dataScene).toBeVisible();
-  await expect(dataScene).toHaveAttribute("data-motion", "planet-core-journey");
+  await expect(dataScene).toHaveAttribute("data-motion", "segmented-planet-core-journey");
   const sceneLayout = await dataScene.evaluate((node) => {
     const scene = node.getBoundingClientRect();
-    const planet = node.querySelector(".career-planet-scene")!.getBoundingClientRect();
-    const offer = node.querySelector(".career-planet-core-offer")!.getBoundingClientRect();
+    const planet = node.querySelector(".career-3d-planet-stage")!.getBoundingClientRect();
+    const offer = node.querySelector(".career-3d-core-offer")!.getBoundingClientRect();
     return {
       width: scene.width,
       height: scene.height,
