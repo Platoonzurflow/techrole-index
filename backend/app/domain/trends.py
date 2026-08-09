@@ -20,9 +20,15 @@ def calculate_trend(
         return Trend(period_days, None, None, None, "unknown")
     current = fmean(clean_current)
     previous = fmean(clean_previous)
-    if previous == 0:
-        return Trend(period_days, current, previous, None, "unknown")
-    change = ((current - previous) / previous) * 100
+    comparison_base = max(abs(current), abs(previous))
+    if comparison_base == 0:
+        change = 0.0
+    else:
+        # Use the larger adjacent-window average as the base. Demand and salary
+        # are non-negative, so this keeps the public change scale intuitive and
+        # bounded. The clamp also protects the contract if a signed metric is
+        # ever passed here later.
+        change = max(-100.0, min(100.0, ((current - previous) / comparison_base) * 100))
     direction = "up" if change > threshold else "down" if change < -threshold else "neutral"
     return Trend(period_days, current, previous, round(change, 2), direction)
 

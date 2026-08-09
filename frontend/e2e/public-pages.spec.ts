@@ -30,6 +30,18 @@ async function expectHealthyRoutes(request: APIRequestContext, routes: string[])
   }
 }
 
+test("public trend percentages stay on the normalized scale", async ({ request }) => {
+  const response = await getWithTransientRetries(request, "/api/v1/ranking");
+  expect(response.ok()).toBe(true);
+  const ranking = await response.json() as Array<{ weekly_change_percent?: number }>;
+  expect(ranking.length).toBeGreaterThan(0);
+  for (const item of ranking) {
+    if (item.weekly_change_percent == null) continue;
+    expect(item.weekly_change_percent).toBeGreaterThanOrEqual(-100);
+    expect(item.weekly_change_percent).toBeLessThanOrEqual(100);
+  }
+});
+
 test("public methodology is rendered and keyboard reachable", async ({ page }) => { await page.goto("/methodology"); await expect(page.getByRole("heading", { level: 1, name: "Как считаются показатели" })).toBeVisible(); await page.keyboard.press("Tab"); await expect(page.locator(":focus")).toBeVisible(); await expect(page.getByText("Midpoint", { exact: false }).first()).toBeVisible(); });
 
 test("public profession SSR contains seeded level metrics", async ({ page }) => {
@@ -481,7 +493,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   const attachedTiles = (await attachedFlags.evaluateAll((flags) => (
     flags.map((flag) => flag.getAttribute("data-anchor-tile"))
   ))).sort();
-  expect(attachedTiles).toEqual(["59", "68", "69"]);
+  expect(attachedTiles).toEqual(["58", "60", "68"]);
   const flagBasesBefore = await page.locator(".career-3d-flag-base").evaluateAll((bases) => (
     bases.map((base) => {
       const box = base.getBoundingClientRect();
@@ -538,8 +550,17 @@ test("mobile navigation keeps account reachable without horizontal page overflow
       const box = flag.getBoundingClientRect();
       return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
     });
-    return { heroBottom: heroBox.bottom, searchBottom: searchBox.bottom, flagBoxes };
+    const sceneStyles = getComputedStyle(hero.querySelector(".career-planet-3d-universe")!);
+    return {
+      heroBottom: heroBox.bottom,
+      searchBottom: searchBox.bottom,
+      flagBoxes,
+      userSelect: sceneStyles.userSelect,
+      webkitUserSelect: sceneStyles.getPropertyValue("-webkit-user-select"),
+    };
   });
+  expect(animationLayout.userSelect).toBe("none");
+  expect(animationLayout.webkitUserSelect).toBe("none");
   expect(Math.min(...animationLayout.flagBoxes.map((box) => box.top)))
     .toBeGreaterThanOrEqual(animationLayout.searchBottom + 4);
   for (const box of animationLayout.flagBoxes) {

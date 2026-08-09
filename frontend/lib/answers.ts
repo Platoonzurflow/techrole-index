@@ -132,9 +132,12 @@ export function buildAnswerSummary(
   };
   const currentPublications = sumRange(currentFrom, latestDate);
   const previousPublications = sumRange(previousFrom, previousTo);
-  const changePercent = previousPublications > 0
-    ? Math.round(((currentPublications - previousPublications) / previousPublications) * 1000) / 10
-    : null;
+  const comparisonBase = Math.max(Math.abs(currentPublications), Math.abs(previousPublications));
+  const changePercent = latestDate == null
+    ? null
+    : comparisonBase === 0
+      ? 0
+      : Math.round(Math.max(-100, Math.min(100, ((currentPublications - previousPublications) / comparisonBase) * 100)) * 10) / 10;
 
   return {
     date_from: dateFrom,

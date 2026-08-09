@@ -83,7 +83,7 @@ describe("answer-first summary", () => {
       previous_date_from: "2026-07-01",
       previous_date_to: "2026-07-07",
       previous_publications: 7,
-      change_percent: 100,
+      change_percent: 50,
     });
   });
 

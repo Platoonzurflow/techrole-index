@@ -1523,7 +1523,7 @@ def get_profession(
     premium = has_premium(db, user)
     effective_days = min(days, 180 if premium else 30)
     cache_parts = {
-        "schema": "hh-market-v2",
+        "schema": "hh-market-v3-bounded-trends",
         "tier": "premium" if premium else "public",
         "slug": slug,
         "days": effective_days,

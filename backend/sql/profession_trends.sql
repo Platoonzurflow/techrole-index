@@ -14,7 +14,19 @@ WITH daily AS (
     FROM daily
 )
 SELECT *,
-    100 * (demand_7d - demand_prev_7d) / NULLIF(demand_prev_7d, 0) AS demand_change_7d,
-    100 * (salary_7d - salary_prev_7d) / NULLIF(salary_prev_7d, 0) AS salary_change_7d
+    CASE
+        WHEN GREATEST(ABS(demand_7d), ABS(demand_prev_7d)) = 0 THEN 0
+        ELSE GREATEST(-100, LEAST(100,
+            100 * (demand_7d - demand_prev_7d)
+                / NULLIF(GREATEST(ABS(demand_7d), ABS(demand_prev_7d)), 0)
+        ))
+    END AS demand_change_7d,
+    CASE
+        WHEN GREATEST(ABS(salary_7d), ABS(salary_prev_7d)) = 0 THEN 0
+        ELSE GREATEST(-100, LEAST(100,
+            100 * (salary_7d - salary_prev_7d)
+                / NULLIF(GREATEST(ABS(salary_7d), ABS(salary_prev_7d)), 0)
+        ))
+    END AS salary_change_7d
 FROM windows;
 

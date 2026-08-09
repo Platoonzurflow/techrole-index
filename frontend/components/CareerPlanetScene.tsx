@@ -30,8 +30,8 @@ type TileMotion = {
 const PLANET_RADIUS = 1.66;
 const FLAG_STAGES = [
   { tileIndex: 68, label: "Подготовка", position: "one" },
-  { tileIndex: 69, label: "Проекты", position: "two" },
-  { tileIndex: 59, label: "Интервью", position: "three" },
+  { tileIndex: 58, label: "Проекты", position: "two" },
+  { tileIndex: 60, label: "Интервью", position: "three" },
 ] as const;
 type FlagStage = (typeof FLAG_STAGES)[number];
 const FLAG_STAGE_BY_TILE = new Map<number, FlagStage>(
@@ -317,7 +317,7 @@ function PlanetSystem({
     : ["#c9414e", "#e24e5a", "#fb6c76"];
 
   return (
-    <group position={[compact ? -0.04 : 0, compact ? -1.1 : 0.28, 0]} scale={compact ? 0.72 : 0.84}>
+    <group position={[compact ? -0.4 : 0, compact ? -1.1 : 0.28, 0]} scale={compact ? 0.72 : 0.84}>
       <group ref={root}>
         <Html position={[0, 0, 0]} zIndexRange={[9, 9]} wrapperClass="career-3d-core-html">
           <div className="career-3d-core-engraving" data-core-attached="true" data-testid="career-planet-core">

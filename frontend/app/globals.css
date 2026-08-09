@@ -2524,6 +2524,16 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   --flag-pole-light: #f8ddb1;
   --flag-pole-dark: #282329;
   --flag-ink: #231b19;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.career-planet-3d-universe * {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .dark .career-planet-3d-universe {

@@ -59,7 +59,8 @@ export default function MethodologyPage() {
           <h2 className="text-2xl font-semibold">Тренды</h2>
           <div className="mt-5 grid gap-4 leading-7 text-muted">
             <p>Стрелка не сравнивает соседние дни. Для периода N сравниваются средние текущего и предыдущего окна:</p>
-            <p className="rounded-xl bg-slate-500/10 p-4 font-mono text-sm text-ink">Δ% = (avg current N - avg previous N) / avg previous N × 100</p>
+            <p className="rounded-xl bg-slate-500/10 p-4 font-mono text-sm text-ink">Δ% = (avg current N − avg previous N) / max(avg current N, avg previous N) × 100</p>
+            <p>Так шкала остаётся понятной: от −100% до +100%, даже если предыдущее окно было очень маленьким.</p>
             <ul className="grid gap-2"><li>↗ рост: больше +3%</li><li>→ нейтрально: от -3% до +3%</li><li>↘ падение: меньше -3%</li></ul>
             <p>Рассчитываются окна 7, 30 и 90 дней. Для 90-дневного сравнения нужны данные за последние 180 дней.</p>
           </div>
