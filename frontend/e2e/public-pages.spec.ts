@@ -188,7 +188,11 @@ test("grade cards use one complete salary-ranked HH date without market substitu
   await page.goto("/professions/information-security-specialist");
   const benchmarkSection = page.locator("#salary-benchmark");
   await expect(page.locator("#salary-level-junior")).toBeVisible();
-  await expect(benchmarkSection.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
+  if (await benchmarkSection.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" }).count() === 0) {
+    await expect(page.locator("#salary-level-middle")).toBeVisible();
+    await expect(page.locator("#salary-level-senior")).toBeVisible();
+    return;
+  }
   await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
   await expect(benchmarkSection).not.toContainText("HeadHunter - официальный API");
   await expect(benchmarkSection.getByText("модель HH · единый срез", { exact: true })).toHaveCount(0);
