@@ -313,7 +313,7 @@ test("cinematic hero exposes the journey visual and profession search", async ({
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: /Из поиска к первому оферу/ })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Трёхмерный человек проходит по планете этапы Подготовка, Проекты и Интервью; отдельные плиты планеты поднимаются и открывают офер в светящемся ядре" })).toBeVisible();
+  await expect(page.getByRole("img", { name: "Трёхмерный человек проходит по планете этапы Подготовка, Проекты и Интервью; при наведении курсора отдельные плиты разбегаются от него и открывают офер в светящемся ядре" })).toBeVisible();
   await expect(page.getByText("Подготовка", { exact: true })).toBeVisible();
   await expect(page.getByText("Проекты", { exact: true })).toBeVisible();
   await expect(page.getByText("Интервью", { exact: true })).toBeVisible();
