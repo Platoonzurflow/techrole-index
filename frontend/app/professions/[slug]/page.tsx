@@ -67,21 +67,6 @@ function TechStack({ profession }: { profession: ProfessionDetail }) {
   );
 }
 
-function ObservationPeriod({ profession }: { profession: ProfessionDetail }) {
-  const source = profession.official_open_data;
-  if (!source) return null;
-  return (
-    <section id="observation-period" className="observation-period mt-10 scroll-mt-24" aria-label="Период наблюдения">
-      <CalendarDays size={18} aria-hidden="true" />
-      <div>
-        <p className="text-xs font-bold uppercase tracking-[.13em] text-muted">Период наблюдения</p>
-        <p className="mt-1 font-mono font-semibold">{source.date_from} — {source.date_to}</p>
-      </div>
-      <span className={confidenceBadge(source.confidence_level).className}>{confidenceBadge(source.confidence_level).label}</span>
-    </section>
-  );
-}
-
 export default async function ProfessionPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   let profession: ProfessionDetail;
@@ -110,9 +95,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
     { title: "График", items: hhEnrichment.work_schedules },
     { title: "Интервалы работы", items: hhEnrichment.working_time_intervals },
     { title: "Режим времени", items: hhEnrichment.working_time_modes },
-    { title: "Языки", items: hhEnrichment.languages },
     { title: "Образование", items: hhEnrichment.education_levels },
-    { title: "Водительские категории", items: hhEnrichment.driver_license_types },
   ].filter((group) => group.items.length) : [];
   const hasMarketProfile = Boolean(
     hhEnrichment?.top_skills.length
@@ -120,6 +103,22 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
       || profession.skills?.length
       || profession.regions?.length,
   );
+  const sourceLinks: Array<{ label: string; href: string }> = [];
+  if (profession.hh_market_data) sourceLinks.push({ label: "HH", href: profession.hh_market_data.source_url });
+  if (profession.official_open_data) sourceLinks.push({ label: "Работа России", href: profession.official_open_data.source_url });
+  for (const source of profession.salary_benchmark?.sources ?? []) {
+    const label = source.name.includes("Хабр")
+      ? "Хабр Карьера"
+      : source.name.includes("Росстат")
+        ? "Росстат"
+        : source.name.includes("Профсоюз")
+          ? "Профсоюз ИТ"
+          : source.name.includes("Grades")
+            ? "Grades"
+            : source.name;
+    sourceLinks.push({ label, href: source.url });
+  }
+  const uniqueSourceLinks = Array.from(new Map(sourceLinks.map((source) => [source.href, source])).values());
   const schema = {
     "@context": "https://schema.org",
     "@graph": [
@@ -276,10 +275,9 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
       <nav className="profession-toc mt-7 flex flex-wrap gap-2" aria-label="Разделы страницы профессии">
         <a href="#tech-stack">Стек</a>
         <a href="#salary-benchmark">Зарплата</a>
-        <a href="#official-open-data">Динамика</a>
-        {profession.hh_market_data ? <a href="#hh-market-data">HH API</a> : null}
+        {profession.hh_market_data ? <a href="#hh-market-data">Компании</a> : null}
         {!profession.teaser_only && profession.metrics ? <a href="#market-metrics">Расчётный ряд</a> : null}
-        <a href="#market-skills">Навыки и регионы</a>
+        <a href="#market-skills">Рынок</a>
         {!profession.teaser_only && profession.metrics ? <a href="#score-breakdown">Индекс</a> : null}
       </nav>
 
@@ -294,47 +292,10 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
         />
       ) : null}
 
-      {profession.official_open_data ? (
-        <section id="official-open-data" className="market-showcase mt-10 p-5 sm:p-8" aria-labelledby="official-open-data-title">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="eyebrow">Дополнительный официальный слой</p>
-              <h2 id="official-open-data-title" className="mt-2 text-3xl font-semibold">Публикации «Работы России»</h2>
-              <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.official_open_data.methodology_note}</p>
-            </div>
-            <a className="button-secondary" href={profession.official_open_data.source_url} rel="noreferrer">Документация источника</a>
-          </div>
-          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-            <div id="publication-count-exact" className="scroll-mt-24"><p className="text-sm text-muted">Публикации «Работы России»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.total_publications)}</p></div>
-            <div id="publication-count-category" className="scroll-mt-24"><p className="text-sm text-muted">Направление в «Работе России»</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.category_total_publications)}</p></div>
-            <div id="remote-publication-count" className="scroll-mt-24"><p className="text-sm text-muted">С признаком удалённой работы</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.official_open_data.remote_count)}</p></div>
-          </div>
-          <div className="market-footnote mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
-            <p>Точное число относится только к публикациям, уверенно классифицированным как «{profession.name_ru}». Данные направления — отдельный устойчивый контекст и не прибавляются к точному числу.</p>
-          </div>
-        </section>
-      ) : null}
-
       {profession.hh_market_data ? (
-        <section id="hh-market-data" className="market-showcase mt-10 scroll-mt-24 p-5 sm:p-8" aria-labelledby="hh-market-data-title">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="eyebrow">Официальный HH API</p>
-              <h2 id="hh-market-data-title" className="mt-2 text-3xl font-semibold">Снимок вакансий HH</h2>
-              <p className="mt-2 text-xs font-medium text-muted">Наблюдаемые публикации: {hhObservedFrom} — {hhObservedTo}</p>
-              <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{profession.hh_market_data.methodology_note}</p>
-            </div>
-            <a className="button-secondary" href={profession.hh_market_data.source_url} rel="noreferrer">Документация HH API</a>
-          </div>
-          <div className="market-showcase-stats compact-stat-grid mt-7 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div><p className="text-sm text-muted">Совпадения поиска по названию</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.total_publications)}</p></div>
-            <div><p className="text-sm text-muted">С зарплатой</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_disclosed_count)}</p></div>
-            <div><p className="text-sm text-muted">Gross</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_gross_count ?? 0)}</p></div>
-            <div><p className="text-sm text-muted">Net</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.salary_net_count ?? 0)}</p></div>
-            <div><p className="text-sm text-muted">Удалённые</p><p className="mt-2 font-mono text-3xl font-semibold">{compact(profession.hh_market_data.remote_count)}</p></div>
-          </div>
+        <section id="hh-market-data" className="market-showcase mt-10 scroll-mt-24 p-5 sm:p-8" aria-label="Компании и вакансии">
           {hhEnrichment?.employer_distribution.length ? (
-            <article id="top-employers" className="market-stage market-stage-primary mt-7 scroll-mt-24">
+            <article id="top-employers" className="market-stage market-stage-primary scroll-mt-24">
               <div className="market-stage-copy flex flex-wrap items-end justify-between gap-4">
                 <div>
                   <p className="eyebrow">Карта найма</p>
@@ -359,28 +320,21 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
               <Paywall compact title="График вакансий за период более 30 дней — в Premium" />
             )}
           </div>
-          <div className="market-footnote mt-5 rounded-2xl border border-line/80 bg-[rgb(var(--panel-rgb)/.62)] p-4 text-xs leading-5 text-muted">
-            <p>Это официальный поисковый снимок, а не полная копия базы HH. Глубина одной поисковой выдачи ограничена 2 000 результатами. Исходные тексты, контакты и адреса не публикуются; названия работодателей показываются только в агрегированном топ-5, остальные объединены в «Другие компании».</p>
-          </div>
         </section>
       ) : null}
 
       {hasMarketProfile ? (
-        <section id="market-skills" className="market-skills-section panel mt-10 scroll-mt-24 p-5 sm:p-8">
-          <p className="eyebrow">Рынок</p>
-          <h2 className="mt-2 text-3xl font-semibold">Навыки, условия и регионы</h2>
-          <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">
-            Здесь собраны повторяющиеся требования из подробных карточек HH и региональный срез этой профессии. Число рядом с признаком показывает, в скольких вакансиях он указан.
-          </p>
+        <section id="market-skills" className="market-skills-section panel mt-10 scroll-mt-24 p-5 sm:p-6">
+          <h2 className="text-2xl font-semibold">Рынок</h2>
           {hhEnrichment?.top_skills.length ? (
-            <div className="mt-7">
-              <h3 className="text-sm font-semibold">Ключевые навыки HH</h3>
+            <div className="mt-5">
+              <h3 className="text-sm font-semibold">Навыки</h3>
               <div className="mobile-chip-rail mt-3 flex flex-wrap gap-2">
                 {hhEnrichment.top_skills.map((item) => <span key={item.id} className="badge">{item.name} · {item.count}</span>)}
               </div>
             </div>
           ) : profession.skills?.length ? (
-            <div className="mt-7">
+            <div className="mt-5">
               <h3 className="text-sm font-semibold">Упоминания навыков</h3>
               <div className="mobile-chip-rail mt-3 flex flex-wrap gap-2">
                 {profession.skills.map((item) => <span key={item.name} className="badge">{item.name} · {item.count}</span>)}
@@ -388,7 +342,7 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
           ) : null}
           {hhFacetGroups.length ? (
-            <div className="hh-facet-grid mt-7">
+            <div className="hh-facet-grid mt-5">
               {hhFacetGroups.map((group) => (
                 <section className="hh-facet-card" key={group.title}>
                   <h3 className="font-semibold">{group.title}</h3>
@@ -400,15 +354,12 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
           ) : null}
           {profession.regions?.length ? (
-            <div className="mt-8">
+            <div className="mt-6">
               <h3 className="text-sm font-semibold">Вакансии по регионам</h3>
               <div className="market-region-grid mt-3 grid gap-3 sm:grid-cols-2">
                 {profession.regions.map((item) => <div key={item.name} className="flex items-center justify-between border-b border-line pb-3"><span className="flex items-center gap-2"><MapPin size={15} className="text-muted" />{item.name}</span><strong className="font-mono">{item.vacancy_count}</strong></div>)}
               </div>
             </div>
-          ) : null}
-          {hhEnrichment ? (
-            <p className="mobile-clamp mt-7 text-sm leading-7 text-muted">Стажировки: <strong className="text-ink">{hhEnrichment.internship_count.toLocaleString("ru-RU")}</strong> · Ночные смены: <strong className="text-ink">{hhEnrichment.night_shift_count.toLocaleString("ru-RU")}</strong> · Временная работа: <strong className="text-ink">{hhEnrichment.temporary_count.toLocaleString("ru-RU")}</strong> · Трудовой договор: <strong className="text-ink">{hhEnrichment.labor_contract_count.toLocaleString("ru-RU")}</strong> · Нужно сопроводительное письмо: <strong className="text-ink">{hhEnrichment.cover_letter_required_count.toLocaleString("ru-RU")}</strong> · Есть тест: <strong className="text-ink">{hhEnrichment.test_required_count.toLocaleString("ru-RU")}</strong></p>
           ) : null}
         </section>
       ) : null}
@@ -435,8 +386,6 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           </div>
         </>
       ) : null}
-
-      <ObservationPeriod profession={profession} />
 
       {profession.teaser_only || !profession.metrics ? <div className="mt-10"><Paywall title={`Метрики «${profession.name_ru}» доступны в Premium`} /></div> : (
         <>
@@ -467,6 +416,16 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
           </section>
         </>
       )}
+      {uniqueSourceLinks.length ? (
+        <aside id="profession-sources" className="mt-10 flex flex-wrap items-center gap-2 border-t border-line pt-4" aria-label="Источники данных">
+          <span className="mr-1 text-xs font-semibold text-muted">Источники</span>
+          {uniqueSourceLinks.map((source) => (
+            <a key={source.href} href={source.href} target="_blank" rel="noreferrer" className="inline-flex rounded-full border border-line px-3 py-1.5 text-xs text-muted transition hover:border-accent hover:text-accent">
+              {source.label}
+            </a>
+          ))}
+        </aside>
+      ) : null}
     </div>
   );
 }

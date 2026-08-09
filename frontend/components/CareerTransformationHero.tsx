@@ -3,6 +3,8 @@
 import { useEffect, useRef } from "react";
 import { BadgeCheck, Database, Sparkles } from "lucide-react";
 
+type BodyPart = "head" | "torso" | "leftArm" | "rightArm" | "leftLeg" | "rightLeg";
+
 type Particle = {
   x: number;
   y: number;
@@ -12,6 +14,7 @@ type Particle = {
   phase: number;
   speed: number;
   accent: boolean;
+  part: BodyPart;
 };
 
 function seeded(seed: number) {
@@ -54,6 +57,64 @@ function pointInHuman(index: number, total: number, width: number, height: numbe
   ] as const;
 }
 
+function bodyPart(index: number, total: number): BodyPart {
+  const part = index / total;
+  if (part < 0.18) return "head";
+  if (part < 0.57) return "torso";
+  if (part < 0.65) return "leftArm";
+  if (part < 0.73) return "rightArm";
+  if (part < 0.865) return "leftLeg";
+  return "rightLeg";
+}
+
+function rotateAround(x: number, y: number, cx: number, cy: number, angle: number) {
+  const cos = Math.cos(angle);
+  const sin = Math.sin(angle);
+  return [cx + (x - cx) * cos - (y - cy) * sin, cy + (x - cx) * sin + (y - cy) * cos] as const;
+}
+
+function animatedHumanTarget(
+  particle: Particle,
+  width: number,
+  height: number,
+  time: number,
+  reducedMotion: boolean,
+) {
+  if (reducedMotion) return [particle.tx, particle.ty] as const;
+
+  const mobile = width < 768;
+  const cx = width * (mobile ? 0.56 : 0.77);
+  const cy = height * (mobile ? 0.69 : 0.53);
+  const scale = Math.min(width, height) * (mobile ? 0.23 : 0.29);
+  const breath = Math.sin(time * 0.00145);
+  const stride = Math.sin(time * 0.00105);
+  let x = particle.tx;
+  let y = particle.ty;
+
+  if (particle.part === "head") {
+    [x, y] = rotateAround(x, y, cx, cy - scale * 0.62, stride * 0.055);
+    y += breath * scale * 0.012;
+  } else if (particle.part === "torso") {
+    x = cx + (x - cx) * (1 + breath * 0.026);
+    y += breath * scale * 0.008;
+  } else if (particle.part === "leftArm" || particle.part === "rightArm") {
+    const side = particle.part === "leftArm" ? -1 : 1;
+    const shoulderX = cx + side * scale * 0.29;
+    const shoulderY = cy - scale * 0.43;
+    [x, y] = rotateAround(x, y, shoulderX, shoulderY, side * stride * 0.16);
+  } else {
+    const side = particle.part === "leftLeg" ? -1 : 1;
+    const hipX = cx + side * scale * 0.13;
+    const hipY = cy + scale * 0.28;
+    [x, y] = rotateAround(x, y, hipX, hipY, -side * stride * 0.065);
+  }
+
+  [x, y] = rotateAround(x, y, cx, cy + scale * 0.28, Math.sin(time * 0.00072) * 0.025);
+  x += Math.sin(time * 0.00072) * scale * 0.028;
+  y += Math.sin(time * 0.00108 + 0.7) * scale * 0.012;
+  return [x, y] as const;
+}
+
 function drawJourney(
   canvas: HTMLCanvasElement,
   context: CanvasRenderingContext2D,
@@ -76,8 +137,9 @@ function drawJourney(
   for (let index = 0; index < particles.length; index += 1) {
     const particle = particles[index];
     const orbit = reducedMotion ? 0 : 2.2 + particle.size * 0.7;
-    let x = particle.tx + Math.sin(drift * particle.speed + particle.phase) * orbit;
-    let y = particle.ty + Math.cos(drift * particle.speed * 0.83 + particle.phase) * orbit;
+    const [animatedX, animatedY] = animatedHumanTarget(particle, width, height, time, reducedMotion);
+    let x = animatedX + Math.sin(drift * particle.speed + particle.phase) * orbit;
+    let y = animatedY + Math.cos(drift * particle.speed * 0.83 + particle.phase) * orbit;
     if (pointer.active) {
       const dx = x - pointer.x;
       const dy = y - pointer.y;
@@ -88,8 +150,8 @@ function drawJourney(
         y += (dy / distance) * force;
       }
     }
-    particle.x += (x - particle.x) * (reducedMotion ? 1 : 0.055);
-    particle.y += (y - particle.y) * (reducedMotion ? 1 : 0.055);
+    particle.x += (x - particle.x) * (reducedMotion ? 1 : 0.085);
+    particle.y += (y - particle.y) * (reducedMotion ? 1 : 0.085);
 
     const pulse = reducedMotion ? 0.72 : 0.52 + Math.sin(drift * 2 + particle.phase) * 0.2;
     context.beginPath();
@@ -160,6 +222,7 @@ export function CareerTransformationHero() {
           phase: seeded(index + 41) * Math.PI * 2,
           speed: 0.7 + seeded(index + 57) * 1.45,
           accent: seeded(index + 73) > 0.84,
+          part: bodyPart(index, count),
         };
       });
       drawJourney(canvas, context, particles, 0, pointer, document.documentElement.classList.contains("dark"), motion.matches);
@@ -203,6 +266,7 @@ export function CareerTransformationHero() {
     <figure
       id="career-transformation"
       className="career-journey-visual career-data-universe"
+      data-motion="full-body"
       role="img"
       aria-label="Световой поток данных собирается в человека и ведёт его через уровни Junior, Middle и Senior к принятому оферу"
     >

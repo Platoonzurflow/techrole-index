@@ -257,11 +257,8 @@ describe("analytics components", () => {
     expect(within(showcase).queryByText("Выборка")).not.toBeInTheDocument();
     expect(within(showcase).queryByText("Налоговый статус")).not.toBeInTheDocument();
     expect(screen.queryByText("Категорийный fallback")).not.toBeInTheDocument();
-    expect(screen.getAllByText(/n=45[\s\u00a0]226/)).toHaveLength(1);
-    expect(screen.getByRole("link", { name: /Источник/ })).toHaveAttribute(
-      "href",
-      "https://habr.com/ru/specials/1060148/",
-    );
+    expect(screen.queryByText(/n=45[\s\u00a0]226/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: /Источник/ })).not.toBeInTheDocument();
   });
 
   it("fills Junior, Middle and Senior from a sourced study when vacancy samples are small", () => {
@@ -408,8 +405,9 @@ describe("analytics components", () => {
     expect(screen.getByText("100 тыс. ₽")).toBeInTheDocument();
     expect(screen.getByText("120 тыс. ₽")).toBeInTheDocument();
     expect(screen.getByText("170 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getAllByText("модель HH · единый срез")).toHaveLength(3);
-    expect(screen.getAllByText("24 июля 2026 г.")).toHaveLength(3);
+    expect(screen.queryByText("модель HH · единый срез")).not.toBeInTheDocument();
+    expect(screen.queryByText("24 июля 2026 г.")).not.toBeInTheDocument();
+    expect(screen.getByText("n=8 из 129")).toBeInTheDocument();
     expect(screen.queryByText("97 тыс. ₽")).not.toBeInTheDocument();
     expect(screen.queryByText("Вилки «Работы России»")).not.toBeInTheDocument();
   });

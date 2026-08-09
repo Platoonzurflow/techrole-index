@@ -409,7 +409,6 @@ export function OfficialSalaryChart({
             </button>
           ))}
         </div>
-        <span className="text-xs text-muted">gross RUB в месяц · вся зарплатная выборка · окно {data.salary_history_window_days ?? 30} дней</span>
       </div>
       {visibleSummaries.length ? (
         <div className="chart-kpis">
@@ -427,7 +426,6 @@ export function OfficialSalaryChart({
           <p>Пунктир — статичный ориентир открытого исследования, а не историческое наблюдение.</p>
         </div>
       )}
-      <p className="chart-explanation mt-3 text-sm text-muted">Каждый срез использует все совместимые зарплаты HH: значения нормализуются в gross RUB, упорядочиваются и делятся на Junior, Middle и Senior в пропорциях требований к опыту по этой профессии.</p>
     </div>
   );
 }

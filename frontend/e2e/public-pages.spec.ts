@@ -35,15 +35,15 @@ test("public methodology is rendered and keyboard reachable", async ({ page }) =
 test("public profession SSR contains seeded level metrics", async ({ page }) => {
   await page.goto("/professions/python-developer");
   const salaryBenchmark = page.locator("#salary-benchmark");
-  const hasHhSalary = await salaryBenchmark.getByText("Официальный HH API", { exact: true }).count() > 0;
+  const hasHhSalary = await salaryBenchmark.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" }).count() > 0;
   await expect(page.getByRole("heading", { level: 1, name: "Python-разработчик" })).toBeVisible();
   await expect(page.getByText("n=", { exact: false }).first()).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Публикации «Работы России»" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Публикации «Работы России»" })).toHaveCount(0);
   if (hasHhSalary) {
     await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
     await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
-    await expect(salaryBenchmark).toContainText("вся зарплатная выборка · gross RUB");
+    await expect(salaryBenchmark).not.toContainText("вся зарплатная выборка · gross RUB");
     await expect(page.locator("#salary-history")).toBeVisible();
   } else {
     await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
@@ -59,8 +59,9 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   await expect(page.getByRole("button", { name: "Скопировать цитату" })).toBeVisible();
   await expect(salaryBenchmark).toBeVisible();
   await expect(page.locator("#salary-level-junior")).toBeVisible();
-  await expect(page.locator("#publication-count-exact")).toBeVisible();
-  await expect(page.locator("#observation-period")).toBeVisible();
+  await expect(page.locator("#publication-count-exact")).toHaveCount(0);
+  await expect(page.locator("#observation-period")).toHaveCount(0);
+  await expect(page.locator("#profession-sources")).toBeVisible();
 });
 
 test("free profession page exposes only the 30-day main chart", async ({ page }) => {
@@ -124,8 +125,6 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
         return rect.width > 0 && rect.left >= -1 && rect.right <= viewport + 1;
       }),
       tocScrollable: getComputedStyle(document.querySelector(".profession-toc")!).overflowX === "auto",
-      statColumns: getComputedStyle(document.querySelector(".compact-stat-grid")!)
-        .gridTemplateColumns.split(" ").length,
       salaryRailScrollable: (() => {
         const rail = document.querySelector(".salary-level-grid") as HTMLElement | null;
         return rail != null
@@ -140,7 +139,6 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
   expect(layout.sectionsFit).toBe(true);
   expect(layout.chartsFit).toBe(true);
   expect(layout.tocScrollable).toBe(true);
-  expect(layout.statColumns).toBe(2);
   expect(layout.salaryRailScrollable).toBe(true);
   if (selectors.includes("#salary-history")) {
     expect(layout.mainChartHeight).toBeGreaterThan(200);
@@ -187,21 +185,21 @@ test("profession structured data cites only visible public datasets", async ({ p
 test("grade cards use one complete salary-ranked HH date without market substitution", async ({ page }) => {
   await page.goto("/professions/information-security-specialist");
   const benchmarkSection = page.locator("#salary-benchmark");
-  if (await benchmarkSection.getByText("Официальный HH API", { exact: true }).count() === 0) {
+  if (await benchmarkSection.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" }).count() === 0) {
     await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
     return;
   }
   await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
-  await expect(benchmarkSection).toContainText("HeadHunter - официальный API");
-  await expect(benchmarkSection.getByText("модель HH · единый срез", { exact: true }).first()).toBeVisible();
-  await expect(page.locator("#salary-level-junior")).toContainText("Выборка сегмента");
-  await expect(page.locator("#salary-level-middle")).toContainText("Выборка сегмента");
-  await expect(page.locator("#salary-level-senior")).toContainText("Выборка сегмента");
+  await expect(benchmarkSection).not.toContainText("HeadHunter - официальный API");
+  await expect(benchmarkSection.getByText("модель HH · единый срез", { exact: true })).toHaveCount(0);
+  await expect(page.locator("#salary-level-junior")).toContainText("n=");
+  await expect(page.locator("#salary-level-middle")).toContainText("n=");
+  await expect(page.locator("#salary-level-senior")).toContainText("n=");
   await expect(page.getByRole("heading", { name: "Доля публикаций с полной зарплатной вилкой" })).toHaveCount(0);
 
   await page.goto("/professions/it-project-manager");
   await expect(page.locator("#salary-history")).toBeVisible();
-  await expect(page.locator("#salary-history")).toContainText("делятся на три сегмента");
+  await expect(page.locator("#salary-history")).not.toContainText("делятся на три сегмента");
 });
 
 test("weekly report and legal pages are publication-ready", async ({ page }) => {
@@ -231,19 +229,19 @@ test("HH salary uses one complete ranked sample while research remains a sparse 
   await page.goto("/professions/data-scientist");
   await expect(page.getByRole("heading", { level: 1, name: "Data Scientist" })).toBeVisible();
   const benchmarkSection = page.locator("#salary-benchmark");
-  if (await benchmarkSection.getByText("Официальный HH API", { exact: true }).count() === 0) {
+  if (await benchmarkSection.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" }).count() === 0) {
     await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toBeVisible();
     return;
   }
   await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
-  await expect(benchmarkSection).toContainText("HeadHunter - официальный API");
-  await expect(benchmarkSection.getByText("модель HH · единый срез", { exact: true })).toHaveCount(3);
+  await expect(benchmarkSection).not.toContainText("HeadHunter - официальный API");
+  await expect(benchmarkSection.getByText("модель HH · единый срез", { exact: true })).toHaveCount(0);
   await expect(benchmarkSection).not.toContainText("нет согласованного среза HH");
-  await expect(page.locator("#salary-history")).toContainText("вся зарплатная выборка");
+  await expect(page.locator("#salary-history")).not.toContainText("вся зарплатная выборка");
 
   await page.goto("/professions/information-security-specialist");
   const salaryHistory = page.locator("#salary-history");
-  await expect(salaryHistory).toContainText("gross RUB в месяц");
+  await expect(salaryHistory).not.toContainText("gross RUB в месяц");
   await expect(salaryHistory).not.toContainText("Junior от");
   await expect(salaryHistory).not.toContainText("Middle от");
   await expect(salaryHistory).not.toContainText("Senior от");
@@ -444,6 +442,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
 
   const dataScene = page.locator(".career-journey-visual");
   await expect(dataScene).toBeVisible();
+  await expect(dataScene).toHaveAttribute("data-motion", "full-body");
   const sceneLayout = await dataScene.evaluate((node) => {
     const scene = node.getBoundingClientRect();
     const canvas = node.querySelector(".career-particle-canvas")!.getBoundingClientRect();
@@ -455,6 +454,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
         && canvas.top <= scene.top && canvas.bottom >= scene.bottom,
       offerInside: offer.left >= scene.left && offer.right <= scene.right
         && offer.top >= scene.top && offer.bottom <= scene.bottom,
+      gridContent: getComputedStyle(node, "::before").content,
     };
   });
   const headingFit = await page.locator(".cinematic-copy h1").evaluate((node) => ({
@@ -465,6 +465,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   expect(sceneLayout.height).toBeGreaterThan(500);
   expect(sceneLayout.canvasCovers).toBe(true);
   expect(sceneLayout.offerInside).toBe(true);
+  expect(sceneLayout.gridContent).toBe("none");
   expect(headingFit.scrollWidth).toBeLessThanOrEqual(headingFit.clientWidth + 1);
 });
 
@@ -473,7 +474,10 @@ test("mobile navigation keeps account reachable without horizontal page overflow
   await page.goto("/");
   const mobileNavigation = page.getByRole("navigation", { name: "Мобильная навигация" });
   await expect(mobileNavigation.getByRole("link", { name: "Кабинет" })).toBeVisible();
-  await expect(mobileNavigation.getByRole("link", { name: "Исследования" })).toHaveAttribute("href", "/insights");
+  await expect(mobileNavigation.getByRole("link", { name: "Исследования" })).toHaveCount(0);
+  await expect(mobileNavigation.getByRole("link", { name: "Методология" })).toHaveCount(0);
+  await expect(page.locator("footer").getByRole("link", { name: "Исследования и разборы" })).toHaveAttribute("href", "/insights");
+  await expect(page.locator("footer").getByRole("link", { name: "Методология" })).toHaveAttribute("href", "/methodology");
   const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client + 1);
 });
