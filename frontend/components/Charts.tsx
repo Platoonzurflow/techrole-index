@@ -19,6 +19,12 @@ const colors = { junior: "#2694a8", middle: "#c85a38", senior: "#8a63a7" };
 const levelLabels = { junior: "Junior", middle: "Middle", senior: "Senior" } as const;
 const employerColors = ["#ff5b62", "#2694a8", "#f2b84b", "#8a63a7", "#3d9b73", "#8b95a7"];
 
+function salaryHistoryValue(
+  point: OfficialOpenDataSummary["salary_history"][number] | undefined,
+) {
+  return point?.median ?? point?.average;
+}
+
 function shortDateLabel(value: string) {
   const date = value.slice(0, 10);
   return /^\d{4}-\d{2}-\d{2}$/.test(date)
@@ -42,7 +48,8 @@ function Chart({
       renderer: "canvas",
       devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
     });
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const reducedMotion = typeof window.matchMedia === "function"
+      && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const compactOption: echarts.EChartsOption = {
       ...(option.legend ? {
         legend: {
@@ -318,9 +325,9 @@ export function OfficialSalaryChart({
   const salarySeries: LineSeriesOption[] = [];
   for (const level of salaryLevelOrder) {
     const points = data.salary_history.filter((item) => item.seniority === level);
-    const visiblePoints = points.filter((item) => item.average != null).length;
+    const visiblePoints = points.filter((item) => salaryHistoryValue(item) != null).length;
     if (visiblePoints > 0) {
-      const scope = points.find((item) => item.average != null)?.scope ?? points[0]?.scope ?? "profession";
+      const scope = points.find((item) => salaryHistoryValue(item) != null)?.scope ?? points[0]?.scope ?? "profession";
       const scopeLabel = scope === "category"
         ? "направление"
         : scope === "market"
@@ -345,7 +352,7 @@ export function OfficialSalaryChart({
           ]),
         },
         itemStyle: { color: colors[level] },
-        data: dates.map((date) => points.find((item) => item.date === date)?.average ?? null),
+        data: dates.map((date) => salaryHistoryValue(points.find((item) => item.date === date)) ?? null),
       });
       continue;
     }
@@ -384,9 +391,10 @@ export function OfficialSalaryChart({
   const visibleSummaries = salaryLevelOrder.flatMap((level) => {
     const point = [...data.salary_history]
       .reverse()
-      .find((item) => item.seniority === level && item.average != null && dates.includes(item.date));
-    return point?.average != null
-      ? [{ level, value: point.average, scope: point.scope, sampleSize: point.sample_size }]
+      .find((item) => item.seniority === level && salaryHistoryValue(item) != null && dates.includes(item.date));
+    const value = salaryHistoryValue(point);
+    return point && value != null
+      ? [{ level, value, scope: point.scope, sampleSize: point.sample_size }]
       : [];
   });
 

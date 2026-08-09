@@ -110,8 +110,8 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
         assert result.vacancy_count == 15
         assert result.metric_rows == 18
         assert latest is not None
-        assert latest.vacancy_count == 5
-        assert latest.salary_count == 5
+        assert latest.vacancy_count == 8
+        assert latest.salary_count == 8
         assert latest.salary_median == Decimal("150000")
         assert latest.remote_share == Decimal("0.06667")
         retained = db.scalar(
@@ -130,7 +130,9 @@ def test_refresh_hh_profession_metrics_uses_exact_profession_windows() -> None:
             days=10,
         )
         assert any(
-            point.date == retained_date and point.average == 140000
+            point.date == retained_date
+            and point.median == 140000
+            and point.average == 140000
             for point in accumulated_history
         )
     engine.dispose()

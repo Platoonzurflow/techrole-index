@@ -310,16 +310,14 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
               <HhEmployerDashboard data={hhEnrichment} />
             </article>
           ) : null}
-          <div className="secondary-chart-grid mt-5 grid gap-5 lg:grid-cols-2">
-            {profession.history_days === 180 ? (
+          {profession.history_days === 180 ? (
+            <div className="secondary-chart-grid mt-5 grid gap-5 lg:grid-cols-2">
               <article className="market-stage">
                 <div className="market-stage-copy"><p className="eyebrow">Поток публикаций</p><h3 className="mt-2 text-2xl font-semibold">Новые вакансии по неделям</h3><p className="mt-3 max-w-4xl text-sm leading-6 text-muted">Поиск выполнен по названию профессии и алиасам. Совпадения дедуплицированы по идентификатору вакансии.</p></div>
                 <div className="mt-5"><PublicationChart data={profession.hh_market_data} minimumExactPublications={5} /></div>
               </article>
-            ) : (
-              <Paywall compact title="График вакансий за период более 30 дней — в Premium" />
-            )}
-          </div>
+            </div>
+          ) : null}
         </section>
       ) : null}
 
@@ -375,15 +373,22 @@ export default async function ProfessionPage({ params }: { params: Promise<{ slu
             </div>
           </section>
 
-          <div className="prepared-chart-grid mt-12 grid gap-5 lg:grid-cols-2">
+          {profession.history_days === 180 ? <div className="prepared-chart-grid mt-12 grid gap-5 lg:grid-cols-2">
             <section id="prepared-vacancy-history" className="prepared-chart-panel panel scroll-mt-24 p-5">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div><p className="eyebrow">Подготовленная модель спроса</p><h2 className="mt-2 text-2xl font-semibold">Расчётный ряд вакансий</h2><p className="mobile-clamp mt-3 max-w-3xl text-sm leading-6 text-muted">Скользящий 30-дневный объём точных HH-вакансий по уровням Junior, Middle и Senior.</p></div>
                 <div className="flex gap-2"><TrendBadge trend={profession.vacancy_trends?.["7"]} label="7д" /><TrendBadge trend={profession.vacancy_trends?.["30"]} label="30д" /><TrendBadge trend={profession.vacancy_trends?.["90"]} label="90д" /></div>
               </div>
-              {profession.history_days === 180 ? <VacancyChart metrics={profession.metrics} /> : <div className="mt-5"><Paywall compact title="Расширенный ряд вакансий — в Premium" /></div>}
+              <VacancyChart metrics={profession.metrics} />
             </section>
-          </div>
+          </div> : (
+            <div className="mt-10">
+              <Paywall
+                title="Графики вакансий за 180 дней — в Premium"
+                description="Один Premium-доступ открывает поток новых публикаций и расширенный расчётный ряд вакансий."
+              />
+            </div>
+          )}
         </>
       ) : null}
 

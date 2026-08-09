@@ -54,6 +54,10 @@ export type CoherentSalarySnapshot = {
   points: Record<SalaryLevel, SalaryHistoryPoint>;
 };
 
+function salaryHistoryValue(point: SalaryHistoryPoint) {
+  return point.median ?? point.average;
+}
+
 export function selectCoherentSalarySnapshot(
   official: OfficialOpenDataSummary,
 ): CoherentSalarySnapshot | undefined {
@@ -61,7 +65,7 @@ export function selectCoherentSalarySnapshot(
 
   for (const point of official.salary_history) {
     if (
-      point.average == null
+      salaryHistoryValue(point) == null
       || point.sample_size < official.salary_min_sample
       || (point.scope != null && point.scope !== "profession")
     ) continue;
@@ -78,9 +82,9 @@ export function selectCoherentSalarySnapshot(
     const middle = points.middle;
     const senior = points.senior;
     if (
-      junior?.average != null
-      && middle?.average != null
-      && senior?.average != null
+      junior && salaryHistoryValue(junior) != null
+      && middle && salaryHistoryValue(middle) != null
+      && senior && salaryHistoryValue(senior) != null
     ) {
       return { date, points: { junior, middle, senior } };
     }
@@ -215,6 +219,7 @@ export function SalaryBenchmarks({
         <div>
           {!usesHhSalary ? <p className="eyebrow">Зарплатные ориентиры</p> : null}
           <h2 id="salary-benchmark-title" className={`${usesHhSalary ? "" : "mt-2 "}text-2xl font-semibold`}>{usesHhSalary ? "Зарплата Junior, Middle и Senior" : "Фактические доходы специалистов"}</h2>
+          {usesHhSalary ? <p className="mt-2 text-sm text-muted">Медиана в месяц · до вычета налогов</p> : null}
           {!usesHhSalary ? <p className="mobile-clamp mt-3 max-w-4xl text-sm leading-6 text-muted">{data.methodology_note}</p> : null}
         </div>
         {!usesHhSalary ? <span className="badge confidence-medium">{coverageLabels[data.coverage]}</span> : null}
@@ -268,9 +273,10 @@ export function SalaryBySeniority({
       {salaryLevelOrder.map((seniority) => {
         const historyPoint = coherentSnapshot?.points[seniority];
         const reference = benchmarkByLevel.get(seniority);
-        const useObserved = historyPoint?.average != null;
+        const observedValue = historyPoint ? salaryHistoryValue(historyPoint) : undefined;
+        const useObserved = observedValue != null;
         const value = useObserved
-          ? `${Math.round(historyPoint!.average! / 1000)} тыс. ₽`
+          ? `${Math.round(observedValue / 1000)} тыс. ₽`
           : reference
             ? pointValue(reference)
             : "Источник не найден";

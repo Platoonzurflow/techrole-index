@@ -604,6 +604,7 @@ def _source_market_summary(
                     OfficialSalaryHistoryPoint(
                         date=point_date,
                         seniority=seniority_code,
+                        median=point_stats.median,
                         average=point_stats.average,
                         sample_size=point_stats.midpoint_sample_size,
                         scope=scope,
@@ -756,6 +757,7 @@ def _hh_metric_salary_history(
         select(
             ProfessionMetricDaily.metric_date,
             SeniorityLevel.code,
+            ProfessionMetricDaily.salary_median,
             ProfessionMetricDaily.salary_average,
             ProfessionMetricDaily.sample_size,
         )
@@ -775,13 +777,18 @@ def _hh_metric_salary_history(
     ).all()
     eligible_levels = {
         seniority_code
-        for _, seniority_code, average, sample_size in rows
-        if average is not None and sample_size >= settings.min_salary_sample
+        for _, seniority_code, median_value, _, sample_size in rows
+        if median_value is not None and sample_size >= settings.min_salary_sample
     }
     return [
         OfficialSalaryHistoryPoint(
             date=metric_date,
             seniority=seniority_code,
+            median=(
+                float(median_value)
+                if median_value is not None and sample_size >= settings.min_salary_sample
+                else None
+            ),
             average=(
                 float(average)
                 if average is not None and sample_size >= settings.min_salary_sample
@@ -790,7 +797,7 @@ def _hh_metric_salary_history(
             sample_size=sample_size,
             scope="profession",
         )
-        for metric_date, seniority_code, average, sample_size in rows
+        for metric_date, seniority_code, median_value, average, sample_size in rows
         if seniority_code in eligible_levels
     ]
 
@@ -822,9 +829,10 @@ def _hh_market_summary(
             "Расчёт использует все вакансии профессии с указанной зарплатой в RUB. Net "
             "пересчитывается в сопоставимый gross по действующей прогрессивной шкале НДФЛ; "
             "для односторонней вилки недостающий центр оценивается по типичной ширине полных "
-            "вилок этой же профессии. Доли Junior, Middle и Senior берутся из требований HH "
-            "к опыту по профессии, после чего зарплаты ранжируются и делятся на три сплошных "
-            "сегмента. Поэтому сумма n трёх уровней равна всей совместимой зарплатной выборке. "
+            "вилок этой же профессии. Зарплаты ранжируются и делятся на три сплошных "
+            "сегмента: нижние 30% — Junior, следующие 55% — Middle, верхние 15% — Senior. "
+            "Для каждого сегмента показывается медиана, а сумма n трёх уровней равна всей "
+            "совместимой зарплатной выборке. "
             f"Временной ряд использует скользящее окно {SALARY_HISTORY_WINDOW_DAYS} дней; "
             f"каждый сегмент публикуется при n≥{settings.min_salary_sample}. Это модельные "
             "зарплатные сегменты рынка вакансий, а не грейды, указанные работодателем."
@@ -852,6 +860,7 @@ def _hh_market_summary(
     return summary.model_copy(
         update={
             "salary_history": accumulated_salary_history or summary.salary_history,
+            "salary_history_metric": "rolling_median",
             "hh_enrichment": _hh_market_enrichment_summary(
                 db,
                 profession_id,

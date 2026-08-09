@@ -360,9 +360,9 @@ describe("analytics components", () => {
         { seniority: "senior" as const, vacancy_count: 23, salary_count: 23, salary_coverage: 1, sample_size: 23, median: 89300, confidence_level: "high" as const },
       ],
       salary_history: [
-        { date: "2026-07-24", seniority: "junior" as const, average: 100000, sample_size: 8, scope: "profession" as const },
-        { date: "2026-07-24", seniority: "middle" as const, average: 120000, sample_size: 9, scope: "profession" as const },
-        { date: "2026-07-24", seniority: "senior" as const, average: 170000, sample_size: 10, scope: "profession" as const },
+        { date: "2026-07-24", seniority: "junior" as const, median: 99000, average: 100000, sample_size: 8, scope: "profession" as const },
+        { date: "2026-07-24", seniority: "middle" as const, median: 119000, average: 120000, sample_size: 9, scope: "profession" as const },
+        { date: "2026-07-24", seniority: "senior" as const, median: 168000, average: 170000, sample_size: 10, scope: "profession" as const },
         { date: "2026-07-23", seniority: "junior" as const, average: 63000, sample_size: 7, scope: "profession" as const },
         { date: "2026-07-23", seniority: "middle" as const, average: 97000, sample_size: 6, scope: "profession" as const },
         { date: "2026-07-23", seniority: "senior" as const, average: 166000, sample_size: 12, scope: "profession" as const },
@@ -402,9 +402,9 @@ describe("analytics components", () => {
     render(<SalaryBenchmarks data={benchmark} official={official} />);
 
     expect(screen.queryByText(/перевёрнутую зарплатную градацию/)).not.toBeInTheDocument();
-    expect(screen.getByText("100 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getByText("120 тыс. ₽")).toBeInTheDocument();
-    expect(screen.getByText("170 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("99 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("119 тыс. ₽")).toBeInTheDocument();
+    expect(screen.getByText("168 тыс. ₽")).toBeInTheDocument();
     expect(screen.queryByText("модель HH · единый срез")).not.toBeInTheDocument();
     expect(screen.queryByText("24 июля 2026 г.")).not.toBeInTheDocument();
     expect(screen.getByText("n=8 из 129")).toBeInTheDocument();
@@ -892,8 +892,11 @@ describe("analytics components", () => {
 
   it("renders the responsive career journey as an accessible visual", () => {
     render(<CareerTransformationHero />);
-    expect(screen.getByRole("img", { name: "Световой поток данных собирается в человека и ведёт его через уровни Junior, Middle и Senior к принятому оферу" })).toBeInTheDocument();
-    expect(screen.getByText("вакансии становятся маршрутом")).toBeInTheDocument();
-    expect(screen.getByText("Офер принят")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "Человек идёт по планете через этапы Подготовка, Проекты и Интервью; планета раскрывается и показывает офер в ядре" })).toBeInTheDocument();
+    expect(screen.getByText("Подготовка")).toBeInTheDocument();
+    expect(screen.getByText("Проекты")).toBeInTheDocument();
+    expect(screen.getByText("Интервью")).toBeInTheDocument();
+    expect(screen.getByText("Офер")).toBeInTheDocument();
+    expect(screen.getByText("в ядре")).toBeInTheDocument();
   });
 });

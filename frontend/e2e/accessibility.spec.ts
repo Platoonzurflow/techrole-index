@@ -113,7 +113,7 @@ test("reduced motion removes long and repeating animation", async ({ page }) => 
       const token = part.trim();
       return token.endsWith("ms") ? Number.parseFloat(token) / 1000 : Number.parseFloat(token);
     });
-    const elements = [document.documentElement, ...document.querySelectorAll(".reveal, .career-journey-image, .career-journey-offer")];
+    const elements = [document.documentElement, ...document.querySelectorAll(".reveal, .career-planet-scene, .career-planet-shell, .career-planet-core, .career-planet-walker")];
     return elements.map((element) => {
       const style = getComputedStyle(element);
       return {

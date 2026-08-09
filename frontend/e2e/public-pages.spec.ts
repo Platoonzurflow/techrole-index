@@ -42,6 +42,7 @@ test("public profession SSR contains seeded level metrics", async ({ page }) => 
   if (hasHhSalary) {
     await expect(page.getByRole("heading", { name: "Фактические доходы специалистов" })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Зарплата Junior, Middle и Senior" })).toBeVisible();
+    await expect(salaryBenchmark.getByText("Медиана в месяц · до вычета налогов", { exact: true })).toBeVisible();
     await expect(page.getByTestId("salary-median-showcase")).toHaveCount(0);
     await expect(salaryBenchmark).not.toContainText("вся зарплатная выборка · gross RUB");
     await expect(page.locator("#salary-history")).toBeVisible();
@@ -83,7 +84,9 @@ test("free profession page exposes only the 30-day main chart", async ({ page })
   await expect(page.getByRole("img", {
     name: "Расчётный объём вакансий подготовленной витрины по уровням",
   })).toHaveCount(0);
-  await expect(page.getByText("Расширенный ряд вакансий — в Premium", { exact: true })).toBeVisible();
+  await expect(page.getByText("Графики вакансий за 180 дней — в Premium", { exact: true })).toHaveCount(1);
+  await expect(page.getByText("Расширенный ряд вакансий — в Premium", { exact: true })).toHaveCount(0);
+  await expect(page.getByText("График вакансий за период более 30 дней — в Premium", { exact: true })).toHaveCount(0);
   await expect(page.locator("#publication-history")).toHaveCount(0);
   await expect(page.getByText("Слои, которые нельзя смешивать", { exact: true })).toHaveCount(0);
   await expect(page.getByText("Продолжить исследование", { exact: true })).toHaveCount(0);
@@ -99,7 +102,6 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
   const selectors = [
     "#tech-stack",
     "#salary-benchmark",
-    "#prepared-vacancy-history",
     "#score-breakdown",
     "#market-skills",
   ];
@@ -309,8 +311,11 @@ test("cinematic hero exposes the journey visual and profession search", async ({
   await page.goto("/");
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { level: 1, name: /Из поиска к первому оферу/ })).toBeVisible();
-  await expect(page.getByRole("img", { name: "Световой поток данных собирается в человека и ведёт его через уровни Junior, Middle и Senior к принятому оферу" })).toBeVisible();
-  await expect(page.getByText("Офер принят")).toBeVisible();
+  await expect(page.getByRole("img", { name: "Человек идёт по планете через этапы Подготовка, Проекты и Интервью; планета раскрывается и показывает офер в ядре" })).toBeVisible();
+  await expect(page.getByText("Подготовка")).toBeVisible();
+  await expect(page.getByText("Проекты")).toBeVisible();
+  await expect(page.getByText("Интервью")).toBeVisible();
+  await expect(page.getByTestId("career-planet-core").getByText("Офер", { exact: true })).toBeVisible();
   await page.getByLabel("Название профессии").fill("Python");
   await page.getByRole("button", { name: "Найти профессию" }).click();
   await expect(page).toHaveURL(/\/professions\?query=Python/);
@@ -324,8 +329,8 @@ test("light and dark career scenes have distinct intentional palettes", async ({
   const lightPalette = await hero.evaluate((node) => ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
-    sceneBackground: getComputedStyle(node.querySelector(".career-data-universe")!).backgroundImage,
-    pill: getComputedStyle(node.querySelector(".career-journey-offer")!).backgroundColor,
+    sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
+    sign: getComputedStyle(node.querySelector(".career-planet-stage rect")!).fill,
   }));
   expect(lightPalette.color).toBe("rgb(20, 20, 22)");
 
@@ -333,13 +338,13 @@ test("light and dark career scenes have distinct intentional palettes", async ({
   const darkPalette = await hero.evaluate((node) => ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
-    sceneBackground: getComputedStyle(node.querySelector(".career-data-universe")!).backgroundImage,
-    pill: getComputedStyle(node.querySelector(".career-journey-offer")!).backgroundColor,
+    sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
+    sign: getComputedStyle(node.querySelector(".career-planet-stage rect")!).fill,
   }));
   expect(darkPalette.background).not.toBe(lightPalette.background);
   expect(darkPalette.color).not.toBe(lightPalette.color);
   expect(darkPalette.sceneBackground).not.toBe(lightPalette.sceneBackground);
-  expect(darkPalette.pill).not.toBe(lightPalette.pill);
+  expect(darkPalette.sign).not.toBe(lightPalette.sign);
 });
 
 test("catalog search controls use the dark palette", async ({ page }) => {
@@ -442,19 +447,18 @@ test("homepage search and career journey stay aligned in the dark theme", async 
 
   const dataScene = page.locator(".career-journey-visual");
   await expect(dataScene).toBeVisible();
-  await expect(dataScene).toHaveAttribute("data-motion", "full-body");
+  await expect(dataScene).toHaveAttribute("data-motion", "planet-core-journey");
   const sceneLayout = await dataScene.evaluate((node) => {
     const scene = node.getBoundingClientRect();
-    const canvas = node.querySelector(".career-particle-canvas")!.getBoundingClientRect();
-    const offer = node.querySelector(".career-journey-offer")!.getBoundingClientRect();
+    const planet = node.querySelector(".career-planet-scene")!.getBoundingClientRect();
+    const offer = node.querySelector(".career-planet-core-offer")!.getBoundingClientRect();
     return {
       width: scene.width,
       height: scene.height,
-      canvasCovers: canvas.left <= scene.left && canvas.right >= scene.right
-        && canvas.top <= scene.top && canvas.bottom >= scene.bottom,
+      planetWidth: planet.width,
       offerInside: offer.left >= scene.left && offer.right <= scene.right
         && offer.top >= scene.top && offer.bottom <= scene.bottom,
-      gridContent: getComputedStyle(node, "::before").content,
+      backdrop: getComputedStyle(node, "::before").backgroundImage,
     };
   });
   const headingFit = await page.locator(".cinematic-copy h1").evaluate((node) => ({
@@ -463,9 +467,9 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   }));
   expect(sceneLayout.width).toBeGreaterThan(500);
   expect(sceneLayout.height).toBeGreaterThan(500);
-  expect(sceneLayout.canvasCovers).toBe(true);
+  expect(sceneLayout.planetWidth).toBeGreaterThan(500);
   expect(sceneLayout.offerInside).toBe(true);
-  expect(sceneLayout.gridContent).toBe("none");
+  expect(sceneLayout.backdrop).not.toContain("linear-gradient");
   expect(headingFit.scrollWidth).toBeLessThanOrEqual(headingFit.clientWidth + 1);
 });
 

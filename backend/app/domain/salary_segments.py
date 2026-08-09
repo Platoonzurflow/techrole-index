@@ -34,22 +34,11 @@ class SalarySegment:
 
 
 LEVELS: tuple[SalaryLevel, ...] = ("junior", "middle", "senior")
-EXPERIENCE_LEVEL: dict[str, SalaryLevel] = {
-    "noexperience": "junior",
-    "between1and3": "middle",
-    "between3and6": "senior",
-    "morethan6": "senior",
+SALARY_BAND_SHARES: dict[SalaryLevel, float] = {
+    "junior": 0.30,
+    "middle": 0.55,
+    "senior": 0.15,
 }
-
-# The prior is the rounded distribution of experience requirements in the
-# current HH IT query-match layer.  It stabilises tiny professions while a
-# large role is driven almost entirely by its own vacancies.
-EXPERIENCE_PRIOR: dict[SalaryLevel, float] = {
-    "junior": 0.15,
-    "middle": 0.45,
-    "senior": 0.40,
-}
-EXPERIENCE_PRIOR_STRENGTH = 30
 
 
 def gross_monthly_from_net(value: Decimal) -> Decimal:
@@ -105,34 +94,7 @@ def _allocated_counts(total: int, shares: dict[SalaryLevel, float]) -> dict[Sala
         result[level] += 1
         remainder -= 1
 
-    minimum = 5 if total >= 15 else 1 if total >= 3 else 0
-    for level in LEVELS:
-        while result[level] < minimum:
-            donor = max(LEVELS, key=lambda item: result[item] - minimum)
-            if result[donor] <= minimum:
-                break
-            result[donor] -= 1
-            result[level] += 1
     return result
-
-
-def _experience_shares(items: Sequence[SalarySegmentInput]) -> dict[SalaryLevel, float]:
-    counts = {level: 0 for level in LEVELS}
-    classified = 0
-    for item in items:
-        level = EXPERIENCE_LEVEL.get(str(item.experience_code or "").casefold())
-        if level is None:
-            continue
-        counts[level] += 1
-        classified += 1
-    denominator = classified + EXPERIENCE_PRIOR_STRENGTH
-    return {
-        level: (
-            counts[level] + EXPERIENCE_PRIOR[level] * EXPERIENCE_PRIOR_STRENGTH
-        )
-        / denominator
-        for level in LEVELS
-    }
 
 
 def _salary_points(items: Sequence[SalarySegmentInput]) -> list[float]:
@@ -178,15 +140,16 @@ def build_ranked_salary_segments(
     *,
     minimum_sample: int = 5,
 ) -> list[SalarySegment]:
-    """Build three exhaustive salary-ranked bands using role-specific HH shares.
+    """Build three exhaustive fixed salary-ranked bands.
 
-    Experience requirements determine how large each band is.  All compatible
-    salary disclosures are then normalised to gross RUB, ordered and split into
-    contiguous low/middle/high bands.  This keeps the model monotonic while
-    retaining the full salary-bearing sample, including one-sided ranges.
+    All compatible salary disclosures are normalised to gross RUB and ordered.
+    The lowest 30% form Junior, the following 55% (30th through 85th percentile)
+    form Middle, and the highest 15% form Senior.  Every published level uses the
+    median of its contiguous band, while all salary-bearing vacancies remain in
+    the model, including one-sided ranges.
     """
 
-    shares = _experience_shares(items)
+    shares = SALARY_BAND_SHARES
     points = _salary_points(items)
     salary_counts = _allocated_counts(len(points), shares)
     vacancy_counts = _allocated_counts(len(items), shares)

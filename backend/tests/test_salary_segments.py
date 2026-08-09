@@ -36,18 +36,26 @@ def test_progressive_net_salary_is_inverted_to_monthly_gross(gross: int, net: in
     assert float(gross_monthly_from_net(Decimal(net))) == pytest.approx(gross)
 
 
-def test_ranked_segments_use_every_salary_and_follow_experience_mix() -> None:
+def test_ranked_segments_use_fixed_30_55_15_bands_and_medians() -> None:
     items = [
-        *[item(value, "noExperience") for value in range(50_000, 150_000, 10_000)],
-        *[item(value, "between1And3") for value in range(150_000, 450_000, 10_000)],
-        *[item(value, "between3And6") for value in range(450_000, 650_000, 10_000)],
+        *[item(value, "noExperience", upper=value) for value in range(50_000, 150_000, 10_000)],
+        *[item(value, "between1And3", upper=value) for value in range(150_000, 450_000, 10_000)],
+        *[item(value, "between3And6", upper=value) for value in range(450_000, 650_000, 10_000)],
     ]
     segments = build_ranked_salary_segments(items)
 
     assert sum(segment.sample_size for segment in segments) == len(items)
-    assert segments[0].sample_size < segments[1].sample_size
-    assert segments[0].median < segments[1].median < segments[2].median
+    assert [segment.sample_size for segment in segments] == [18, 33, 9]
+    assert [segment.median for segment in segments] == [135_000, 390_000, 600_000]
     assert all(segment.confidence_level != "insufficient" for segment in segments)
+
+
+def test_experience_labels_do_not_change_fixed_salary_bands() -> None:
+    values = range(50_000, 650_000, 10_000)
+    first = build_ranked_salary_segments([item(value, "noExperience", upper=value) for value in values])
+    second = build_ranked_salary_segments([item(value, "moreThan6", upper=value) for value in values])
+
+    assert first == second
 
 
 def test_one_sided_and_net_ranges_remain_in_the_sample() -> None:
@@ -61,7 +69,9 @@ def test_one_sided_and_net_ranges_remain_in_the_sample() -> None:
     segments = build_ranked_salary_segments(items)
 
     assert sum(segment.sample_size for segment in segments) == len(items)
-    assert all(segment.sample_size >= 5 for segment in segments)
+    assert [segment.sample_size for segment in segments] == [7, 12, 3]
+    assert segments[2].median is None
+    assert segments[2].confidence_level == "insufficient"
 
 
 def test_unknown_tax_basis_is_not_silently_mixed() -> None:
@@ -71,3 +81,4 @@ def test_unknown_tax_basis_is_not_silently_mixed() -> None:
     segments = build_ranked_salary_segments(items)
 
     assert sum(segment.sample_size for segment in segments) == 15
+    assert [segment.sample_size for segment in segments] == [5, 8, 2]

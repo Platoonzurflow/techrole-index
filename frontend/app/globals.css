@@ -1745,3 +1745,265 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .career-journey-offer-rings,
   .career-offer-spark { animation: none !important; }
 }
+
+/* Career journey v4: a code-native miniature planet. The 16-second scene loops
+   through the three steps, opens the shell and reveals the offer in its core. */
+.career-planet-universe {
+  --planet-shift-x: 0px;
+  --planet-shift-y: 0px;
+  background:
+    radial-gradient(circle at 82% 35%, rgb(239 85 96 / .11), transparent 24%),
+    radial-gradient(circle at 69% 72%, rgb(67 142 167 / .1), transparent 27%),
+    linear-gradient(112deg, #f8f5f2 0 42%, #f1edeb 71%, #eae4e1 100%);
+}
+.career-planet-universe::before {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background:
+    radial-gradient(circle at 84% 22%, rgb(255 255 255 / .9) 0 1px, transparent 2px),
+    radial-gradient(circle at 62% 16%, rgb(239 85 96 / .42) 0 1px, transparent 2px),
+    radial-gradient(circle at 94% 66%, rgb(255 255 255 / .76) 0 1px, transparent 2px);
+  background-size: 156px 139px, 211px 187px, 129px 173px;
+  content: "";
+  opacity: .68;
+}
+.career-planet-parallax {
+  position: absolute;
+  z-index: 2;
+  top: 2%;
+  right: -1%;
+  width: min(69vw, 60rem);
+  height: 94%;
+  transform: translate3d(var(--planet-shift-x), var(--planet-shift-y), 0);
+  transition: transform .7s cubic-bezier(.2,.8,.2,1);
+  will-change: transform;
+}
+.career-planet-scene {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  animation: career-planet-camera 16s cubic-bezier(.55,.02,.25,1) infinite;
+}
+.career-planet-surface-light { stop-color: #8ec9c3; }
+.career-planet-surface-mid { stop-color: #407f8d; }
+.career-planet-surface-dark { stop-color: #173f54; }
+.career-planet-land { fill: #c7dcae; stroke: rgb(255 255 255 / .22); stroke-width: 2; }
+.career-planet-land-two { fill: #a9cc96; }
+.career-planet-land-three { fill: #bdd4a2; }
+.career-planet-contour { fill: none; stroke: rgb(255 255 255 / .15); stroke-width: 2; }
+.career-planet-stars { fill: #ef5560; filter: drop-shadow(0 0 7px rgb(239 85 96 / .75)); }
+.career-planet-stars circle:nth-child(even) { fill: #fff; }
+.career-planet-shadow { fill: rgb(28 27 35 / .18); filter: blur(12px); }
+.career-planet-atmosphere {
+  fill: none;
+  stroke: rgb(105 179 191 / .23);
+  stroke-width: 20;
+  filter: blur(6px);
+  animation: career-planet-atmosphere 5s ease-in-out infinite;
+}
+.career-planet-shell {
+  transform-box: view-box;
+  transform-origin: 560px 390px;
+  will-change: transform;
+}
+.career-planet-shell-top { animation: career-planet-open-top 16s cubic-bezier(.65,0,.24,1) infinite; }
+.career-planet-shell-bottom { animation: career-planet-open-bottom 16s cubic-bezier(.65,0,.24,1) infinite; }
+.career-planet-core {
+  opacity: 0;
+  transform-box: view-box;
+  transform-origin: 560px 390px;
+  animation: career-planet-core-reveal 16s cubic-bezier(.2,.8,.2,1) infinite;
+}
+.career-planet-core-halo { fill: rgb(239 85 96 / .44); }
+.career-planet-core-ring {
+  fill: none;
+  stroke: rgb(255 255 255 / .58);
+  stroke-dasharray: 4 10;
+  stroke-width: 2;
+  animation: career-planet-core-spin 9s linear infinite;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.career-planet-core-offer rect {
+  fill: rgb(255 255 255 / .92);
+  stroke: rgb(255 255 255 / .8);
+  stroke-width: 2;
+  filter: drop-shadow(0 13px 24px rgb(91 27 39 / .35));
+}
+.career-planet-core-offer path {
+  fill: none;
+  stroke: #ef5560;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 6;
+}
+.career-planet-core-offer text { fill: #281f26; font: 900 20px/1 system-ui, sans-serif; letter-spacing: -.02em; }
+.career-planet-core-offer .career-planet-core-caption { fill: #78656e; font-size: 13px; font-weight: 750; letter-spacing: .04em; text-transform: uppercase; }
+.career-planet-route-base,
+.career-planet-route-pulse {
+  fill: none;
+  stroke-linecap: round;
+  transform-box: view-box;
+  transform-origin: 560px 390px;
+  animation: career-planet-route-hide 16s ease-in-out infinite;
+}
+.career-planet-route-base { stroke: rgb(255 255 255 / .42); stroke-dasharray: 3 10; stroke-width: 3; }
+.career-planet-route-pulse {
+  stroke: url(#career-planet-route);
+  stroke-dasharray: 34 250;
+  stroke-width: 6;
+  filter: drop-shadow(0 0 9px rgb(239 85 96 / .7));
+  animation: career-planet-route-travel 3.2s linear infinite, career-planet-route-hide 16s ease-in-out infinite;
+}
+.career-planet-stage {
+  animation: career-planet-stage-hide 16s ease-in-out infinite;
+  filter: drop-shadow(0 11px 17px rgb(28 42 48 / .2));
+}
+.career-planet-stage rect { fill: rgb(255 255 255 / .9); stroke: rgb(29 60 70 / .14); stroke-width: 2; }
+.career-planet-stage text { fill: #263a40; font: 850 15px/1 system-ui, sans-serif; letter-spacing: -.015em; }
+.career-planet-sign-post { fill: none; stroke: rgb(255 255 255 / .78); stroke-linecap: round; stroke-width: 6; }
+.career-planet-stage-one { animation-name: career-planet-stage-one; }
+.career-planet-stage-two { animation-name: career-planet-stage-two; }
+.career-planet-stage-three { animation-name: career-planet-stage-three; }
+.career-planet-walker {
+  transform: translate(345px, 309px) rotate(-8deg);
+  transform-box: view-box;
+  transform-origin: 0 0;
+  animation: career-planet-walk-route 16s cubic-bezier(.45,.05,.3,1) infinite;
+  filter: drop-shadow(0 10px 12px rgb(17 30 37 / .28));
+  will-change: transform, opacity;
+}
+.career-planet-walker-shadow { fill: rgb(19 42 48 / .22); filter: blur(3px); }
+.career-planet-person-head { fill: #ffd1af; stroke: #fff; stroke-width: 2; }
+.career-planet-person-body { fill: #ef5560; stroke: #fff; stroke-width: 2; }
+.career-planet-person-limb {
+  fill: none;
+  stroke: #243a45;
+  stroke-linecap: round;
+  stroke-width: 8;
+  transform-box: fill-box;
+  transform-origin: 50% 8%;
+}
+.career-planet-person-arm-one,
+.career-planet-person-leg-two { animation: career-person-limb-forward .72s ease-in-out infinite alternate; }
+.career-planet-person-arm-two,
+.career-planet-person-leg-one { animation: career-person-limb-back .72s ease-in-out infinite alternate; }
+.career-planet-sparks { fill: none; stroke: #ef5560; stroke-linecap: round; stroke-width: 4; filter: drop-shadow(0 0 8px rgb(239 85 96 / .6)); }
+.career-planet-sparks > * { animation: career-planet-spark 2.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.career-planet-sparks > *:nth-child(2) { animation-delay: -.7s; }
+.career-planet-sparks > *:nth-child(3) { animation-delay: -1.4s; }
+.career-planet-orbit { fill: none; stroke-width: 2; transform-origin: 560px 390px; }
+.career-planet-orbit-back { stroke: rgb(52 102 117 / .14); stroke-dasharray: 8 12; }
+.career-planet-orbit-front { stroke: #ef5560; stroke-dasharray: 75 1960; stroke-linecap: round; filter: drop-shadow(0 0 7px rgb(239 85 96 / .45)); animation: career-planet-orbit 9s linear infinite; }
+.career-planet-universe .career-journey-shade {
+  z-index: 3;
+  background:
+    linear-gradient(90deg, #f8f5f2 0%, rgb(248 245 242 / .98) 29%, rgb(248 245 242 / .72) 43%, transparent 64%),
+    linear-gradient(0deg, rgb(248 245 242 / .48), transparent 28%);
+  pointer-events: none;
+}
+
+.dark .career-planet-universe {
+  background:
+    radial-gradient(circle at 82% 35%, rgb(239 85 96 / .18), transparent 24%),
+    radial-gradient(circle at 69% 72%, rgb(79 160 181 / .11), transparent 28%),
+    linear-gradient(112deg, #09090b 0 42%, #0e1015 71%, #111721 100%);
+}
+.dark .career-planet-universe .career-journey-shade {
+  background:
+    linear-gradient(90deg, #09090b 0%, rgb(9 9 11 / .98) 29%, rgb(9 9 11 / .73) 44%, transparent 65%),
+    linear-gradient(0deg, rgb(9 9 11 / .6), transparent 30%);
+}
+.dark .career-planet-stage rect { fill: rgb(17 20 27 / .9); stroke: rgb(255 255 255 / .17); }
+.dark .career-planet-stage text { fill: rgb(255 255 255 / .88); }
+.dark .career-planet-sign-post { stroke: rgb(255 255 255 / .62); }
+.dark .career-planet-orbit-back { stroke: rgb(255 255 255 / .13); }
+
+@keyframes career-planet-camera {
+  0%, 58%, 100% { transform: scale(1); }
+  70%, 86% { transform: scale(1.045); }
+}
+@keyframes career-planet-atmosphere { 50% { opacity: .55; stroke-width: 30; } }
+@keyframes career-planet-route-travel { to { stroke-dashoffset: -284; } }
+@keyframes career-planet-route-hide { 0%, 59% { opacity: 1; } 66%, 91% { opacity: 0; } 97%, 100% { opacity: 1; } }
+@keyframes career-planet-stage-hide { 0%, 58% { opacity: 1; } 65%, 92% { opacity: 0; } 98%, 100% { opacity: 1; } }
+@keyframes career-planet-stage-one { 0%, 6%, 18%, 58% { opacity: .58; } 10%, 15% { opacity: 1; filter: drop-shadow(0 8px 17px rgb(239 85 96 / .42)); } 65%, 92% { opacity: 0; } 98%, 100% { opacity: .58; } }
+@keyframes career-planet-stage-two { 0%, 22%, 38%, 58% { opacity: .58; } 27%, 34% { opacity: 1; filter: drop-shadow(0 8px 17px rgb(239 85 96 / .42)); } 65%, 92% { opacity: 0; } 98%, 100% { opacity: .58; } }
+@keyframes career-planet-stage-three { 0%, 41%, 58% { opacity: .58; } 46%, 55% { opacity: 1; filter: drop-shadow(0 8px 17px rgb(239 85 96 / .42)); } 65%, 92% { opacity: 0; } 98%, 100% { opacity: .58; } }
+@keyframes career-planet-walk-route {
+  0%, 4% { opacity: 1; transform: translate(345px, 309px) rotate(-8deg); }
+  16% { transform: translate(414px, 236px) rotate(-13deg); }
+  31% { transform: translate(548px, 187px) rotate(0deg); }
+  47% { opacity: 1; transform: translate(688px, 229px) rotate(13deg); }
+  58% { opacity: 1; transform: translate(758px, 308px) rotate(18deg); }
+  64%, 94% { opacity: 0; transform: translate(758px, 308px) rotate(18deg); }
+  100% { opacity: 0; transform: translate(345px, 309px) rotate(-8deg); }
+}
+@keyframes career-person-limb-forward { to { transform: rotate(24deg); } }
+@keyframes career-person-limb-back { to { transform: rotate(-24deg); } }
+@keyframes career-planet-open-top {
+  0%, 60%, 100% { transform: translateY(0) rotate(0); }
+  70%, 86% { transform: translateY(-124px) rotate(-7deg); }
+  95% { transform: translateY(-12px) rotate(-1deg); }
+}
+@keyframes career-planet-open-bottom {
+  0%, 60%, 100% { transform: translateY(0) rotate(0); }
+  70%, 86% { transform: translateY(98px) rotate(5deg); }
+  95% { transform: translateY(10px) rotate(.5deg); }
+}
+@keyframes career-planet-core-reveal {
+  0%, 61%, 96%, 100% { opacity: 0; transform: scale(.35) rotate(-12deg); }
+  70%, 87% { opacity: 1; transform: scale(1) rotate(0); }
+  92% { opacity: .55; transform: scale(.84); }
+}
+@keyframes career-planet-core-spin { to { transform: rotate(360deg); } }
+@keyframes career-planet-spark { 50% { opacity: .36; transform: scale(.62) rotate(25deg); } }
+@keyframes career-planet-orbit { to { stroke-dashoffset: -2035; } }
+
+@media (max-width: 767px) {
+  .career-planet-universe {
+    background:
+      radial-gradient(circle at 64% 76%, rgb(239 85 96 / .13), transparent 27%),
+      linear-gradient(180deg, #f8f5f2 0 39%, #f1edeb 71%, #e9e3e0 100%);
+  }
+  .career-planet-parallax {
+    top: 41%;
+    right: auto;
+    left: 50%;
+    width: 41.25rem;
+    height: 35rem;
+    transform: translateX(-50%) translate3d(var(--planet-shift-x), var(--planet-shift-y), 0);
+  }
+  .career-planet-universe .career-journey-shade {
+    background: linear-gradient(180deg, #f8f5f2 0%, rgb(248 245 242 / .97) 29%, rgb(248 245 242 / .58) 46%, transparent 62%);
+  }
+  .dark .career-planet-universe {
+    background:
+      radial-gradient(circle at 64% 76%, rgb(239 85 96 / .18), transparent 28%),
+      linear-gradient(180deg, #09090b 0 39%, #0d1016 71%, #111721 100%);
+  }
+  .dark .career-planet-universe .career-journey-shade {
+    background: linear-gradient(180deg, #09090b 0%, rgb(9 9 11 / .98) 29%, rgb(9 9 11 / .62) 47%, transparent 64%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .career-planet-scene,
+  .career-planet-atmosphere,
+  .career-planet-shell,
+  .career-planet-core,
+  .career-planet-core-ring,
+  .career-planet-route-base,
+  .career-planet-route-pulse,
+  .career-planet-stage,
+  .career-planet-walker,
+  .career-planet-person-limb,
+  .career-planet-sparks > *,
+  .career-planet-orbit-front { animation: none !important; }
+  .career-planet-shell-top { transform: translateY(-82px) rotate(-5deg); }
+  .career-planet-shell-bottom { transform: translateY(66px) rotate(3deg); }
+  .career-planet-core { opacity: 1; transform: scale(.88); }
+  .career-planet-walker { opacity: 0; }
+}
