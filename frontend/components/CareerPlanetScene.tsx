@@ -1,6 +1,6 @@
 "use client";
 
-import { RoundedBox, Sparkles } from "@react-three/drei";
+import { Html, RoundedBox, Sparkles } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
@@ -28,6 +28,39 @@ type TileMotion = {
 };
 
 const PLANET_RADIUS = 1.66;
+const FLAG_STAGES = [
+  { tileIndex: 68, label: "Подготовка", position: "one" },
+  { tileIndex: 69, label: "Проекты", position: "two" },
+  { tileIndex: 59, label: "Интервью", position: "three" },
+] as const;
+type FlagStage = (typeof FLAG_STAGES)[number];
+const FLAG_STAGE_BY_TILE = new Map<number, FlagStage>(
+  FLAG_STAGES.map((stage) => [stage.tileIndex, stage]),
+);
+
+function TileJourneyFlag({ label, position, tileIndex }: {
+  label: string;
+  position: "one" | "two" | "three";
+  tileIndex: number;
+}) {
+  return (
+    <div
+      className={`career-3d-stage-flag career-3d-stage-flag-${position}`}
+      data-anchor-tile={tileIndex}
+      data-tile-attached="true"
+    >
+      <span className="career-3d-flag-pole">
+        <span className="career-3d-flag-finial" />
+        <span className="career-3d-flag-collar" />
+        <span className="career-3d-flag-base" />
+      </span>
+      <span className="career-3d-flag-banner">
+        <span className="career-3d-flag-label">{label}</span>
+        <span className="career-3d-flag-fold" />
+      </span>
+    </div>
+  );
+}
 
 function seeded(seed: number) {
   const value = Math.sin(seed * 91.731 + 17.193) * 43758.5453;
@@ -284,8 +317,13 @@ function PlanetSystem({
     : ["#c9414e", "#e24e5a", "#fb6c76"];
 
   return (
-    <group position={[0, compact ? 1.45 : 0.28, 0]} scale={compact ? 0.72 : 0.84}>
+    <group position={[compact ? -0.04 : 0, compact ? -1.1 : 0.28, 0]} scale={compact ? 0.72 : 0.84}>
       <group ref={root}>
+        <Html position={[0, 0, 0]} zIndexRange={[9, 9]} wrapperClass="career-3d-core-html">
+          <div className="career-3d-core-engraving" data-core-attached="true" data-testid="career-planet-core">
+            Офер
+          </div>
+        </Html>
         <mesh castShadow receiveShadow>
           <icosahedronGeometry args={[1.34, 5]} />
           <meshPhysicalMaterial
@@ -334,6 +372,7 @@ function PlanetSystem({
         {tiles.map((tile, index) => {
           const palette = tile.land ? land : ocean;
           const color = palette[Math.min(palette.length - 1, Math.floor(tile.shade * palette.length))];
+          const flagStage = FLAG_STAGE_BY_TILE.get(index);
           return (
             <RoundedBox
               key={tile.id}
@@ -355,6 +394,19 @@ function PlanetSystem({
                 clearcoat={0.22}
                 clearcoatRoughness={0.4}
               />
+              {flagStage ? (
+                <Html
+                  position={[0, 0, tile.size[2] / 2 + 0.03]}
+                  zIndexRange={[8, 8]}
+                  wrapperClass="career-3d-flag-html"
+                >
+                  <TileJourneyFlag
+                    label={flagStage.label}
+                    position={flagStage.position}
+                    tileIndex={flagStage.tileIndex}
+                  />
+                </Html>
+              ) : null}
             </RoundedBox>
           );
         })}

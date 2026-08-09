@@ -8,9 +8,16 @@ const CareerPlanetScene = dynamic(
   { ssr: false },
 );
 
-function JourneyFlag({ label, position }: { label: string; position: "one" | "two" | "three" }) {
+function JourneyFlag({ anchorIndex, label, position }: {
+  anchorIndex: number;
+  label: string;
+  position: "one" | "two" | "three";
+}) {
   return (
-    <div className={`career-3d-stage-flag career-3d-stage-flag-${position}`}>
+    <div
+      className={`career-3d-stage-flag career-3d-stage-flag-${position}`}
+      data-flag-anchor={anchorIndex}
+    >
       <span className="career-3d-flag-pole">
         <span className="career-3d-flag-finial" />
         <span className="career-3d-flag-collar" />
@@ -90,13 +97,16 @@ export function CareerTransformationHero() {
           </div>
         )}
 
-        <JourneyFlag label="Подготовка" position="one" />
-        <JourneyFlag label="Проекты" position="two" />
-        <JourneyFlag label="Интервью" position="three" />
-
-        <div className="career-3d-core-engraving" data-testid="career-planet-core">
-          Офер
-        </div>
+        {!sceneReady ? (
+          <>
+            <JourneyFlag anchorIndex={0} label="Подготовка" position="one" />
+            <JourneyFlag anchorIndex={1} label="Проекты" position="two" />
+            <JourneyFlag anchorIndex={2} label="Интервью" position="three" />
+            <div className="career-3d-core-engraving" data-testid="career-planet-core">
+              Офер
+            </div>
+          </>
+        ) : null}
       </div>
       <span className="career-journey-shade" aria-hidden="true" />
       <span className="sr-only">Подготовка · Проекты · Интервью · Офер</span>

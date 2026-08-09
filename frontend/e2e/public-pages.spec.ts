@@ -450,6 +450,8 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   const dataScene = page.locator(".career-journey-visual");
   await expect(dataScene).toBeVisible();
   await expect(dataScene).toHaveAttribute("data-motion", "interactive-obsidian-flag-planet");
+  const attachedFlags = page.locator('.career-3d-stage-flag[data-tile-attached="true"]');
+  await expect(attachedFlags).toHaveCount(3, { timeout: 12_000 });
   const sceneLayout = await dataScene.evaluate((node) => {
     const scene = node.getBoundingClientRect();
     const planet = node.querySelector(".career-3d-planet-stage")!.getBoundingClientRect();
@@ -476,6 +478,16 @@ test("homepage search and career journey stay aligned in the dark theme", async 
 
   const pointerState = page.locator(".career-webgl-state");
   await expect(pointerState).toHaveAttribute("data-pointer-active", "false", { timeout: 12_000 });
+  const attachedTiles = (await attachedFlags.evaluateAll((flags) => (
+    flags.map((flag) => flag.getAttribute("data-anchor-tile"))
+  ))).sort();
+  expect(attachedTiles).toEqual(["59", "68", "69"]);
+  const flagBasesBefore = await page.locator(".career-3d-flag-base").evaluateAll((bases) => (
+    bases.map((base) => {
+      const box = base.getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    })
+  ));
   const planetBox = await page.locator(".career-3d-planet-stage").boundingBox();
   expect(planetBox).not.toBeNull();
   await page.waitForTimeout(250);
@@ -490,6 +502,17 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   );
   await expect(pointerState).toHaveAttribute("data-pointer-active", "true");
   await expect(dataScene).toHaveAttribute("data-interacting", "true");
+  await expect(attachedFlags.first()).toHaveCSS("opacity", "0.42");
+  const flagBasesAfter = await page.locator(".career-3d-flag-base").evaluateAll((bases) => (
+    bases.map((base) => {
+      const box = base.getBoundingClientRect();
+      return { x: box.left + box.width / 2, y: box.top + box.height / 2 };
+    })
+  ));
+  expect(Math.max(...flagBasesAfter.map((point, index) => Math.hypot(
+    point.x - flagBasesBefore[index].x,
+    point.y - flagBasesBefore[index].y,
+  )))).toBeGreaterThan(4);
   await page.mouse.move(20, 120);
   await expect(pointerState).toHaveAttribute("data-pointer-active", "false");
   await expect(dataScene).toHaveAttribute("data-interacting", "false");
@@ -506,6 +529,24 @@ test("mobile navigation keeps account reachable without horizontal page overflow
   await expect(page.locator("footer").getByRole("link", { name: "Методология" })).toHaveAttribute("href", "/methodology");
   const dimensions = await page.evaluate(() => ({ scroll: document.documentElement.scrollWidth, client: document.documentElement.clientWidth }));
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client + 1);
+  const mobileFlags = page.locator('.career-3d-stage-flag[data-tile-attached="true"]');
+  await expect(mobileFlags).toHaveCount(3, { timeout: 12_000 });
+  const animationLayout = await page.locator(".cinematic-hero").evaluate((hero) => {
+    const heroBox = hero.getBoundingClientRect();
+    const searchBox = hero.querySelector(".career-search")!.getBoundingClientRect();
+    const flagBoxes = Array.from(hero.querySelectorAll(".career-3d-stage-flag")).map((flag) => {
+      const box = flag.getBoundingClientRect();
+      return { left: box.left, right: box.right, top: box.top, bottom: box.bottom };
+    });
+    return { heroBottom: heroBox.bottom, searchBottom: searchBox.bottom, flagBoxes };
+  });
+  expect(Math.min(...animationLayout.flagBoxes.map((box) => box.top)))
+    .toBeGreaterThanOrEqual(animationLayout.searchBottom + 4);
+  for (const box of animationLayout.flagBoxes) {
+    expect(box.left).toBeGreaterThanOrEqual(-1);
+    expect(box.right).toBeLessThanOrEqual(dimensions.client + 1);
+    expect(box.bottom).toBeLessThanOrEqual(animationLayout.heroBottom + 1);
+  }
 });
 
 test("weekly research is answer-first, sourced and responsive", async ({ page }) => {
