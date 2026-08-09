@@ -478,9 +478,15 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   await expect(pointerState).toHaveAttribute("data-pointer-active", "false", { timeout: 12_000 });
   const planetBox = await page.locator(".career-3d-planet-stage").boundingBox();
   expect(planetBox).not.toBeNull();
+  await page.waitForTimeout(250);
+  await page.mouse.move(
+    planetBox!.x + planetBox!.width / 2 - 20,
+    planetBox!.y + planetBox!.height / 2 - 20,
+  );
   await page.mouse.move(
     planetBox!.x + planetBox!.width / 2,
     planetBox!.y + planetBox!.height / 2,
+    { steps: 4 },
   );
   await expect(pointerState).toHaveAttribute("data-pointer-active", "true");
   await expect(dataScene).toHaveAttribute("data-interacting", "true");
