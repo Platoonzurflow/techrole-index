@@ -292,12 +292,13 @@ test("support topics stay readable and keyboard selectable", async ({ page }) =>
 
 test("popular profession card opens from its arrow area", async ({ page }) => {
   await page.goto("/");
-  const cards = page.locator(".profession-card");
-  expect(await cards.count()).toBeGreaterThan(0);
-  const card = cards.first();
+  const cardLinks = page.locator(".profession-card-link");
+  expect(await cardLinks.count()).toBeGreaterThan(0);
+  const cardLink = cardLinks.first();
+  const card = cardLink.locator(".profession-card");
   await card.scrollIntoViewIfNeeded();
   await expect(card).toBeVisible();
-  const destination = await card.locator("a").getAttribute("href");
+  const destination = await cardLink.getAttribute("href");
   const expectedDestination = new URL(destination!, page.url()).toString();
   const arrowLocator = card.locator(".card-arrow");
   await expect(arrowLocator).toBeVisible();
@@ -305,8 +306,21 @@ test("popular profession card opens from its arrow area", async ({ page }) => {
 
   expect(destination).toBeTruthy();
   expect(arrow).toBeTruthy();
-  await page.mouse.click(arrow!.x + arrow!.width / 2, arrow!.y + arrow!.height / 2);
-  await expect(page).toHaveURL(expectedDestination);
+  await page.mouse.move(arrow!.x + arrow!.width / 2, arrow!.y + arrow!.height / 2);
+  await page.waitForTimeout(300);
+  const settledArrow = await arrowLocator.boundingBox();
+  const settledLink = await cardLink.boundingBox();
+  expect(settledArrow).toBeTruthy();
+  expect(settledLink).toBeTruthy();
+  await Promise.all([
+    page.waitForURL(expectedDestination),
+    cardLink.click({
+      position: {
+        x: settledArrow!.x + settledArrow!.width / 2 - settledLink!.x,
+        y: settledArrow!.y + settledArrow!.height / 2 - settledLink!.y,
+      },
+    }),
+  ]);
 });
 
 test("mentorship application is complete without sending data", async ({ page }) => {

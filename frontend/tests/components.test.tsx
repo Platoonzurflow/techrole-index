@@ -484,7 +484,7 @@ describe("analytics components", () => {
     expect(screen.getByText("Premium")).toBeInTheDocument();
     expect(screen.getByText("-")).toBeInTheDocument();
     expect(screen.getByRole("link")).toHaveAttribute("href", "/professions/python");
-    expect(screen.getByRole("link")).toHaveClass("after:z-10");
+    expect(screen.getByRole("link")).toHaveClass("profession-card-link");
   });
 
   it("uses accessible trend text and direction", () => {

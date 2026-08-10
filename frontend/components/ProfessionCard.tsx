@@ -14,10 +14,15 @@ export function ProfessionCard({ profession }: { profession: ProfessionSummary }
   const scoreStyle = { "--score": `${profession.score ?? 0}%` } as CSSProperties;
 
   return (
-    <article className="profession-card group flex h-full flex-col p-5">
+    <Link
+      href={`/professions/${profession.slug}`}
+      className="profession-card-link group block h-full"
+      aria-label={`Открыть профессию ${profession.name_ru}`}
+    >
+    <article className="profession-card flex h-full flex-col p-5">
       <div className="flex items-start justify-between gap-3">
         <h2 className="text-xl font-extrabold leading-tight tracking-tight">
-        <Link href={`/professions/${profession.slug}`} className="after:absolute after:inset-0 after:z-10 transition-colors group-hover:text-accent">{profession.name_ru}</Link>
+          <span className="transition-colors group-hover:text-accent">{profession.name_ru}</span>
         </h2>
         {profession.score != null ? (
           <div className="flex items-center gap-3">
@@ -32,5 +37,6 @@ export function ProfessionCard({ profession }: { profession: ProfessionSummary }
       <div className="mt-auto flex flex-wrap gap-2 pt-5 text-xs font-semibold text-muted"><span className="vacancy-chip">Junior · Middle · Senior</span><span className="vacancy-chip">Стек роли</span></div>
       <div className="relative flex items-center justify-between pt-5"><div>{profession.teaser_only ? <span className="badge badge-premium"><LockKeyhole size={12} /> Premium</span> : profession.data_confidence ? <span className={`badge confidence-${profession.data_confidence}`}>{confidenceLabels[profession.data_confidence] ?? profession.data_confidence}</span> : null}</div><span className="card-arrow"><ArrowRight size={17} aria-hidden="true" /></span></div>
     </article>
+    </Link>
   );
 }
