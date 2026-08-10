@@ -343,21 +343,36 @@ test("light and dark career scenes have distinct intentional palettes", async ({
   await page.addInitScript(() => localStorage.setItem("theme", "light"));
   await page.goto("/");
   const hero = page.locator(".cinematic-hero");
-  const lightPalette = await hero.evaluate((node) => ({
+  const scene = page.locator(".career-journey-visual");
+  const attachedFlags = page.locator('.career-3d-stage-flag[data-tile-attached="true"]');
+  await expect(scene).toHaveAttribute("data-scene-ready", "true", { timeout: 5_000 });
+  await expect(attachedFlags).toHaveCount(3, { timeout: 12_000 });
+  const lightHeroPalette = await hero.evaluate((node) => ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
-    sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
-    flag: getComputedStyle(node.querySelector(".career-3d-flag-banner")!).backgroundImage,
   }));
+  const lightPalette = {
+    ...lightHeroPalette,
+    sceneBackground: await scene.evaluate((node) => getComputedStyle(node).backgroundImage),
+    flag: await attachedFlags.first().locator(".career-3d-flag-banner").evaluate(
+      (node) => getComputedStyle(node).backgroundImage,
+    ),
+  };
   expect(lightPalette.color).toBe("rgb(20, 20, 22)");
 
   await page.getByRole("button", { name: "Включить тёмную тему" }).click();
-  const darkPalette = await hero.evaluate((node) => ({
+  await expect(attachedFlags).toHaveCount(3, { timeout: 12_000 });
+  const darkHeroPalette = await hero.evaluate((node) => ({
     background: getComputedStyle(node).backgroundImage,
     color: getComputedStyle(node).color,
-    sceneBackground: getComputedStyle(node.querySelector(".career-planet-universe")!).backgroundImage,
-    flag: getComputedStyle(node.querySelector(".career-3d-flag-banner")!).backgroundImage,
   }));
+  const darkPalette = {
+    ...darkHeroPalette,
+    sceneBackground: await scene.evaluate((node) => getComputedStyle(node).backgroundImage),
+    flag: await attachedFlags.first().locator(".career-3d-flag-banner").evaluate(
+      (node) => getComputedStyle(node).backgroundImage,
+    ),
+  };
   expect(darkPalette.background).not.toBe(lightPalette.background);
   expect(darkPalette.color).not.toBe(lightPalette.color);
   expect(darkPalette.sceneBackground).not.toBe(lightPalette.sceneBackground);
