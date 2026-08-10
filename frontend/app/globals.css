@@ -2777,7 +2777,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   --core-anchor-x: 50%;
   --core-anchor-y: 51%;
   --core-cut-edge: #12080b;
-  --core-cut-fill: #65232d;
+  --core-cut-fill: #84333e;
   --core-cut-glint: rgb(255 184 153 / .24);
   --core-cut-halo: rgb(181 48 64 / .16);
   top: var(--core-anchor-y);
@@ -2816,7 +2816,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 
 .dark .career-3d-core-engraving {
   --core-cut-edge: #070305;
-  --core-cut-fill: #742832;
+  --core-cut-fill: #913743;
   --core-cut-glint: rgb(255 164 139 / .2);
   --core-cut-halo: rgb(214 55 74 / .12);
   color: var(--core-cut-fill);
