@@ -1198,6 +1198,45 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .salary-headline-ring strong { font-size: 1.6rem; }
   .salary-headline-visual > p:last-child { display: none; }
   .salary-level-grid { margin-top: .85rem; }
+  .salary-benchmark-section .salary-level-grid.mobile-card-rail {
+    margin-inline: 0;
+    overflow: visible;
+    padding: 0;
+    scroll-snap-type: none;
+  }
+  .salary-benchmark-section .salary-level-summary-grid.mobile-card-rail {
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: .45rem;
+  }
+  .salary-benchmark-section .salary-level-reference-grid.mobile-card-rail {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .salary-benchmark-section .salary-level-summary-grid > .salary-level-card {
+    min-width: 0;
+    padding: .72rem .52rem;
+    scroll-snap-align: none;
+  }
+  .salary-benchmark-section .salary-level-summary-grid h4 { font-size: .82rem; }
+  .salary-benchmark-section .salary-level-summary-grid .badge,
+  .salary-benchmark-section .salary-level-summary-grid h4 + .text-xs { display: none; }
+  .salary-benchmark-section .salary-level-summary-grid p.text-sm {
+    font-size: .62rem;
+    line-height: 1.3;
+  }
+  .salary-benchmark-section .salary-level-summary-grid p.font-mono.text-2xl {
+    overflow: hidden;
+    font-size: clamp(.8rem, 3.6vw, 1rem);
+    letter-spacing: -.045em;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .salary-benchmark-section .salary-level-summary-grid p.font-mono.text-xs {
+    font-size: .52rem;
+    line-height: 1.25;
+  }
   .salary-level-card dl { margin-top: .8rem; gap: .45rem; padding-top: .7rem; }
   .salary-level-card > p.mt-5 { margin-top: .75rem; }
   .salary-level-card > p:last-child, .salary-source-card > p:last-child {
@@ -2016,7 +2055,7 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   position: absolute;
   z-index: 2;
   top: 5%;
-  right: -9%;
+  right: -6.5%;
   width: min(62vw, 54rem);
   height: 91%;
   isolation: isolate;

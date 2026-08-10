@@ -3,8 +3,10 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 
+const loadCareerPlanetScene = () => import("@/components/CareerPlanetScene")
+  .then((module) => module.CareerPlanetScene);
 const CareerPlanetScene = dynamic(
-  () => import("@/components/CareerPlanetScene").then((module) => module.CareerPlanetScene),
+  loadCareerPlanetScene,
   { ssr: false },
 );
 
@@ -42,24 +44,18 @@ export function CareerTransformationHero() {
     const syncTheme = () => setDark(document.documentElement.classList.contains("dark"));
     const syncMotion = () => setReducedMotion(Boolean(motion?.matches));
     const themeObserver = new MutationObserver(syncTheme);
-    let idleId: number | undefined;
-    let fallbackTimer: number | undefined;
     const enableScene = () => {
-      setSceneReady(
-        typeof window.WebGLRenderingContext !== "undefined"
-        || typeof window.WebGL2RenderingContext !== "undefined",
-      );
+      const webglAvailable = typeof window.WebGLRenderingContext !== "undefined"
+        || typeof window.WebGL2RenderingContext !== "undefined";
+      if (webglAvailable) {
+        void loadCareerPlanetScene();
+        setSceneReady(true);
+      }
     };
     const frame = window.requestAnimationFrame(() => {
       syncTheme();
       syncMotion();
-      fallbackTimer = window.setTimeout(() => {
-        if (typeof window.requestIdleCallback === "function") {
-          idleId = window.requestIdleCallback(enableScene, { timeout: 1200 });
-        } else {
-          enableScene();
-        }
-      }, 1600);
+      enableScene();
     });
     themeObserver.observe(document.documentElement, {
       attributes: true,
@@ -68,8 +64,6 @@ export function CareerTransformationHero() {
     motion?.addEventListener?.("change", syncMotion);
     return () => {
       window.cancelAnimationFrame(frame);
-      if (idleId !== undefined) window.cancelIdleCallback(idleId);
-      if (fallbackTimer !== undefined) window.clearTimeout(fallbackTimer);
       themeObserver.disconnect();
       motion?.removeEventListener?.("change", syncMotion);
     };
@@ -81,6 +75,7 @@ export function CareerTransformationHero() {
       className="career-journey-visual career-planet-universe career-planet-3d-universe"
       data-motion="interactive-obsidian-flag-planet"
       data-interacting={planetInteracting ? "true" : "false"}
+      data-scene-ready={sceneReady ? "true" : "false"}
       role="img"
       aria-label="Интерактивная планета с металлическими флагами Подготовка, Проекты и Интервью; при наведении отдельные плиты раскрывают обсидиановое ядро с золотой гравировкой Офер"
     >

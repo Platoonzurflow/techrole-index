@@ -237,7 +237,7 @@ export function SalaryBenchmarks({
           {official ? (
             <SalaryBySeniority official={official} benchmark={data} />
           ) : (
-            <div className="salary-level-grid mobile-card-rail mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
+            <div className="salary-level-grid salary-level-reference-grid mobile-card-rail mt-4 grid gap-4 md:grid-cols-3">{levels.map((point) => <BenchmarkCard key={`${point.source_id}-${point.scope}-${point.seniority}`} point={point} />)}</div>
           )}
         </div>
       ) : null}
@@ -269,7 +269,7 @@ export function SalaryBySeniority({
 
   return (
     <>
-      <div className="salary-level-grid mobile-card-rail mt-5 grid gap-4 lg:grid-cols-3">
+      <div className="salary-level-grid salary-level-summary-grid mobile-card-rail mt-5 grid gap-4 lg:grid-cols-3">
       {salaryLevelOrder.map((seniority) => {
         const historyPoint = coherentSnapshot?.points[seniority];
         const reference = benchmarkByLevel.get(seniority);

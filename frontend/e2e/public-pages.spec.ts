@@ -139,11 +139,14 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
         return rect.width > 0 && rect.left >= -1 && rect.right <= viewport + 1;
       }),
       tocScrollable: getComputedStyle(document.querySelector(".profession-toc")!).overflowX === "auto",
-      salaryRailScrollable: (() => {
+      salaryLevelsFit: (() => {
         const rail = document.querySelector(".salary-level-grid") as HTMLElement | null;
         return rail != null
-          && getComputedStyle(rail).overflowX === "auto"
-          && rail.scrollWidth > rail.clientWidth;
+          && getComputedStyle(rail).overflowX !== "auto"
+          && ["junior", "middle", "senior"].every((seniority) => {
+            const rect = document.querySelector(`#salary-level-${seniority}`)?.getBoundingClientRect();
+            return rect != null && rect.width > 0 && rect.left >= -1 && rect.right <= viewport + 1;
+          });
       })(),
       mainChartHeight: document.querySelector("#salary-history .chart-shell")
         ?.getBoundingClientRect().height ?? 0,
@@ -153,7 +156,7 @@ test("profession card stays readable on a narrow phone", async ({ page }) => {
   expect(layout.sectionsFit).toBe(true);
   expect(layout.chartsFit).toBe(true);
   expect(layout.tocScrollable).toBe(true);
-  expect(layout.salaryRailScrollable).toBe(true);
+  expect(layout.salaryLevelsFit).toBe(true);
   if (selectors.includes("#salary-history")) {
     expect(layout.mainChartHeight).toBeGreaterThan(200);
     expect(layout.mainChartHeight).toBeLessThanOrEqual(280);
@@ -462,6 +465,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   const dataScene = page.locator(".career-journey-visual");
   await expect(dataScene).toBeVisible();
   await expect(dataScene).toHaveAttribute("data-motion", "interactive-obsidian-flag-planet");
+  await expect(dataScene).toHaveAttribute("data-scene-ready", "true", { timeout: 5_000 });
   const attachedFlags = page.locator('.career-3d-stage-flag[data-tile-attached="true"]');
   await expect(attachedFlags).toHaveCount(3, { timeout: 12_000 });
   const sceneLayout = await dataScene.evaluate((node) => {
@@ -493,7 +497,15 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   const attachedTiles = (await attachedFlags.evaluateAll((flags) => (
     flags.map((flag) => flag.getAttribute("data-anchor-tile"))
   ))).sort();
-  expect(attachedTiles).toEqual(["58", "60", "68"]);
+  expect(attachedTiles).toEqual(["59", "67", "69"]);
+  const desktopFlagBoxes = await attachedFlags.evaluateAll((flags) => flags.map((flag) => {
+    const box = flag.getBoundingClientRect();
+    return { left: box.left, right: box.right };
+  }));
+  for (const box of desktopFlagBoxes) {
+    expect(box.left).toBeGreaterThanOrEqual(-1);
+    expect(box.right).toBeLessThanOrEqual(1463);
+  }
   const flagBasesBefore = await page.locator(".career-3d-flag-base").evaluateAll((bases) => (
     bases.map((base) => {
       const box = base.getBoundingClientRect();
@@ -543,6 +555,10 @@ test("mobile navigation keeps account reachable without horizontal page overflow
   expect(dimensions.scroll).toBeLessThanOrEqual(dimensions.client + 1);
   const mobileFlags = page.locator('.career-3d-stage-flag[data-tile-attached="true"]');
   await expect(mobileFlags).toHaveCount(3, { timeout: 12_000 });
+  const mobileAttachedTiles = (await mobileFlags.evaluateAll((flags) => (
+    flags.map((flag) => flag.getAttribute("data-anchor-tile"))
+  ))).sort();
+  expect(mobileAttachedTiles).toEqual(["58", "60", "68"]);
   const animationLayout = await page.locator(".cinematic-hero").evaluate((hero) => {
     const heroBox = hero.getBoundingClientRect();
     const searchBox = hero.querySelector(".career-search")!.getBoundingClientRect();

@@ -28,14 +28,22 @@ type TileMotion = {
 };
 
 const PLANET_RADIUS = 1.66;
-const FLAG_STAGES = [
+const MOBILE_FLAG_STAGES = [
   { tileIndex: 68, label: "Подготовка", position: "one" },
   { tileIndex: 58, label: "Проекты", position: "two" },
   { tileIndex: 60, label: "Интервью", position: "three" },
 ] as const;
-type FlagStage = (typeof FLAG_STAGES)[number];
-const FLAG_STAGE_BY_TILE = new Map<number, FlagStage>(
-  FLAG_STAGES.map((stage) => [stage.tileIndex, stage]),
+const DESKTOP_FLAG_STAGES = [
+  { tileIndex: 67, label: "Подготовка", position: "one" },
+  { tileIndex: 69, label: "Проекты", position: "two" },
+  { tileIndex: 59, label: "Интервью", position: "three" },
+] as const;
+type FlagStage = (typeof MOBILE_FLAG_STAGES)[number] | (typeof DESKTOP_FLAG_STAGES)[number];
+const MOBILE_FLAG_STAGE_BY_TILE = new Map<number, FlagStage>(
+  MOBILE_FLAG_STAGES.map((stage) => [stage.tileIndex, stage]),
+);
+const DESKTOP_FLAG_STAGE_BY_TILE = new Map<number, FlagStage>(
+  DESKTOP_FLAG_STAGES.map((stage) => [stage.tileIndex, stage]),
 );
 
 function TileJourneyFlag({ label, position, tileIndex }: {
@@ -181,7 +189,8 @@ function PlanetSystem({
     open: new THREE.Color(dark ? "#100c08" : "#18120d"),
   }), [dark]);
   const { size } = useThree();
-  const compact = size.width < 680;
+  const compact = size.width < 768;
+  const flagStageByTile = compact ? MOBILE_FLAG_STAGE_BY_TILE : DESKTOP_FLAG_STAGE_BY_TILE;
 
   useEffect(() => () => onInteractionChange?.(false), [onInteractionChange]);
 
@@ -372,7 +381,7 @@ function PlanetSystem({
         {tiles.map((tile, index) => {
           const palette = tile.land ? land : ocean;
           const color = palette[Math.min(palette.length - 1, Math.floor(tile.shade * palette.length))];
-          const flagStage = FLAG_STAGE_BY_TILE.get(index);
+          const flagStage = flagStageByTile.get(index);
           return (
             <RoundedBox
               key={tile.id}
@@ -387,8 +396,8 @@ function PlanetSystem({
             >
               <meshPhysicalMaterial
                 color={color}
-                emissive={dark ? color : "#000000"}
-                emissiveIntensity={dark ? 0.2 : 0}
+                emissive={color}
+                emissiveIntensity={(dark ? 0.34 : 0.1) + tile.shade * (dark ? 0.16 : 0.08)}
                 roughness={0.46 + tile.shade * 0.16}
                 metalness={0.025}
                 clearcoat={0.22}
