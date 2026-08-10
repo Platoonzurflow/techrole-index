@@ -483,6 +483,7 @@ test("homepage search and career journey stay aligned in the dark theme", async 
   await expect(dataScene).toHaveAttribute("data-scene-ready", "true", { timeout: 5_000 });
   const attachedFlags = page.locator('.career-3d-stage-flag[data-tile-attached="true"]');
   await expect(attachedFlags).toHaveCount(3, { timeout: 12_000 });
+  await expect(page.getByTestId("career-planet-core")).toHaveAttribute("data-core-finish", "engraved");
   const sceneLayout = await dataScene.evaluate((node) => {
     const scene = node.getBoundingClientRect();
     const planet = node.querySelector(".career-3d-planet-stage")!.getBoundingClientRect();

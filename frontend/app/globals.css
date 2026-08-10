@@ -2502,9 +2502,9 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 }
 
 .career-planet-3d-universe[data-interacting="true"] .career-3d-core-engraving {
-  opacity: 1;
-  letter-spacing: .2em;
-  transform: translate(-50%, -50%) scale(1);
+  opacity: .94;
+  letter-spacing: .13em;
+  transform: translate(-50%, -50%) perspective(360px) rotateX(-4deg) rotateY(7deg) scaleX(.96);
 }
 
 @keyframes career-3d-arrow-travel {
@@ -2774,19 +2774,36 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 .career-3d-core-engraving {
   --core-anchor-x: 50%;
   --core-anchor-y: 51%;
+  --core-cut-edge: #12080b;
+  --core-cut-fill: #65232d;
+  --core-cut-glint: rgb(255 184 153 / .24);
+  --core-cut-halo: rgb(181 48 64 / .16);
   top: var(--core-anchor-y);
   left: var(--core-anchor-x);
-  color: transparent;
-  background: linear-gradient(180deg, #fff1bd 0%, #d7a24f 31%, #73491e 49%, #e6b864 68%, #fff3c7 100%);
-  background-clip: text;
+  isolation: isolate;
+  color: var(--core-cut-fill);
+  background: none;
   font-family: Georgia, "Times New Roman", serif;
-  font-size: clamp(1.42rem, 3vw, 2.72rem);
-  font-weight: 600;
-  letter-spacing: .17em;
-  -webkit-background-clip: text;
-  -webkit-text-stroke: .7px #573412;
-  filter: drop-shadow(0 1px 0 rgb(255 245 207 / .62)) drop-shadow(0 6px 10px rgb(0 0 0 / .72));
-  text-shadow: none;
+  font-size: clamp(1.34rem, 2.75vw, 2.5rem);
+  font-weight: 700;
+  letter-spacing: .13em;
+  -webkit-text-stroke: 1px var(--core-cut-edge);
+  filter: none;
+  text-shadow:
+    -1.5px -1.5px 1px rgb(0 0 0 / .92),
+    1px 1px 0 var(--core-cut-glint),
+    0 0 5px var(--core-cut-halo);
+}
+
+.career-3d-core-engraving::before {
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  color: transparent;
+  content: attr(data-core-label);
+  -webkit-text-stroke: 3px rgb(0 0 0 / .5);
+  filter: blur(.55px);
+  transform: translate(-1px, -1px);
 }
 
 .career-3d-core-engraving[data-core-attached="true"] {
@@ -2796,12 +2813,18 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
 }
 
 .dark .career-3d-core-engraving {
-  color: transparent;
-  background: linear-gradient(180deg, #fff4c9 0%, #d6a14d 30%, #6a411a 50%, #e5b15b 70%, #fff0b7 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-stroke-color: #4a2d10;
-  filter: drop-shadow(0 1px 0 rgb(255 245 205 / .7)) drop-shadow(0 0 12px rgb(220 159 72 / .34)) drop-shadow(0 7px 12px rgb(0 0 0 / .82));
+  --core-cut-edge: #070305;
+  --core-cut-fill: #742832;
+  --core-cut-glint: rgb(255 164 139 / .2);
+  --core-cut-halo: rgb(214 55 74 / .12);
+  color: var(--core-cut-fill);
+  background: none;
+  -webkit-text-stroke-color: var(--core-cut-edge);
+  filter: none;
+  text-shadow:
+    -1.5px -1.5px 1px rgb(0 0 0 / .94),
+    1px 1px 0 var(--core-cut-glint),
+    0 0 5px var(--core-cut-halo);
 }
 
 .career-planet-3d-universe[data-interacting="true"] .career-3d-stage-flag {
@@ -2844,7 +2867,11 @@ select.field:hover { border-color: rgb(var(--accent-rgb) / .42); background-colo
   .career-3d-core-engraving {
     --core-anchor-y: 55%;
     font-size: 1.16rem;
-    letter-spacing: .14em;
+    letter-spacing: .11em;
+  }
+  .career-planet-3d-universe[data-interacting="true"] .career-3d-core-engraving {
+    letter-spacing: .11em;
+    transform: translate(-50%, -50%) perspective(300px) rotateX(-3deg) rotateY(5deg) scaleX(.94);
   }
 }
 

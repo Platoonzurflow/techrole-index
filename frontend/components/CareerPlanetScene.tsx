@@ -329,7 +329,13 @@ function PlanetSystem({
     <group position={[compact ? -0.4 : 0, compact ? -1.1 : 0.28, 0]} scale={compact ? 0.72 : 0.84}>
       <group ref={root}>
         <Html position={[0, 0, 0]} zIndexRange={[9, 9]} wrapperClass="career-3d-core-html">
-          <div className="career-3d-core-engraving" data-core-attached="true" data-testid="career-planet-core">
+          <div
+            className="career-3d-core-engraving"
+            data-core-attached="true"
+            data-core-finish="engraved"
+            data-core-label="Офер"
+            data-testid="career-planet-core"
+          >
             Офер
           </div>
         </Html>

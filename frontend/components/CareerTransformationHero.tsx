@@ -97,7 +97,12 @@ export function CareerTransformationHero() {
             <JourneyFlag anchorIndex={0} label="Подготовка" position="one" />
             <JourneyFlag anchorIndex={1} label="Проекты" position="two" />
             <JourneyFlag anchorIndex={2} label="Интервью" position="three" />
-            <div className="career-3d-core-engraving" data-testid="career-planet-core">
+            <div
+              className="career-3d-core-engraving"
+              data-core-finish="engraved"
+              data-core-label="Офер"
+              data-testid="career-planet-core"
+            >
               Офер
             </div>
           </>
